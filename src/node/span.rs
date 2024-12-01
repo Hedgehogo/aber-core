@@ -1,51 +1,46 @@
-use std::fmt;
+use std::{fmt, ops::Range};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Position {
-    pub byte: usize,
-    pub line: usize,
-    pub collumn: usize,
+#[derive(Clone, PartialEq, Eq)]
+pub struct Span {
+    pub range: Range<usize>,
 }
 
-impl Position {
-    pub fn new(byte: usize, line: usize, collumn: usize) -> Self {
-        Self {
-            byte,
-            line,
-            collumn,
-        }
+impl Span {
+    pub fn new(range: Range<usize>) -> Self {
+        Self { range }
     }
 }
 
-impl fmt::Debug for Position {
+impl fmt::Debug for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{} ({})", self.line, self.collumn, self.byte)
+        write!(f, "{:?}..{:?}", self.range.start, self.range.end)
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Span<'input> {
-    pub slice: &'input str,
-    pub begin: Position,
-    pub end: Position,
-}
+impl chumsky::span::Span for Span {
+    type Context = ();
 
-impl<'input> Span<'input> {
-    pub fn new(slice: &'input str, begin: Position, end: Position) -> Self {
-        Self { slice, begin, end }
+    type Offset = usize;
+
+    fn new(_context: Self::Context, range: std::ops::Range<Self::Offset>) -> Self {
+        Self::new(range)
+    }
+
+    fn context(&self) -> Self::Context {}
+
+    fn start(&self) -> Self::Offset {
+        self.range.start
+    }
+
+    fn end(&self) -> Self::Offset {
+        self.range.end
     }
 }
 
-impl<'input> fmt::Debug for Span<'input> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}..{:?}", self.begin, self.end)
-    }
-}
+#[derive(Clone, PartialEq, Eq)]
+pub struct Spanned<T>(Span, T);
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Spanned<'input, T>(Span<'input>, T);
-
-impl<'input, T: fmt::Debug> fmt::Debug for Spanned<'input, T> {
+impl<T: fmt::Debug> fmt::Debug for Spanned<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?} @ {:?}", self.1, self.0)
     }

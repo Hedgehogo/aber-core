@@ -15,7 +15,7 @@ use string::String;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Wast<'input> {
-    Number(Number),
+    Number(Number<'input>),
     String(String),
     Pair(Box<Node<'input>>),
     Tuple(ExprVec<'input>),
@@ -24,5 +24,5 @@ pub enum Wast<'input> {
     MethodCall(ExprCall<'input>),
     ChildCall(ExprCall<'input>),
     NegativeCall(NegativeCall<'input>),
-    Assign(Assign<'input>, Expr<'input>),
+    Assign(Assign<'input>),
 }

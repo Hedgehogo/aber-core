@@ -28,15 +28,12 @@ impl<'input> fmt::Debug for Ident<'input> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Call<'input> {
-    pub ident: Spanned<'input, Ident<'input>>,
-    pub generics: Spanned<'input, ExprVec<'input>>,
+    pub ident: Spanned<Ident<'input>>,
+    pub generics: Spanned<ExprVec<'input>>,
 }
 
 impl<'input> Call<'input> {
-    pub fn new(
-        ident: Spanned<'input, Ident<'input>>,
-        generics: Spanned<'input, ExprVec<'input>>,
-    ) -> Self {
+    pub fn new(ident: Spanned<Ident<'input>>, generics: Spanned<ExprVec<'input>>) -> Self {
         Self { ident, generics }
     }
 }
