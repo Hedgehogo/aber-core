@@ -2,6 +2,7 @@ pub mod number;
 
 use crate::node::Node;
 use crate::node::Wast;
+use chumsky::error::Error;
 use chumsky::prelude::*;
 use chumsky::text::{
     unicode::{Grapheme, Graphemes},
@@ -9,15 +10,17 @@ use chumsky::text::{
 };
 use extra::ParserExtra;
 
-type GraphemesExtra<'input> = extra::Err<Rich<'input, &'input Grapheme>>;
-
-pub trait GraphemeParser<'input, O>:
-    Parser<'input, &'input Graphemes, O, GraphemesExtra<'input>>
+pub trait GraphemeParser<'input, O, E>:
+    Parser<'input, &'input Graphemes, O, extra::Err<E>>
+where
+    E: Error<'input, &'input Graphemes> + 'input,
 {
 }
 
-impl<'input, O, T> GraphemeParser<'input, O> for T where
-    T: Parser<'input, &'input Graphemes, O, GraphemesExtra<'input>>
+impl<'input, O, T, E> GraphemeParser<'input, O, E> for T
+where
+    T: Parser<'input, &'input Graphemes, O, extra::Err<E>>,
+    E: Error<'input, &'input Graphemes> + 'input,
 {
 }
 
@@ -33,7 +36,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chumsky::util::Maybe;
 
     #[test]
     fn test_parser() {}

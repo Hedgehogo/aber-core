@@ -1,5 +1,7 @@
 use std::{fmt, ops::Range};
 
+use chumsky::span::SimpleSpan;
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct Span {
     pub range: Range<usize>,
@@ -8,6 +10,12 @@ pub struct Span {
 impl Span {
     pub fn new(range: Range<usize>) -> Self {
         Self { range }
+    }
+}
+
+impl From<SimpleSpan> for Span {
+    fn from(value: SimpleSpan) -> Self {
+        Self::new(value.into_range())
     }
 }
 

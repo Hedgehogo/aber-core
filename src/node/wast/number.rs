@@ -1,5 +1,7 @@
-/// A type guarantee that contains the base of a numeral system in the range of `1` to `36` inclusive.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use std::fmt::Debug;
+
+/// A type guarantee that contains the base of a numeral system in the range of `2` to `36` inclusive.
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Radix {
     inner: u8,
 }
@@ -14,7 +16,7 @@ impl Radix {
     /// Creates a new base of the numeral system from a number, returns `None` if unsuccessful.
     pub fn new(inner: u8) -> Option<Self> {
         match inner {
-            1..=36 => Some(Self { inner }),
+            2..=36 => Some(Self { inner }),
             _ => None,
         }
     }
@@ -39,8 +41,14 @@ impl From<Radix> for u8 {
     }
 }
 
+impl Debug for Radix {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Radix({:?})", self.inner)
+    }
+}
+
 /// A type guarantee that contains a digit from `0` to `35` (`Z` in base-36 numeral system) inclusive.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub struct Digit {
     inner: u8,
 }
@@ -72,9 +80,11 @@ impl Digit {
 
     /// Returns the minimum numeral system in which the digit can be written.
     pub fn min_radix(self) -> Radix {
-        Radix {
-            inner: self.inner + 1,
-        }
+        let inner = match self.inner {
+            0 => 2,
+            i => i + 1,
+        };
+        Radix { inner }
     }
 }
 
@@ -84,8 +94,14 @@ impl From<Digit> for u8 {
     }
 }
 
+impl Debug for Digit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.inner)
+    }
+}
+
 /// A type that stores consecutive digits as they were written.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub struct Digits<'input> {
     inner: &'input str,
 }
@@ -111,6 +127,12 @@ impl<'input> Digits<'input> {
 impl<'input> AsRef<str> for Digits<'input> {
     fn as_ref(&self) -> &str {
         self.as_str()
+    }
+}
+
+impl Debug for Digits<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Digits({:?})", self.inner)
     }
 }
 
@@ -178,7 +200,7 @@ mod tests {
     #[test]
     fn test_radix() {
         assert_eq!(Radix::new(0), None);
-        assert_eq!(u8::from(Radix::new(1).unwrap()), 1);
+        assert_eq!(u8::from(Radix::new(2).unwrap()), 2);
         assert_eq!(u8::from(Radix::new(36).unwrap()), 36);
         assert_eq!(Radix::new(37), None);
     }
@@ -188,6 +210,10 @@ mod tests {
         assert_eq!(u8::from(Digit::new(0).unwrap()), 0);
         assert_eq!(u8::from(Digit::new(35).unwrap()), 35);
         assert_eq!(Digit::new(36), None);
+
+        assert_eq!(u8::from(Digit::new(0).unwrap().min_radix()), 2);
+        assert_eq!(u8::from(Digit::new(1).unwrap().min_radix()), 2);
+        assert_eq!(u8::from(Digit::new(35).unwrap().min_radix()), 36);
     }
 
     #[test]
