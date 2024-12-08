@@ -30,7 +30,11 @@ pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'in
     let unsigned = custom(move |input| {
         let (radix_or_int, span) = input.parse(spanned(digits(Radix::DECIMAL)))?;
 
-        let (radix, int) = match input.parse(just("'").or_not())? {
+        let (radix, int) = match input.parse(
+            just("'")
+                .map_err(|e: Error| e.replace_expected(Expected::RadixSpecial))
+                .or_not(),
+        )? {
             Some(_) => radix_or_int
                 .as_str()
                 .parse::<u8>()
@@ -43,7 +47,12 @@ pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'in
         };
 
         input
-            .parse(just(".").ignore_then(frac(radix)).or_not())
+            .parse(
+                just(".")
+                    .map_err(|e: Error| e.replace_expected(Expected::NumberDot))
+                    .ignore_then(frac(radix))
+                    .or_not(),
+            )
             .map(|frac| (radix, int, frac))
     });
 
@@ -56,9 +65,9 @@ pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'in
 
 #[cfg(test)]
 mod tests {
-    use crate::node::span::Span;
-
     use super::*;
+
+    use crate::node::span::Span;
     use chumsky::util::Maybe;
     use smallvec::smallvec;
     use text::Graphemes;
@@ -73,8 +82,8 @@ mod tests {
         );
         assert_eq!(
             number().parse(Graphemes::new("10A")).into_result(),
-            Err(vec![Error::new_expected(
-                Expected::Eof,
+            Err(vec![Error::new(
+                smallvec![Expected::NumberDot, Expected::Eof],
                 Some(grapheme("A")),
                 Span::new(2..3)
             )])

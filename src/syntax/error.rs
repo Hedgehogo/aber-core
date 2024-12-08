@@ -9,25 +9,27 @@ use chumsky::{
 use smallvec::{smallvec, SmallVec};
 
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub struct Ascii(u8);
+
+impl Debug for Ascii {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.0 as char)
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Expected {
     #[default]
     Eof,
-    Ascii(u8),
+    Ascii(Ascii),
     Digit(Radix),
     Minus,
     Radix,
-}
-
-impl Debug for Expected {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Eof => write!(f, "Eof"),
-            Self::Ascii(i) => write!(f, "Ascii({:?})", *i as char),
-            Self::Digit(i) => write!(f, "Digit({:?})", i),
-            Self::Minus => write!(f, "Minus"),
-            Self::Radix => write!(f, "Radix"),
-        }
-    }
+    RadixSpecial,
+    NumberDot,
+    RawStringStart,
+    RawStringEnd,
+    RawStringIndent,
 }
 
 type ExpectedVec = SmallVec<[Expected; 2]>;
@@ -79,7 +81,7 @@ impl<'input> chumsky::error::Error<'input, &'input Graphemes> for Error<'input> 
         let expected = expected
             .into_iter()
             .filter_map(|i| match i.map(MaybeRef::into_inner) {
-                Some(i) => i.to_ascii().map(Expected::Ascii),
+                Some(i) => i.to_ascii().map(|i| Expected::Ascii(Ascii(i))),
                 None => Some(Expected::Eof),
             })
             .collect();
