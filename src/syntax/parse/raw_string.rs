@@ -45,7 +45,7 @@ pub fn raw_string<'input>() -> impl GraphemeParser<'input, String, Error<'input>
 
         let line = just(indent)
             .map_err(|e: Error| e.replace_expected(Expected::RawStringIndent))
-            .ignore_then(line(quotes));
+            .ignore_then(newline().not().then(any()).repeated().to_slice());
 
         input.rewind(lines_start);
 
@@ -139,14 +139,14 @@ mod tests {
                 """"
                   Hello Aber!
                  """"#};
-           assert_eq!(
-               raw_string().parse(Graphemes::new(input)).into_result(),
-               Err(vec![Error::new_expected(
-                   Expected::RawStringEnd,
-                   None,
-                   Span::new(23..23)
-               )])
-           );
+            assert_eq!(
+                raw_string().parse(Graphemes::new(input)).into_result(),
+                Err(vec![Error::new_expected(
+                    Expected::RawStringEnd,
+                    None,
+                    Span::new(23..23)
+                )])
+            );
         }
     }
 }
