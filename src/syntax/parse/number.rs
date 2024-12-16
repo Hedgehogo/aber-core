@@ -68,7 +68,6 @@ mod tests {
     use super::*;
 
     use crate::node::span::Span;
-    use chumsky::util::Maybe;
     use smallvec::smallvec;
     use text::Graphemes;
 

@@ -195,7 +195,6 @@ impl<'input> Number<'input> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chumsky::util::Maybe;
 
     #[test]
     fn test_radix() {

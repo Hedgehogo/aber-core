@@ -27,6 +27,10 @@ pub enum Expected {
     Radix,
     RadixSpecial,
     NumberDot,
+    StringSpecial,
+    StringEscape,
+    StringEscaped,
+    StringUnescaped,
     RawStringStart,
     RawStringEnd,
     RawStringIndent,
@@ -61,6 +65,10 @@ impl<'input> Error<'input> {
 
     pub fn replace_expected(self, expected: Expected) -> Self {
         Self::new_expected(expected, self.found, self.span)
+    }
+
+    pub fn expected(&self) -> &[Expected] {
+        self.expected.as_slice()
     }
 
     pub fn span(&self) -> Span {

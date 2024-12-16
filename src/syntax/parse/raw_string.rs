@@ -1,25 +1,31 @@
 use super::super::error::{Error, Expected};
 use super::GraphemeParser;
+use crate::node::wast::string::String;
 use chumsky::prelude::*;
 use chumsky::text::{inline_whitespace, newline, Graphemes};
 
 pub fn raw_string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> {
-    let special = just("\"\"\"");
+    let special = just("\"");
 
     let start_special = special
-        .ignore_then(just("\"").repeated().to_slice())
+        .repeated()
+        .at_least(3)
+        .count()
         .then_ignore(newline())
         .map_err(|e: Error| e.replace_expected(Expected::RawStringStart));
 
-    let end_special = move |quotes| {
+    let end_special = move |quotes_count| {
         special
-            .ignore_then(just(quotes).ignored())
+            .repeated()
+            .at_least(quotes_count)
+            .at_most(quotes_count)
+            .ignored()
             .map_err(|e: Error| e.replace_expected(Expected::RawStringEnd))
     };
 
-    let line = move |quotes| {
+    let line = move |quotes_count| {
         newline()
-            .or(end_special(quotes))
+            .or(end_special(quotes_count))
             .not()
             .then(any())
             .repeated()
@@ -33,14 +39,14 @@ pub fn raw_string<'input>() -> impl GraphemeParser<'input, String, Error<'input>
     };
 
     custom(move |input| {
-        let quotes = input.parse(start_special)?;
+        let quotes_count = input.parse(start_special)?;
         let lines_start = input.save();
-        let lines_count = input.parse(line(quotes).then(newline()).repeated().count())?;
-        let indent = input.parse(indent(quotes))?;
+        let lines_count = input.parse(line(quotes_count).then(newline()).repeated().count())?;
+        let indent = input.parse(indent(quotes_count))?;
         let end = input.save();
 
         if lines_count == 0 {
-            return Ok(String::new());
+            return Ok(Default::default());
         }
 
         let line = just(indent)
@@ -51,7 +57,7 @@ pub fn raw_string<'input>() -> impl GraphemeParser<'input, String, Error<'input>
 
         let mut result = input
             .parse(line)
-            .map(|i: &Graphemes| String::from(i.as_str()))?;
+            .map(|i: &Graphemes| std::string::String::from(i.as_str()))?;
 
         for _ in 1..lines_count {
             let (newline, line): (&Graphemes, &Graphemes) =
@@ -63,7 +69,7 @@ pub fn raw_string<'input>() -> impl GraphemeParser<'input, String, Error<'input>
 
         input.rewind(end);
 
-        Ok(result)
+        Ok(String::new(result))
     })
 }
 
@@ -72,10 +78,7 @@ mod tests {
     use super::*;
 
     use crate::node::span::Span;
-    use chumsky::util::Maybe;
     use indoc::indoc;
-    use smallvec::smallvec;
-    use text::Graphemes;
 
     #[test]
     fn test_raw_string() {

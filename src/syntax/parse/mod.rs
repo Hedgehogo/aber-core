@@ -1,5 +1,6 @@
 pub mod number;
 pub mod raw_string;
+pub mod string;
 
 use crate::node::Node;
 use crate::node::Wast;
