@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-chumsky = { git = "https://github.com/Hedgehogo/chumsky.git", branch = "char_impl_for_grapheme" }
+chumsky = { git = "https://github.com/Hedgehogo/chumsky.git", branch = "unstable" }
 smallvec = "1"
 num-traits = "0.2"
 num = "0.4"

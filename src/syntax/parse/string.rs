@@ -69,6 +69,7 @@ mod tests {
 
     use crate::node::span::Span;
     use indoc::indoc;
+    use smallvec::smallvec;
 
     #[test]
     fn test_string() {
@@ -84,8 +85,12 @@ mod tests {
             let input = r#""Hello Aber!"#;
             assert_eq!(
                 string().parse(Graphemes::new(input)).into_result(),
-                Err(vec![Error::new_expected(
-                    Expected::StringSpecial,
+                Err(vec![Error::new(
+                    smallvec![
+                        Expected::StringUnescaped,
+                        Expected::StringEscape,
+                        Expected::StringSpecial
+                    ],
                     None,
                     Span::new(12..12)
                 )])

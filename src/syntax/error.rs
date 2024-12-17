@@ -9,7 +9,7 @@ use chumsky::{
 use smallvec::{smallvec, SmallVec};
 
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
-pub struct Ascii(u8);
+pub struct Ascii(pub u8);
 
 impl Debug for Ascii {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -27,6 +27,7 @@ pub enum Expected {
     Radix,
     RadixSpecial,
     NumberDot,
+    NumberSpacer,
     StringSpecial,
     StringEscape,
     StringEscaped,
