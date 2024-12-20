@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 /// A type guarantee that contains the base of a numeral system in the range of `2` to `36` inclusive.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Radix {
     inner: u8,
 }
@@ -43,12 +43,12 @@ impl From<Radix> for u8 {
 
 impl Debug for Radix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Radix({:?})", self.inner)
+        write!(f, "{:?}'", self.inner)
     }
 }
 
 /// A type guarantee that contains a digit from `0` to `35` (`Z` in base-36 numeral system) inclusive.
-#[derive(Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub struct Digit {
     inner: u8,
 }
@@ -101,7 +101,7 @@ impl Debug for Digit {
 }
 
 /// A type that stores consecutive digits as they were written.
-#[derive(Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub struct Digits<'input> {
     inner: &'input str,
 }
@@ -168,7 +168,7 @@ impl<'input> DoubleEndedIterator for DigitIter<'input> {
 }
 
 /// A type that stores information about how a number was written.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub struct Number<'input> {
     pub sign: bool,
     pub radix: Radix,

@@ -8,7 +8,7 @@ use chumsky::{
 };
 use smallvec::{smallvec, SmallVec};
 
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Ascii(pub u8);
 
 impl Debug for Ascii {
@@ -17,13 +17,11 @@ impl Debug for Ascii {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Expected {
-    #[default]
-    Eof,
     Ascii(Ascii),
-    Digit(Radix),
     Minus,
+    Digit(Radix),
     Radix,
     RadixSpecial,
     NumberDot,
@@ -35,6 +33,8 @@ pub enum Expected {
     RawStringStart,
     RawStringEnd,
     RawStringIndent,
+    #[default]
+    Eof,
 }
 
 type ExpectedVec = SmallVec<[Expected; 2]>;
@@ -47,7 +47,8 @@ pub struct Error<'input> {
 }
 
 impl<'input> Error<'input> {
-    pub fn new(expected: ExpectedVec, found: Option<&'input Grapheme>, span: Span) -> Self {
+    pub fn new(mut expected: ExpectedVec, found: Option<&'input Grapheme>, span: Span) -> Self {
+        expected.sort();
         Self {
             expected,
             found,
@@ -98,7 +99,47 @@ impl<'input> chumsky::error::Error<'input, &'input Graphemes> for Error<'input> 
     }
 
     fn merge(mut self, mut other: Self) -> Self {
-        self.expected.append(&mut other.expected);
+        self.expected = merge_sorted_vec(self.expected, other.expected);
         self
+    }
+}
+
+fn merge_sorted_vec<T: PartialOrd>(
+    mut first: SmallVec<[T; 2]>,
+    second: SmallVec<[T; 2]>,
+) -> SmallVec<[T; 2]> {
+    first.reserve(second.len());
+    let mut i = 0usize;
+    for item in second.into_iter() {
+        while first.get(i).is_some_and(|i| *i < item) {
+            i += 1;
+        }
+        if !first.get(i).is_some_and(|i| *i == item) {
+            first.insert(i, item);
+            i += 1;
+        }
+    }
+    first
+}
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_merge_expected_vec() {
+        let first = smallvec![1, 4, 7];
+        let second = smallvec![3, 4, 6];
+        let result: SmallVec<[i32; 2]> = smallvec![1, 3, 4, 6, 7];
+        assert_eq!(merge_sorted_vec(first, second), result);
+
+        let first = smallvec![2, 3];
+        let second = smallvec![3, 4, 6];
+        let result: SmallVec<[i32; 2]> = smallvec![2, 3, 4, 6];
+        assert_eq!(merge_sorted_vec(first, second), result);
+
+        let first = smallvec![];
+        let second = smallvec![3, 4, 6];
+        let result: SmallVec<[i32; 2]> = smallvec![3, 4, 6];
+        assert_eq!(merge_sorted_vec(first, second), result);
     }
 }
