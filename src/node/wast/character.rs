@@ -37,3 +37,9 @@ impl<'input> Character<'input> {
         Self { inner }
     }
 }
+
+impl<'input> From<&'input Grapheme> for Character<'input> {
+    fn from(value: &'input Grapheme) -> Self {
+        Character::new(value)
+    }
+}

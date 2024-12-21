@@ -29,3 +29,15 @@ pub enum Wast<'input> {
     NegativeCall(NegativeCall<'input>),
     Assign(Assign<'input>),
 }
+
+impl<'input> Wast<'input> {
+    pub fn into_node(self) -> Node<'input> {
+        self.into()
+    }
+}
+
+impl<'input> From<Wast<'input>> for Node<'input> {
+    fn from(value: Wast<'input>) -> Self {
+        Node::Wast(value)
+    }
+}

@@ -1,6 +1,5 @@
 use super::super::error::Error;
 use super::GraphemeParser;
-use crate::node::wast::Wast;
 use chumsky::prelude::*;
 use text::newline;
 
@@ -29,7 +28,9 @@ mod tests {
     #[test]
     fn test_whitespace() {
         assert_eq!(
-            whitespace().parse(Graphemes::new(" //asdsad\n \t \n")).into_result(),
+            whitespace()
+                .parse(Graphemes::new(" //asdsad\n \t \n"))
+                .into_result(),
             Ok(())
         );
     }
