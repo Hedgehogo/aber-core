@@ -41,6 +41,13 @@ where
         .map(String::new)
 }
 
+pub fn separator<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + Copy {
+    quote()
+        .not()
+        .map_err(|e| e.replace_expected(Expected::NonZeroWhitespace))
+        .recover_with(via_parser(empty()))
+}
+
 pub fn string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> {
     let escape = just("\\").map_err(|e: Error| e.replace_expected(Expected::StringEscape));
 
@@ -58,6 +65,7 @@ pub fn string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> {
     quote().ignore_then(
         content(unit)
             .then_ignore(quote())
+            .then_ignore(separator())
             .recover_with(via_parser(content(recover_unit))),
     )
 }
@@ -154,6 +162,17 @@ mod tests {
                     Some(grapheme("m")),
                     Span::new(13..14)
                 )]
+            );
+        }
+        {
+            let input = r#""Hello Aber!""""#;
+            assert_eq!(
+                string().parse(Graphemes::new(input)),
+                Err(vec![Error::new_expected(
+                    Expected::NonZeroWhitespace,
+                    Some(grapheme("\"")),
+                    Span::new(12..13)
+                )])
             );
         }
     }

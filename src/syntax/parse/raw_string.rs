@@ -1,5 +1,5 @@
 use super::super::error::{Error, Expected};
-use super::GraphemeParser;
+use super::{string::separator, GraphemeParser};
 use crate::node::wast::string::String;
 use chumsky::prelude::*;
 use chumsky::text::{inline_whitespace, newline, Graphemes};
@@ -71,6 +71,7 @@ pub fn raw_string<'input>() -> impl GraphemeParser<'input, String, Error<'input>
 
         Ok(String::new(result))
     })
+    .then_ignore(separator())
 }
 
 #[cfg(test)]
@@ -149,6 +150,23 @@ mod tests {
                     None,
                     Span::new(23..23)
                 )])
+            );
+        }
+        {
+            let input = indoc! {r#"
+                """
+                  Hello Aber!
+                 """"""#};
+            assert_eq!(
+                raw_string().parse(Graphemes::new(input)).into_result(),
+                Err(vec![
+                    Error::new_expected(
+                        Expected::NonZeroWhitespace,
+                        Some(grapheme("\"")),
+                        Span::new(22..23)
+                    ),
+                    Error::new_expected(Expected::Eof, Some(grapheme("\"")), Span::new(22..23))
+                ])
             );
         }
     }

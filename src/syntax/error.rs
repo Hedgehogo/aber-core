@@ -31,6 +31,7 @@ pub enum Expected {
     RawStringStart,
     RawStringEnd,
     RawStringIndent,
+    NonZeroWhitespace,
     #[default]
     Eof,
 }
