@@ -6,6 +6,7 @@ use text::{newline, Char, Grapheme, Graphemes};
 
 fn quote<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + Copy {
     just("\"")
+        .then_ignore(just("\"\"").not())
         .map_err(|e: Error| e.replace_expected(Expected::StringSpecial))
         .ignored()
 }
@@ -48,7 +49,7 @@ pub fn separator<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + C
         .recover_with(via_parser(empty()))
 }
 
-pub fn string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> {
+pub fn string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> + Copy {
     let escape = just("\\").map_err(|e: Error| e.replace_expected(Expected::StringEscape));
 
     let escaped = escape.ignore_then(escape_sequence());
@@ -167,7 +168,7 @@ mod tests {
         {
             let input = r#""Hello Aber!""""#;
             assert_eq!(
-                string().parse(Graphemes::new(input)),
+                string().parse(Graphemes::new(input)).into_result(),
                 Err(vec![Error::new_expected(
                     Expected::NonZeroWhitespace,
                     Some(grapheme("\"")),

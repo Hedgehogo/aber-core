@@ -4,7 +4,7 @@ use crate::node::wast::string::String;
 use chumsky::prelude::*;
 use chumsky::text::{inline_whitespace, newline, Graphemes};
 
-pub fn raw_string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> {
+pub fn raw_string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> + Copy {
     let special = just("\"");
 
     let start_special = special

@@ -25,7 +25,7 @@ pub fn digits<'input>(
         .map(|i| unsafe { Digits::from_str_unchecked(i.as_str()) })
 }
 
-pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'input>> {
+pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'input>> + Copy {
     let frac = move |radix| digits(radix).or(empty().map(|_| Digits::default()));
 
     let unsigned = custom(move |input| {
