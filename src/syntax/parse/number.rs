@@ -17,19 +17,23 @@ pub fn digit<'input>(radix: Radix) -> impl GraphemeParser<'input, Digit, Error<'
 
 pub fn digits<'input>(
     radix: Radix,
+    expected: Expected,
 ) -> impl GraphemeParser<'input, Digits<'input>, Error<'input>> + Copy {
     let spacer = just("_").map_err(|e: Error| e.replace_expected(Expected::NumberSpacer));
     digit(radix)
+        .map_err(move |e: Error| e.replace_expected(expected))
         .then(digit(radix).ignored().or(spacer.ignored()).repeated())
         .to_slice()
         .map(|i| unsafe { Digits::from_str_unchecked(i.as_str()) })
 }
 
 pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'input>> + Copy {
-    let frac = move |radix| digits(radix).or(empty().map(|_| Digits::default()));
+    let frac =
+        move |radix| digits(radix, Expected::Digit(radix)).or(empty().map(|_| Digits::default()));
 
     let unsigned = custom(move |input| {
-        let (radix_or_int, span) = input.parse(spanned(digits(Radix::DECIMAL)))?;
+        let (radix_or_int, span) =
+            input.parse(spanned(digits(Radix::DECIMAL, Expected::Number)))?;
 
         let (radix, int) = match input.parse(
             just("'")
@@ -42,7 +46,9 @@ pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'in
                 .ok()
                 .and_then(Radix::new)
                 .ok_or_else(|| Error::new_expected(Expected::Radix, None, span.into()))
-                .and_then(|radix| Ok((radix, input.parse(digits(radix))?)))?,
+                .and_then(|radix| {
+                    Ok((radix, input.parse(digits(radix, Expected::Digit(radix)))?))
+                })?,
 
             None => (Radix::DECIMAL, radix_or_int),
         };
@@ -58,7 +64,7 @@ pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'in
     });
 
     just("-")
-        .map_err(move |e: Error| e.replace_expected(Expected::Minus))
+        .map_err(move |e: Error| e.replace_expected(Expected::Number))
         .or_not()
         .then(unsigned)
         .map(|(sign, (radix, int, frac))| Number::new(sign.is_none(), radix, int, frac))
@@ -127,8 +133,8 @@ mod tests {
         );
         assert_eq!(
             number().parse(Graphemes::new("_1")).into_result(),
-            Err(vec![Error::new(
-                smallvec![Expected::Minus, Expected::Digit(Radix::DECIMAL)],
+            Err(vec![Error::new_expected(
+                Expected::Number,
                 Some(grapheme("_")),
                 Span::new(0..1)
             )])
@@ -153,8 +159,8 @@ mod tests {
         );
         assert_eq!(
             number().parse(Graphemes::new(".1")).into_result(),
-            Err(vec![Error::new(
-                smallvec![Expected::Minus, Expected::Digit(Radix::DECIMAL)],
+            Err(vec![Error::new_expected(
+                Expected::Number,
                 Some(grapheme(".")),
                 Span::new(0..1)
             )])

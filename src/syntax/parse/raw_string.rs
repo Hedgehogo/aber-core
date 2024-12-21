@@ -5,41 +5,37 @@ use chumsky::prelude::*;
 use chumsky::text::{inline_whitespace, newline, Graphemes};
 
 pub fn raw_string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> + Copy {
-    let special = just("\"");
+    let quote = just("\"");
 
-    let start_special = special
+    let open = quote
         .repeated()
         .at_least(3)
         .count()
         .then_ignore(newline())
-        .map_err(|e: Error| e.replace_expected(Expected::RawStringStart));
+        .map_err(|e: Error| e.replace_expected(Expected::RawString));
 
-    let end_special = move |quotes_count| {
-        special
+    let close = move |quotes_count| {
+        quote
             .repeated()
             .at_least(quotes_count)
             .at_most(quotes_count)
             .ignored()
-            .map_err(|e: Error| e.replace_expected(Expected::RawStringEnd))
+            .map_err(|e: Error| e.replace_expected(Expected::RawStringCLose))
     };
 
     let line = move |quotes_count| {
         newline()
-            .or(end_special(quotes_count))
+            .or(close(quotes_count))
             .not()
             .then(any())
             .repeated()
             .to_slice()
     };
 
-    let indent = move |quotes| {
-        inline_whitespace()
-            .to_slice()
-            .then_ignore(end_special(quotes))
-    };
+    let indent = move |quotes| inline_whitespace().to_slice().then_ignore(close(quotes));
 
     custom(move |input| {
-        let quotes_count = input.parse(start_special)?;
+        let quotes_count = input.parse(open)?;
         let lines_start = input.save();
         let lines_count = input.parse(line(quotes_count).then(newline()).repeated().count())?;
         let indent = input.parse(indent(quotes_count))?;
@@ -146,7 +142,7 @@ mod tests {
             assert_eq!(
                 raw_string().parse(Graphemes::new(input)).into_result(),
                 Err(vec![Error::new_expected(
-                    Expected::RawStringEnd,
+                    Expected::RawStringCLose,
                     None,
                     Span::new(23..23)
                 )])

@@ -33,6 +33,7 @@ where
 {
 }
 
+#[allow(clippy::type_complexity)]
 pub fn spanned<'src, P, I, O, E>(
     parser: P,
 ) -> MapWith<P, O, impl Fn(O, &mut MapExtra<'src, '_, I, E>) -> (O, I::Span) + Copy>

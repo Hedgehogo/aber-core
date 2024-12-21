@@ -90,7 +90,7 @@ mod tests {
                     .into_spanned(0..3)
                 ),
                 vec![Error::new_expected(
-                    Expected::CharSpecial,
+                    Expected::CharClose,
                     None,
                     Span::new(2..2)
                 )]
@@ -104,11 +104,11 @@ mod tests {
                 None,
                 vec![Error::new(
                     smallvec![
-                        Expected::Digit(Radix::DECIMAL),
-                        Expected::CharSpecial,
-                        Expected::StringSpecial,
-                        Expected::RawStringStart,
-                        Expected::TupleLeftBracket,
+                        Expected::Number,
+                        Expected::Char,
+                        Expected::String,
+                        Expected::RawString,
+                        Expected::Tuple,
                     ],
                     Some(grapheme(":")),
                     Span::new(0..1)

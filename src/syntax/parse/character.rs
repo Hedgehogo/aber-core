@@ -23,7 +23,7 @@ fn escape_sequence<'input>() -> impl GraphemeParser<'input, &'input Grapheme, Er
 }
 
 pub fn character<'input>() -> impl GraphemeParser<'input, Character<'input>, Error<'input>> + Copy {
-    let quote = just("'").map_err(|e: Error| e.replace_expected(Expected::CharSpecial));
+    let quote = |expected| just("'").map_err(move |e: Error| e.replace_expected(expected));
     let escape = just("\\").map_err(|e: Error| e.replace_expected(Expected::CharEscape));
     let escaped = escape.ignore_then(escape_sequence());
     let unescaped = none_of("\\").map_err(|e: Error| e.replace_expected(Expected::CharUnescaped));
@@ -34,9 +34,13 @@ pub fn character<'input>() -> impl GraphemeParser<'input, Character<'input>, Err
             .map(|_| Graphemes::new("\u{FFFD}").iter().next().unwrap()),
     ));
 
-    quote
+    quote(Expected::Char)
         .ignore_then(character)
-        .then_ignore(quote.ignored().recover_with(via_parser(empty())))
+        .then_ignore(
+            quote(Expected::CharClose)
+                .ignored()
+                .recover_with(via_parser(empty())),
+        )
         .map(Character::new)
 }
 
@@ -60,7 +64,7 @@ mod tests {
             (
                 Some(Character::new(grapheme("m"))),
                 vec![Error::new_expected(
-                    Expected::CharSpecial,
+                    Expected::CharClose,
                     None,
                     Span::new(2..2)
                 )]
@@ -76,7 +80,7 @@ mod tests {
                         None,
                         Span::new(1..1)
                     ),
-                    Error::new(smallvec![Expected::CharSpecial], None, Span::new(1..1))
+                    Error::new(smallvec![Expected::CharClose], None, Span::new(1..1))
                 ]
             )
         );
@@ -88,7 +92,7 @@ mod tests {
                 Some(Character::new(grapheme("\u{FFFD}"))),
                 vec![
                     Error::new_expected(Expected::CharEscaped, None, Span::new(2..2)),
-                    Error::new_expected(Expected::CharSpecial, None, Span::new(2..2))
+                    Error::new_expected(Expected::CharClose, None, Span::new(2..2))
                 ]
             )
         );
@@ -99,7 +103,7 @@ mod tests {
             (
                 None,
                 vec![
-                    Error::new_expected(Expected::CharSpecial, None, Span::new(2..2)),
+                    Error::new_expected(Expected::CharClose, None, Span::new(2..2)),
                     Error::new_expected(Expected::Eof, Some(grapheme("m")), Span::new(2..3)),
                 ]
             )
@@ -109,7 +113,7 @@ mod tests {
             (
                 None,
                 vec![Error::new(
-                    smallvec![Expected::CharSpecial],
+                    smallvec![Expected::Char],
                     None,
                     Span::new(0..0)
                 )]

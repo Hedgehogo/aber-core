@@ -40,7 +40,7 @@ mod tests {
                         .into_spanned(17..19),
                 ]),
                 vec![Error::new_expected(
-                    Expected::CharSpecial,
+                    Expected::CharClose,
                     None,
                     Span::new(19..19)
                 )]

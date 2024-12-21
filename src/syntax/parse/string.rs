@@ -4,10 +4,10 @@ use crate::node::wast::string::String;
 use chumsky::prelude::*;
 use text::{newline, Char, Grapheme, Graphemes};
 
-fn quote<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + Copy {
+fn quote<'input>(expected: Expected) -> impl GraphemeParser<'input, (), Error<'input>> + Copy {
     just("\"")
         .then_ignore(just("\"\"").not())
-        .map_err(|e: Error| e.replace_expected(Expected::StringSpecial))
+        .map_err(move |e: Error| e.replace_expected(expected))
         .ignored()
 }
 
@@ -43,7 +43,7 @@ where
 }
 
 pub fn separator<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + Copy {
-    quote()
+    quote(Expected::String)
         .not()
         .map_err(|e| e.replace_expected(Expected::NonZeroWhitespace))
         .recover_with(via_parser(empty()))
@@ -63,9 +63,9 @@ pub fn string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> + 
 
     let recover_unit = newline().not().ignore_then(unit);
 
-    quote().ignore_then(
+    quote(Expected::String).ignore_then(
         content(unit)
-            .then_ignore(quote())
+            .then_ignore(quote(Expected::StringClose))
             .then_ignore(separator())
             .recover_with(via_parser(content(recover_unit))),
     )
@@ -97,7 +97,7 @@ mod tests {
                     smallvec![
                         Expected::StringUnescaped,
                         Expected::StringEscape,
-                        Expected::StringSpecial
+                        Expected::StringClose
                     ],
                     None,
                     Span::new(12..12)
@@ -109,7 +109,7 @@ mod tests {
             assert_eq!(
                 string().parse(Graphemes::new(input)).into_result(),
                 Err(vec![Error::new_expected(
-                    Expected::StringSpecial,
+                    Expected::String,
                     Some(grapheme("H")),
                     Span::new(0..1)
                 )])

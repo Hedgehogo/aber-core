@@ -12,7 +12,7 @@ where
 {
     let left_bracket = just("(")
         .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::TupleLeftBracket));
+        .map_err(|e: Error| e.replace_expected(Expected::Tuple));
 
     let comma = just(",")
         .ignored()
@@ -20,7 +20,7 @@ where
 
     let right_bracket = just(")")
         .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::TupleRightBracket))
+        .map_err(|e: Error| e.replace_expected(Expected::TupleClose))
         .recover_with(via_parser(empty()));
 
     let expression = spanned(expression(meaningful_unit, 1)).map(Spanned::from);
@@ -66,13 +66,12 @@ mod tests {
                 Some(vec![]),
                 vec![Error::new(
                     smallvec![
-                        Expected::Minus,
-                        Expected::Digit(Radix::DECIMAL),
-                        Expected::CharSpecial,
-                        Expected::StringSpecial,
-                        Expected::RawStringStart,
-                        Expected::TupleLeftBracket,
-                        Expected::TupleRightBracket,
+                        Expected::Number,
+                        Expected::Char,
+                        Expected::String,
+                        Expected::RawString,
+                        Expected::Tuple,
+                        Expected::TupleClose,
                     ],
                     None,
                     Span::new(1..1)
@@ -103,14 +102,13 @@ mod tests {
                 )]),
                 vec![Error::new(
                     smallvec![
-                        Expected::Minus,
-                        Expected::Digit(Radix::DECIMAL),
-                        Expected::CharSpecial,
-                        Expected::StringSpecial,
-                        Expected::RawStringStart,
+                        Expected::Number,
+                        Expected::Char,
+                        Expected::String,
+                        Expected::RawString,
                         Expected::PairSpecial,
-                        Expected::TupleLeftBracket,
-                        Expected::TupleRightBracket,
+                        Expected::Tuple,
+                        Expected::TupleClose,
                         Expected::Comma
                     ],
                     None,
@@ -171,7 +169,7 @@ mod tests {
             (
                 None,
                 vec![Error::new(
-                    smallvec![Expected::TupleLeftBracket],
+                    smallvec![Expected::Tuple],
                     None,
                     Span::new(0..0)
                 )]

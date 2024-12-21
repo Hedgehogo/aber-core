@@ -14,26 +14,28 @@ use smallvec::{smallvec, SmallVec};
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Expected {
     Ascii(Ascii),
-    Minus,
+    Number,
     Digit(Radix),
     Radix,
     RadixSpecial,
     NumberDot,
     NumberSpacer,
-    CharSpecial,
+    Char,
+    CharClose,
     CharEscape,
     CharEscaped,
     CharUnescaped,
-    StringSpecial,
+    String,
+    StringClose,
     StringEscape,
     StringEscaped,
     StringUnescaped,
-    RawStringStart,
-    RawStringEnd,
+    RawString,
+    RawStringCLose,
     RawStringIndent,
     PairSpecial,
-    TupleLeftBracket,
-    TupleRightBracket,
+    Tuple,
+    TupleClose,
     Comma,
     NonZeroWhitespace,
     #[default]
@@ -105,7 +107,7 @@ impl<'input> chumsky::error::Error<'input, &'input Graphemes> for Error<'input> 
                 None => Some(Expected::Eof),
             })
             .collect();
-        
+
         Self::new(expected, found, span.into())
     }
 
