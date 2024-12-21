@@ -30,9 +30,9 @@ where
 {
 }
 
-pub fn spanned<'src, P, I, O, E>(parser: P) -> impl Parser<'src, I, (O, I::Span), E>
+pub fn spanned<'src, P, I, O, E>(parser: P) -> impl Parser<'src, I, (O, I::Span), E> + Copy
 where
-    P: Parser<'src, I, O, E>,
+    P: Parser<'src, I, O, E> + Copy,
     I: Input<'src>,
     E: ParserExtra<'src, I>,
 {

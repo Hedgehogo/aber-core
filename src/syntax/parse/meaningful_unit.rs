@@ -1,18 +1,31 @@
 use super::super::error::Error;
 use super::{
-    character::character, number::number, raw_string::raw_string, string::string, GraphemeParser,
+    character::character, number::number, raw_string::raw_string, spanned, string::string,
+    whitespace::whitespace, GraphemeParser,
 };
 use crate::node::wast::Wast;
+use crate::node::{Node, Spanned};
 use chumsky::prelude::*;
 
-pub fn meaningful_unit<'input>() -> impl GraphemeParser<'input, Wast<'input>, Error<'input>> {
+pub fn meaningful_unit<'input>() -> impl GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone
+{
     recursive(|_meaningful_unit| {
-        choice((
+        let choice = choice((
             number().map(Wast::Number),
             character().map(Wast::Character),
             string().map(Wast::String),
             raw_string().map(Wast::String),
-        ))
+        ));
+
+        spanned(choice.map(Node::Wast))
+            .map(Spanned::from)
+            .then(whitespace().ignore_then(just(":")).or_not())
+            .map_with(|(i, pair), extra| match pair {
+                Some(_) => Wast::Pair(Box::new(i))
+                    .into_node()
+                    .into_spanned(extra.span()),
+                None => i,
+            })
     })
 }
 
@@ -42,23 +55,47 @@ mod tests {
                 Radix::DECIMAL,
                 digits("10"),
                 None
-            )))
+            )).into_node()
+            .into_spanned(0..2))
         );
         assert_eq!(
             meaningful_unit().parse(Graphemes::new("'m'")).into_result(),
-            Ok(Wast::Character(Character::new(grapheme("m"))))
+            Ok(Wast::Character(grapheme("m").into())
+                .into_node()
+                .into_spanned(0..3))
         );
         assert_eq!(
             meaningful_unit()
                 .parse(Graphemes::new("\"Hello\""))
                 .into_result(),
-            Ok(Wast::String("Hello".into()))
+            Ok(Wast::String("Hello".into()).into_node().into_spanned(0..7))
         );
         assert_eq!(
             meaningful_unit()
                 .parse(Graphemes::new("\"\"\"\nHello\n\"\"\""))
                 .into_result(),
-            Ok(Wast::String("Hello".into()))
+            Ok(Wast::String("Hello".into()).into_node().into_spanned(0..13))
+        );
+        assert_eq!(
+            meaningful_unit()
+                .parse(Graphemes::new("'g:"))
+                .into_output_errors(),
+            (
+                Some(
+                    Wast::Pair(Box::new(
+                        Wast::Character(grapheme("g").into())
+                            .into_node()
+                            .into_spanned(0..2)
+                    ))
+                    .into_node()
+                    .into_spanned(0..3)
+                ),
+                vec![Error::new_expected(
+                    Expected::CharSpecial,
+                    None,
+                    Span::new(2..2)
+                )]
+            )
         );
         assert_eq!(
             meaningful_unit()

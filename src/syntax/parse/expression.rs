@@ -8,12 +8,11 @@ use chumsky::prelude::*;
 pub fn expression<'input, M>(
     meaningful_unit: M,
     at_least: usize,
-) -> impl GraphemeParser<'input, Expr<'input>, Error<'input>>
+) -> impl GraphemeParser<'input, Expr<'input>, Error<'input>> + Clone
 where
-    M: GraphemeParser<'input, Wast<'input>, Error<'input>>,
+    M: GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone,
 {
-    spanned(meaningful_unit.map(Node::Wast))
-        .map(Spanned::from)
+    meaningful_unit
         .separated_by(whitespace())
         .at_least(at_least)
         .collect()

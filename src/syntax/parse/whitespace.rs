@@ -3,7 +3,7 @@ use super::GraphemeParser;
 use chumsky::prelude::*;
 use text::newline;
 
-pub fn whitespace<'input>() -> impl GraphemeParser<'input, (), Error<'input>> {
+pub fn whitespace<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + Copy {
     let comment = just("//")
         .then(newline().not().then(any()).repeated())
         .ignored();
