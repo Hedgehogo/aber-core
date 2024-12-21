@@ -1,4 +1,4 @@
-use super::super::error::{Error, Expected};
+use super::super::error::Error;
 use super::{
     character::character, number::number, raw_string::raw_string, string::string, GraphemeParser,
 };
