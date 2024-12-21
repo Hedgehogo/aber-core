@@ -31,6 +31,10 @@ pub enum Expected {
     RawStringStart,
     RawStringEnd,
     RawStringIndent,
+    PairSpecial,
+    TupleLeftBracket,
+    TupleRightBracket,
+    Comma,
     NonZeroWhitespace,
     #[default]
     Eof,
@@ -70,6 +74,10 @@ impl<'input> Error<'input> {
 
     pub fn expected(&self) -> &[Expected] {
         self.expected.as_slice()
+    }
+
+    pub fn found(&self) -> Option<&'input Grapheme> {
+        self.found
     }
 
     pub fn span(&self) -> Span {
@@ -129,7 +137,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_merge_expected_vec() {
+    fn test_merge_sorted_vec() {
         let first = smallvec![1, 4, 7];
         let second = smallvec![3, 4, 6];
         let result: SmallVec<[i32; 2]> = smallvec![1, 3, 4, 6, 7];

@@ -1,7 +1,5 @@
 use super::super::error::Error;
-use super::spanned;
 use super::{whitespace::whitespace, GraphemeParser};
-use crate::node::wast::Wast;
 use crate::node::{Expr, Node, Spanned};
 use chumsky::prelude::*;
 
@@ -24,14 +22,7 @@ mod tests {
 
     use super::super::super::error::Expected;
     use super::super::meaningful_unit::meaningful_unit;
-    use crate::node::{
-        span::Span,
-        wast::{
-            character::Character,
-            number::{Digits, Number, Radix},
-        },
-    };
-    use smallvec::smallvec;
+    use crate::node::{span::Span, wast::Wast};
     use text::Graphemes;
 
     #[test]

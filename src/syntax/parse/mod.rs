@@ -4,11 +4,14 @@ pub mod meaningful_unit;
 pub mod number;
 pub mod raw_string;
 pub mod string;
+pub mod tuple;
 pub mod whitespace;
 
 use crate::node::Node;
 use crate::node::Wast;
+use chumsky::combinator::MapWith;
 use chumsky::error::Error;
+use chumsky::input::MapExtra;
 use chumsky::prelude::*;
 use chumsky::text::{
     unicode::{Grapheme, Graphemes},
@@ -30,9 +33,11 @@ where
 {
 }
 
-pub fn spanned<'src, P, I, O, E>(parser: P) -> impl Parser<'src, I, (O, I::Span), E> + Copy
+pub fn spanned<'src, P, I, O, E>(
+    parser: P,
+) -> MapWith<P, O, impl Fn(O, &mut MapExtra<'src, '_, I, E>) -> (O, I::Span) + Copy>
 where
-    P: Parser<'src, I, O, E> + Copy,
+    P: Parser<'src, I, O, E>,
     I: Input<'src>,
     E: ParserExtra<'src, I>,
 {

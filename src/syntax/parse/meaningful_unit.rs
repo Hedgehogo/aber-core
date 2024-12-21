@@ -1,4 +1,5 @@
-use super::super::error::Error;
+use super::super::error::{Error, Expected};
+use super::tuple::tuple;
 use super::{
     character::character, number::number, raw_string::raw_string, spanned, string::string,
     whitespace::whitespace, GraphemeParser,
@@ -7,19 +8,22 @@ use crate::node::wast::Wast;
 use crate::node::{Node, Spanned};
 use chumsky::prelude::*;
 
-pub fn meaningful_unit<'input>() -> impl GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone
-{
-    recursive(|_meaningful_unit| {
+pub fn meaningful_unit<'input>(
+) -> impl GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone {
+    recursive(|meaningful_unit| {
         let choice = choice((
             number().map(Wast::Number),
             character().map(Wast::Character),
             string().map(Wast::String),
             raw_string().map(Wast::String),
+            tuple(meaningful_unit).map(Wast::Tuple),
         ));
+
+        let pair_special = just(":").map_err(|e: Error| e.replace_expected(Expected::PairSpecial));
 
         spanned(choice.map(Node::Wast))
             .map(Spanned::from)
-            .then(whitespace().ignore_then(just(":")).or_not())
+            .then(whitespace().ignore_then(pair_special).or_not())
             .map_with(|(i, pair), extra| match pair {
                 Some(_) => Wast::Pair(Box::new(i))
                     .into_node()
@@ -36,10 +40,7 @@ mod tests {
     use super::super::super::error::Expected;
     use crate::node::{
         span::Span,
-        wast::{
-            character::Character,
-            number::{Digits, Number, Radix},
-        },
+        wast::number::{Digits, Number, Radix},
     };
     use smallvec::smallvec;
     use text::Graphemes;
@@ -50,13 +51,11 @@ mod tests {
         let digits = |s| unsafe { Digits::from_str_unchecked(s) };
         assert_eq!(
             meaningful_unit().parse(Graphemes::new("10")).into_result(),
-            Ok(Wast::Number(Number::new(
-                true,
-                Radix::DECIMAL,
-                digits("10"),
-                None
-            )).into_node()
-            .into_spanned(0..2))
+            Ok(
+                Wast::Number(Number::new(true, Radix::DECIMAL, digits("10"), None))
+                    .into_node()
+                    .into_spanned(0..2)
+            )
         );
         assert_eq!(
             meaningful_unit().parse(Graphemes::new("'m'")).into_result(),
@@ -108,7 +107,8 @@ mod tests {
                         Expected::Digit(Radix::DECIMAL),
                         Expected::CharSpecial,
                         Expected::StringSpecial,
-                        Expected::RawStringStart
+                        Expected::RawStringStart,
+                        Expected::TupleLeftBracket,
                     ],
                     Some(grapheme(":")),
                     Span::new(0..1)
