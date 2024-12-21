@@ -1,5 +1,5 @@
 use super::super::error::{Error, Expected};
-use super::tuple::tuple;
+use super::list::tuple;
 use super::{
     character::character, number::number, raw_string::raw_string, spanned, string::string,
     whitespace::whitespace, GraphemeParser,

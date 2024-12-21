@@ -36,6 +36,8 @@ pub enum Expected {
     PairSpecial,
     Tuple,
     TupleClose,
+    Generics,
+    GenericsClose,
     Comma,
     NonZeroWhitespace,
     #[default]

@@ -4,33 +4,52 @@ use super::{expression::expression, whitespace::whitespace, GraphemeParser};
 use crate::node::{ExprVec, Node, Spanned};
 use chumsky::prelude::*;
 
+fn list<'input, M>(
+    meaningful_unit: M,
+    open: (&'static str, Expected),
+    close: (&'static str, Expected),
+) -> impl GraphemeParser<'input, ExprVec<'input>, Error<'input>> + Clone
+where
+    M: GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone,
+{
+    let open = just(open.0)
+        .ignored()
+        .map_err(move |e: Error| e.replace_expected(open.1));
+
+    let comma = just(",")
+        .ignored()
+        .map_err(|e: Error| e.replace_expected(Expected::Comma));
+
+    let close = just(close.0)
+        .ignored()
+        .map_err(move |e: Error| e.replace_expected(close.1));
+
+    let close = close.recover_with(via_parser(empty()));
+    let expression = spanned(expression(meaningful_unit, 1)).map(Spanned::from);
+    let item = expression.then_ignore(whitespace());
+    let separator = comma.then_ignore(whitespace());
+
+    open.ignore_then(whitespace())
+        .ignore_then(item.separated_by(separator).allow_trailing().collect())
+        .then_ignore(close)
+}
+
 pub fn tuple<'input, M>(
     meaningful_unit: M,
 ) -> impl GraphemeParser<'input, ExprVec<'input>, Error<'input>> + Clone
 where
     M: GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone,
 {
-    let left_bracket = just("(")
-        .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::Tuple));
+    list(meaningful_unit, ("(", Expected::Tuple), (")", Expected::TupleClose))
+}
 
-    let comma = just(",")
-        .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::Comma));
-
-    let right_bracket = just(")")
-        .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::TupleClose))
-        .recover_with(via_parser(empty()));
-
-    let expression = spanned(expression(meaningful_unit, 1)).map(Spanned::from);
-    let item = expression.then_ignore(whitespace());
-    let separator = comma.then_ignore(whitespace());
-
-    left_bracket
-        .ignore_then(whitespace())
-        .ignore_then(item.separated_by(separator).allow_trailing().collect())
-        .then_ignore(right_bracket)
+pub fn generics<'input, M>(
+    meaningful_unit: M,
+) -> impl GraphemeParser<'input, ExprVec<'input>, Error<'input>> + Clone
+where
+    M: GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone,
+{
+    list(meaningful_unit, ("[", Expected::Generics), ("]", Expected::GenericsClose))
 }
 
 #[cfg(test)]
