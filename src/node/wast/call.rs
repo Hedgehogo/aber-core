@@ -20,7 +20,7 @@ impl<'input> Ident<'input> {
     }
 }
 
-impl<'input> fmt::Debug for Ident<'input> {
+impl fmt::Debug for Ident<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.content)
     }

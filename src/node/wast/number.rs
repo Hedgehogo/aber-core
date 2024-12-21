@@ -109,7 +109,8 @@ pub struct Digits<'input> {
 impl<'input> Digits<'input> {
     /// Creates a sequence of numbers from a string without checking the string for validity.
     ///
-    /// Note: The string must contain only the characters `0` - `9`, `A` - `Z` and `_`.
+    /// # Safety
+    /// The string must contain only the characters `0` - `9`, `A` - `Z` and `_`.
     pub unsafe fn from_str_unchecked(inner: &'input str) -> Self {
         Self { inner }
     }
@@ -124,7 +125,7 @@ impl<'input> Digits<'input> {
     }
 }
 
-impl<'input> AsRef<str> for Digits<'input> {
+impl AsRef<str> for Digits<'_> {
     fn as_ref(&self) -> &str {
         self.as_str()
     }
@@ -147,13 +148,13 @@ impl<'input> DigitIter<'input> {
     }
 
     fn iter(&mut self) -> impl DoubleEndedIterator<Item = Digit> + use<'_, 'input> {
-        (&mut self.iter).filter_map(|i| {
-            (*i != b'_').then(|| unsafe { Digit::from_ascii(*i, Radix::MAX).unwrap_unchecked() })
-        })
+        (&mut self.iter)
+            .filter(|&i| (*i != b'_'))
+            .map(|i| unsafe { Digit::from_ascii(*i, Radix::MAX).unwrap_unchecked() })
     }
 }
 
-impl<'input> Iterator for DigitIter<'input> {
+impl Iterator for DigitIter<'_> {
     type Item = Digit;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -161,7 +162,7 @@ impl<'input> Iterator for DigitIter<'input> {
     }
 }
 
-impl<'input> DoubleEndedIterator for DigitIter<'input> {
+impl DoubleEndedIterator for DigitIter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter().next_back()
     }

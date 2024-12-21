@@ -25,6 +25,7 @@ fn escape_sequence<'input>() -> impl GraphemeParser<'input, &'input str, Error<'
                 .ok_or_else(|| Error::new_expected(Expected::StringEscaped, Some(i), span.into()))
         })
         .map_err(|e: Error| e.replace_expected(Expected::StringEscaped))
+        .recover_with(via_parser(any().or_not().map(|_| "\u{FFFD}")))
 }
 
 fn content<'input, P>(unit: P) -> impl GraphemeParser<'input, String, Error<'input>> + Copy
@@ -37,15 +38,13 @@ where
             result.push_str(unit);
             result
         })
-        .map(|i| String::new(i))
+        .map(String::new)
 }
 
 pub fn string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> {
     let escape = just("\\").map_err(|e: Error| e.replace_expected(Expected::StringEscape));
 
-    let escaped = escape.ignore_then(
-        escape_sequence().recover_with(via_parser(any().or_not().map(|_| "\u{FFFD}"))),
-    );
+    let escaped = escape.ignore_then(escape_sequence());
 
     let unescaped = none_of("\\\"")
         .to_slice()

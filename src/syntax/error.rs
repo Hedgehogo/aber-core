@@ -1,21 +1,15 @@
 use std::fmt::Debug;
 
-use crate::node::{span::Span, wast::number::Radix};
+use crate::node::{
+    span::Span,
+    wast::{character::Ascii, number::Radix},
+};
 use chumsky::{
     span::SimpleSpan,
     text::{Char, Grapheme, Graphemes},
     util::MaybeRef,
 };
 use smallvec::{smallvec, SmallVec};
-
-#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Ascii(pub u8);
-
-impl Debug for Ascii {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.0 as char)
-    }
-}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Expected {
@@ -26,6 +20,10 @@ pub enum Expected {
     RadixSpecial,
     NumberDot,
     NumberSpacer,
+    CharSpecial,
+    CharEscape,
+    CharEscaped,
+    CharUnescaped,
     StringSpecial,
     StringEscape,
     StringEscaped,
@@ -91,14 +89,18 @@ impl<'input> chumsky::error::Error<'input, &'input Graphemes> for Error<'input> 
         let expected = expected
             .into_iter()
             .filter_map(|i| match i.map(MaybeRef::into_inner) {
-                Some(i) => i.to_ascii().map(|i| Expected::Ascii(Ascii(i))),
+                Some(i) => i
+                    .to_ascii()
+                    .map(|i| Expected::Ascii(Ascii::new(i).unwrap())),
+
                 None => Some(Expected::Eof),
             })
             .collect();
+        
         Self::new(expected, found, span.into())
     }
 
-    fn merge(mut self, mut other: Self) -> Self {
+    fn merge(mut self, other: Self) -> Self {
         self.expected = merge_sorted_vec(self.expected, other.expected);
         self
     }
