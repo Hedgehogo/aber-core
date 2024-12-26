@@ -11,8 +11,8 @@ pub struct Ident<'input> {
 }
 
 impl<'input> Ident<'input> {
-    pub fn new(content: &'input str) -> Result<Self, IdentError> {
-        Ok(Self { content })
+    pub fn new(content: &'input str) -> Self {
+        Self { content }
     }
 
     pub fn as_str(&self) -> &str {

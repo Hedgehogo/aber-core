@@ -39,6 +39,7 @@ pub enum Expected {
     Generics,
     GenericsClose,
     Comma,
+    Ident,
     NonZeroWhitespace,
     #[default]
     Eof,

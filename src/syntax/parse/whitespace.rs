@@ -1,19 +1,22 @@
 use super::super::error::Error;
 use super::GraphemeParser;
+use chumsky::combinator::Repeated;
 use chumsky::prelude::*;
 use smallvec::smallvec;
-use text::newline;
+use text::{newline, Graphemes};
 
-pub fn whitespace<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + Copy {
+pub fn whitespace<'input>() -> Repeated<
+    impl GraphemeParser<'input, (), Error<'input>> + Copy,
+    (),
+    &'input Graphemes,
+    extra::Err<Error<'input>>,
+> {
     let comment = just("//")
         .map_err(|e: Error| Error::new(smallvec![], e.found(), e.span()))
         .then(newline().not().then(any()).repeated())
         .ignored();
 
-    text::whitespace()
-        .at_least(1)
-        .or(comment)
-        .repeated()
+    text::whitespace().at_least(1).or(comment).repeated()
 }
 
 #[cfg(test)]
