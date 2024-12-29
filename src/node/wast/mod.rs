@@ -6,7 +6,7 @@ pub mod negative_call;
 pub mod number;
 pub mod string;
 
-use super::{Expr, ExprVec, Node, Spanned};
+use super::{span::Span, Expr, ExprVec, Node, Spanned};
 use assign::Assign;
 use call::Call;
 use character::Character;
@@ -33,6 +33,12 @@ pub enum Wast<'input> {
 impl<'input> Wast<'input> {
     pub fn into_node(self) -> Node<'input> {
         self.into()
+    }
+}
+
+impl<'input> Wast<'input> {
+    pub fn into_spanned_node<S: Into<Span>>(self, span: S) -> Spanned<Node<'input>> {
+        Spanned(self.into(), span.into())
     }
 }
 

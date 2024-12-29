@@ -20,7 +20,7 @@ pub fn raw_string<'input>() -> impl GraphemeParser<'input, String, Error<'input>
             .at_least(quotes_count)
             .at_most(quotes_count)
             .ignored()
-            .map_err(|e: Error| e.replace_expected(Expected::RawStringCLose))
+            .map_err(|e: Error| e.replace_expected(Expected::RawStringClose))
     };
 
     let line = move |quotes_count| {
@@ -142,7 +142,7 @@ mod tests {
             assert_eq!(
                 raw_string().parse(Graphemes::new(input)).into_result(),
                 Err(vec![Error::new_expected(
-                    Expected::RawStringCLose,
+                    Expected::RawStringClose,
                     None,
                     Span::new(23..23)
                 )])

@@ -54,6 +54,17 @@ impl chumsky::span::Span for Span {
 #[derive(Clone, PartialEq, Eq)]
 pub struct Spanned<T>(pub T, pub Span);
 
+impl<T> Spanned<T> {
+    pub fn into_vec(self) -> Vec<Self> {
+        vec![self]
+    }
+
+    pub fn into_spanned_vec(self) -> Spanned<Vec<Self>> {
+        let span = self.1.clone();
+        Spanned(vec![self], span)
+    }
+}
+
 impl<T: fmt::Debug> fmt::Debug for Spanned<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?} @ {:?}", self.0, self.1)
@@ -63,5 +74,15 @@ impl<T: fmt::Debug> fmt::Debug for Spanned<T> {
 impl<T, S: Into<Span>> From<(T, S)> for Spanned<T> {
     fn from(value: (T, S)) -> Self {
         Self(value.0, value.1.into())
+    }
+}
+
+pub trait IntoSpanned<S: Into<Span>>: Sized {
+    fn into_spanned(self, span: S) -> Spanned<Self>;
+}
+
+impl<T, S: Into<Span>> IntoSpanned<S> for T {
+    fn into_spanned(self, span: S) -> Spanned<Self> {
+        Spanned(self, span.into())
     }
 }

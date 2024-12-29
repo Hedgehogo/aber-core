@@ -31,7 +31,7 @@ pub enum Expected {
     StringEscaped,
     StringUnescaped,
     RawString,
-    RawStringCLose,
+    RawStringClose,
     RawStringIndent,
     PairSpecial,
     Tuple,
@@ -40,6 +40,9 @@ pub enum Expected {
     GenericsClose,
     Comma,
     Ident,
+    MethodSpecial,
+    ChildSpecial,
+    NegativeSpecial,
     NonZeroWhitespace,
     #[default]
     Eof,

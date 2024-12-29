@@ -5,7 +5,7 @@ use crate::node::{
         call::{Call, Ident},
         number::Radix,
     },
-    Node, Spanned,
+    Expr, Spanned,
 };
 use chumsky::prelude::*;
 use chumsky::text::unicode::Grapheme;
@@ -32,14 +32,14 @@ pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'inpu
         .map(|i| Ident::new(i.as_str()))
 }
 
-pub fn call<'input, M>(
-    meaningful_unit: M,
+pub fn call<'input, E>(
+    expression: E,
 ) -> impl GraphemeParser<'input, Call<'input>, Error<'input>> + Clone
 where
-    M: GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone,
+    E: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
     let generics = whitespace()
-        .ignore_then(spanned(generics(meaningful_unit)))
+        .ignore_then(spanned(generics(expression)))
         .or(spanned(empty().map(|_| vec![])));
 
     spanned(ident())
@@ -52,9 +52,8 @@ where
 mod tests {
     use super::*;
 
-    use super::super::meaningful_unit::meaningful_unit;
+    use super::super::{expression::expression, meaningful_unit::meaningful_unit};
     use crate::node::span::Span;
-    use smallvec::smallvec;
     use text::Graphemes;
 
     #[test]
@@ -122,7 +121,7 @@ mod tests {
     fn test_call() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            call(meaningful_unit())
+            call(expression(meaningful_unit()))
                 .parse(Graphemes::new("hello"))
                 .into_result(),
             Ok(Call::new(
@@ -131,7 +130,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            call(meaningful_unit())
+            call(expression(meaningful_unit()))
                 .parse(Graphemes::new("hello[]"))
                 .into_result(),
             Ok(Call::new(
@@ -140,7 +139,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            call(meaningful_unit())
+            call(expression(meaningful_unit()))
                 .parse(Graphemes::new("hello //hello\n []"))
                 .into_result(),
             Ok(Call::new(

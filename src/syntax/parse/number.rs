@@ -80,10 +80,7 @@ mod tests {
 
     #[test]
     fn test() {
-        use chumsky::{
-            error::{Error, Rich},
-            util::Maybe,
-        };
+        use chumsky::error::{Error, Rich};
 
         let parser = just::<_, &str, extra::Err<Rich<_>>>("-")
             .or_not()

@@ -1,5 +1,5 @@
+use super::super::span::Spanned;
 use super::ExprVec;
-use super::Spanned;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
