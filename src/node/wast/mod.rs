@@ -1,4 +1,5 @@
 pub mod assign;
+pub mod block;
 pub mod call;
 pub mod character;
 pub mod expr_call;
@@ -8,6 +9,7 @@ pub mod string;
 
 use super::{span::Span, Expr, ExprVec, Node, Spanned};
 use assign::Assign;
+use block::Block;
 use call::Call;
 use character::Character;
 use expr_call::ExprCall;
@@ -22,12 +24,11 @@ pub enum Wast<'input> {
     String(String),
     Pair(Box<Spanned<Node<'input>>>),
     Tuple(ExprVec<'input>),
-    Block(ExprVec<'input>),
+    Block(Block<'input>),
     Call(Call<'input>),
     MethodCall(ExprCall<'input>),
     ChildCall(ExprCall<'input>),
     NegativeCall(NegativeCall<'input>),
-    Assign(Assign<'input>),
 }
 
 impl<'input> Wast<'input> {

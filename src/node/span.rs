@@ -55,6 +55,10 @@ impl chumsky::span::Span for Span {
 pub struct Spanned<T>(pub T, pub Span);
 
 impl<T> Spanned<T> {
+    pub fn map<O, F: FnOnce(T) -> O>(self, f: F) -> Spanned<O> {
+        Spanned(f(self.0), self.1)
+    }
+
     pub fn into_vec(self) -> Vec<Self> {
         vec![self]
     }
