@@ -1,28 +1,7 @@
 use super::super::error::{Error, Expected};
-use super::{spanned, whitespace::whitespace, GraphemeParser};
-use crate::node::wast::block::Block;
-use crate::node::{
-    wast::{assign::Assign, block::Statement},
-    Expr, Spanned,
-};
+use super::{parser, whitespace::whitespace, GraphemeParser};
+use crate::node::{wast::block::Block, Expr, Spanned};
 use chumsky::prelude::*;
-
-pub fn assign<'input, E>(
-    expression: E,
-) -> impl GraphemeParser<'input, Assign<'input>, Error<'input>> + Clone
-where
-    E: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
-{
-    let special = just("=")
-        .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::AssignSpecial));
-
-    expression
-        .clone()
-        .then_ignore(whitespace().then(special).then(whitespace()))
-        .then(expression)
-        .map(|(left, right)| Assign::new(left, right))
-}
 
 pub fn block<'input, E>(
     expression: E,
@@ -34,33 +13,14 @@ where
         .ignored()
         .map_err(move |e: Error| e.replace_expected(Expected::Block));
 
-    let semicolon = just(";")
-        .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::Semicolon));
-
     let close = just("}")
         .ignored()
         .map_err(move |e: Error| e.replace_expected(Expected::BlockClose))
         .recover_with(via_parser(empty()));
 
-    let statement = choice((
-        expression.clone().map(|i| i.map(Statement::Expr)),
-        spanned(assign(expression.clone()))
-            .map(Spanned::from)
-            .map(|i| i.map(Statement::Assign)),
-    ))
-    .then_ignore(whitespace())
-    .then_ignore(semicolon)
-    .then_ignore(whitespace());
-
-    let expression = expression.or(spanned(empty().map(|_| vec![])).map(Spanned::from));
-
-    open.ignore_then(whitespace())
-        .ignore_then(statement.repeated().collect())
-        .then(expression)
-        .map(|(statements, expr)| Block::new(statements, expr))
-        .then_ignore(whitespace())
-        .then_ignore(close)
+    open.then(whitespace())
+        .ignore_then(parser(expression))
+        .then_ignore(whitespace().then(close))
 }
 
 #[cfg(test)]
@@ -70,7 +30,7 @@ mod tests {
     use super::super::super::error::Expected;
     use super::super::{expression::expression, meaningful_unit::meaningful_unit};
     use crate::node::span::IntoSpanned;
-    use crate::node::{span::Span, wast::Wast};
+    use crate::node::{span::Span, wast::{Wast, block::Statement}};
     use smallvec::smallvec;
     use text::Graphemes;
 
