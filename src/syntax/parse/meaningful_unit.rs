@@ -1,11 +1,10 @@
 use super::super::error::{Error, Expected};
-use super::expression::expression;
-use super::list::tuple;
 use super::{
-    character::character, number::number, raw_string::raw_string, spanned, string::string,
-    whitespace::whitespace, GraphemeParser,
+    block::block, call::call, character::character, expression::expression, list::tuple,
+    number::number, raw_string::raw_string, spanned, string::string, whitespace::whitespace,
+    GraphemeParser,
 };
-use crate::node::{Node, Spanned, wast::Wast};
+use crate::node::{wast::Wast, Node, Spanned};
 use chumsky::prelude::*;
 
 pub fn meaningful_unit<'input>(
@@ -16,7 +15,9 @@ pub fn meaningful_unit<'input>(
             character().map(Wast::Character),
             string().map(Wast::String),
             raw_string().map(Wast::String),
-            tuple(expression(meaningful_unit)).map(Wast::Tuple),
+            call(expression(meaningful_unit.clone())).map(Wast::Call),
+            tuple(expression(meaningful_unit.clone())).map(Wast::Tuple),
+            block(expression(meaningful_unit)).map(Wast::Block),
         ));
 
         let pair_special = just(":")
@@ -27,8 +28,7 @@ pub fn meaningful_unit<'input>(
             .map(Spanned::from)
             .then(whitespace().ignore_then(pair_special).or_not())
             .map_with(|(i, pair), extra| match pair {
-                Some(_) => Wast::Pair(Box::new(i))
-                    .into_spanned_node(extra.span()),
+                Some(_) => Wast::Pair(Box::new(i)).into_spanned_node(extra.span()),
                 None => i,
             })
     })
@@ -59,8 +59,7 @@ mod tests {
         );
         assert_eq!(
             meaningful_unit().parse(Graphemes::new("'m'")).into_result(),
-            Ok(Wast::Character(grapheme("m").into())
-                .into_spanned_node(0..3))
+            Ok(Wast::Character(grapheme("m").into()).into_spanned_node(0..3))
         );
         assert_eq!(
             meaningful_unit()
@@ -81,8 +80,7 @@ mod tests {
             (
                 Some(
                     Wast::Pair(Box::new(
-                        Wast::Character(grapheme("g").into())
-                            .into_spanned_node(0..2)
+                        Wast::Character(grapheme("g").into()).into_spanned_node(0..2)
                     ))
                     .into_spanned_node(0..3)
                 ),
@@ -105,7 +103,9 @@ mod tests {
                         Expected::Char,
                         Expected::String,
                         Expected::RawString,
+                        Expected::Block,
                         Expected::Tuple,
+                        Expected::Ident,
                     ],
                     Some(grapheme(":")),
                     Span::new(0..1)

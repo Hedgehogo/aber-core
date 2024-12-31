@@ -91,6 +91,8 @@ mod tests {
                         Expected::RawString,
                         Expected::Tuple,
                         Expected::TupleClose,
+                        Expected::Block,
+                        Expected::Ident,
                         Expected::NegativeSpecial,
                     ],
                     None,
@@ -127,7 +129,9 @@ mod tests {
                         Expected::PairSpecial,
                         Expected::Tuple,
                         Expected::TupleClose,
+                        Expected::Block,
                         Expected::Comma,
+                        Expected::Ident,
                         Expected::MethodSpecial,
                         Expected::ChildSpecial,
                         Expected::NegativeSpecial
