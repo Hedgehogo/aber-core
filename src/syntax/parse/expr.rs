@@ -8,14 +8,14 @@ use crate::node::{
 use chumsky::pratt::*;
 use chumsky::prelude::*;
 
-pub fn expression<'input, M>(
-    meaningful_unit: M,
+pub fn expr<'input, F>(
+    fact: F,
 ) -> impl GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone
 where
-    M: GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone + 'input,
+    F: GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone + 'input,
 {
-    recursive(|expression| {
-        let atom = meaningful_unit.map(|i| {
+    recursive(|expr| {
+        let atom = fact.map(|i| {
             let span = i.1.clone();
             Spanned(vec![i], span)
         });
@@ -27,7 +27,7 @@ where
         let expr_call = |s: &'static str, expected| {
             just(s)
                 .padded_by(whitespace())
-                .ignore_then(spanned(call(expression.clone())).map(Spanned::from))
+                .ignore_then(spanned(call(expr.clone())).map(Spanned::from))
                 .map_err(move |e: Error| e.replace_expected(expected))
         };
 
@@ -69,7 +69,7 @@ mod tests {
     use super::*;
 
     use super::super::super::error::Expected;
-    use super::super::meaningful_unit::meaningful_unit;
+    use super::super::fact::fact;
     use crate::node::{
         span::{IntoSpanned, Span},
         wast::{
@@ -89,46 +89,46 @@ mod tests {
     }
 
     #[test]
-    fn test_expression() {
+    fn test_expr() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            expression(meaningful_unit())
-                .parse(Graphemes::new("'a'"))
-                .into_result(),
+            expr(fact()).parse(Graphemes::new("'a'")).into_result(),
             Ok(Wast::Character(grapheme("a").into())
                 .into_spanned_node(0..3)
                 .into_spanned_vec())
         );
         assert_eq!(
-            expression(meaningful_unit())
-                .parse(Graphemes::new("'a'.foo"))
-                .into_result(),
+            expr(fact()).parse(Graphemes::new("'a'.foo")).into_result(),
             Ok(Wast::MethodCall(ExprCall::new(
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(0..3)
                     .into_spanned_vec(),
-                Call::new(Ident::new("foo").into_spanned(4..7), vec![].into_spanned(7..7))
-                    .into_spanned(4..7)
+                Call::new(
+                    Ident::new("foo").into_spanned(4..7),
+                    vec![].into_spanned(7..7)
+                )
+                .into_spanned(4..7)
             ))
             .into_spanned_node(0..7)
             .into_spanned_vec()),
         );
         assert_eq!(
-            expression(meaningful_unit())
-                .parse(Graphemes::new("'a'::foo"))
-                .into_result(),
+            expr(fact()).parse(Graphemes::new("'a'::foo")).into_result(),
             Ok(Wast::ChildCall(ExprCall::new(
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(0..3)
                     .into_spanned_vec(),
-                Call::new(Ident::new("foo").into_spanned(5..8), vec![].into_spanned(8..8))
-                    .into_spanned(5..8)
+                Call::new(
+                    Ident::new("foo").into_spanned(5..8),
+                    vec![].into_spanned(8..8)
+                )
+                .into_spanned(5..8)
             ))
             .into_spanned_node(0..8)
             .into_spanned_vec()),
         );
         assert_eq!(
-            expression(meaningful_unit())
+            expr(fact())
                 .parse(Graphemes::new("'a'.foo::bar"))
                 .into_result(),
             Ok(Wast::ChildCall(ExprCall::new(
@@ -136,8 +136,11 @@ mod tests {
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
                         .into_spanned_vec(),
-                    Call::new(Ident::new("foo").into_spanned(4..7), vec![].into_spanned(7..7))
-                        .into_spanned(4..7)
+                    Call::new(
+                        Ident::new("foo").into_spanned(4..7),
+                        vec![].into_spanned(7..7)
+                    )
+                    .into_spanned(4..7)
                 ))
                 .into_spanned_node(0..7)
                 .into_spanned_vec(),
@@ -151,7 +154,7 @@ mod tests {
             .into_spanned_vec()),
         );
         assert_eq!(
-            expression(meaningful_unit())
+            expr(fact())
                 .parse(Graphemes::new("'a'::foo.bar"))
                 .into_result(),
             Ok(Wast::MethodCall(ExprCall::new(
@@ -159,8 +162,11 @@ mod tests {
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
                         .into_spanned_vec(),
-                    Call::new(Ident::new("foo").into_spanned(5..8), vec![].into_spanned(8..8))
-                        .into_spanned(5..8)
+                    Call::new(
+                        Ident::new("foo").into_spanned(5..8),
+                        vec![].into_spanned(8..8)
+                    )
+                    .into_spanned(5..8)
                 ))
                 .into_spanned_node(0..8)
                 .into_spanned_vec(),
@@ -174,7 +180,7 @@ mod tests {
             .into_spanned_vec()),
         );
         assert_eq!(
-            expression(meaningful_unit())
+            expr(fact())
                 .parse(Graphemes::new("@'a''b'::foo"))
                 .into_result(),
             Ok(Wast::ChildCall(ExprCall::new(
@@ -197,7 +203,7 @@ mod tests {
             .into_spanned_vec()),
         );
         assert_eq!(
-            expression(meaningful_unit())
+            expr(fact())
                 .parse(Graphemes::new("\"hello\" //hello\n 'h"))
                 .into_output_errors(),
             (

@@ -1,23 +1,22 @@
 use super::super::error::{Error, Expected};
 use super::{
-    block::block, call::call, character::character, expression::expression, list::tuple,
+    block::block, call::call, character::character, expr::expr, list::tuple,
     number::number, raw_string::raw_string, spanned, string::string, whitespace::whitespace,
     GraphemeParser,
 };
 use crate::node::{wast::Wast, Node, Spanned};
 use chumsky::prelude::*;
 
-pub fn meaningful_unit<'input>(
-) -> impl GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone {
-    recursive(|meaningful_unit| {
+pub fn fact<'input>() -> impl GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone {
+    recursive(|fact| {
         let choice = choice((
             number().map(Wast::Number),
             character().map(Wast::Character),
             string().map(Wast::String),
             raw_string().map(Wast::String),
-            call(expression(meaningful_unit.clone())).map(Wast::Call),
-            tuple(expression(meaningful_unit.clone())).map(Wast::Tuple),
-            block(expression(meaningful_unit)).map(Wast::Block),
+            call(expr(fact.clone())).map(Wast::Call),
+            tuple(expr(fact.clone())).map(Wast::Tuple),
+            block(expr(fact)).map(Wast::Block),
         ));
 
         let pair_special = just(":")
@@ -47,36 +46,32 @@ mod tests {
     use text::Graphemes;
 
     #[test]
-    fn test_meaningful_unit() {
+    fn test_fact() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         let digits = |s| unsafe { Digits::from_str_unchecked(s) };
         assert_eq!(
-            meaningful_unit().parse(Graphemes::new("10")).into_result(),
+            fact().parse(Graphemes::new("10")).into_result(),
             Ok(
                 Wast::Number(Number::new(true, Radix::DECIMAL, digits("10"), None))
                     .into_spanned_node(0..2)
             )
         );
         assert_eq!(
-            meaningful_unit().parse(Graphemes::new("'m'")).into_result(),
+            fact().parse(Graphemes::new("'m'")).into_result(),
             Ok(Wast::Character(grapheme("m").into()).into_spanned_node(0..3))
         );
         assert_eq!(
-            meaningful_unit()
-                .parse(Graphemes::new("\"Hello\""))
-                .into_result(),
+            fact().parse(Graphemes::new("\"Hello\"")).into_result(),
             Ok(Wast::String("Hello".into()).into_spanned_node(0..7))
         );
         assert_eq!(
-            meaningful_unit()
+            fact()
                 .parse(Graphemes::new("\"\"\"\nHello\n\"\"\""))
                 .into_result(),
             Ok(Wast::String("Hello".into()).into_spanned_node(0..13))
         );
         assert_eq!(
-            meaningful_unit()
-                .parse(Graphemes::new("'g:"))
-                .into_output_errors(),
+            fact().parse(Graphemes::new("'g:")).into_output_errors(),
             (
                 Some(
                     Wast::Pair(Box::new(
@@ -92,9 +87,7 @@ mod tests {
             )
         );
         assert_eq!(
-            meaningful_unit()
-                .parse(Graphemes::new(":"))
-                .into_output_errors(),
+            fact().parse(Graphemes::new(":")).into_output_errors(),
             (
                 None,
                 vec![Error::new(

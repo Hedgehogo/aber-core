@@ -3,11 +3,11 @@ use super::{parser, whitespace::whitespace, GraphemeParser};
 use crate::node::{wast::block::Block, Expr, Spanned};
 use chumsky::prelude::*;
 
-pub fn block<'input, E>(
-    expression: E,
+pub fn block<'input, X>(
+    expr: X,
 ) -> impl GraphemeParser<'input, Block<'input>, Error<'input>> + Clone
 where
-    E: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
+    X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
     let open = just("{")
         .ignored()
@@ -19,7 +19,7 @@ where
         .recover_with(via_parser(empty()));
 
     open.then(whitespace())
-        .ignore_then(parser(expression))
+        .ignore_then(parser(expr))
         .then_ignore(whitespace().then(close))
 }
 
@@ -28,9 +28,12 @@ mod tests {
     use super::*;
 
     use super::super::super::error::Expected;
-    use super::super::{expression::expression, meaningful_unit::meaningful_unit};
+    use super::super::{expr::expr, fact::fact};
     use crate::node::span::IntoSpanned;
-    use crate::node::{span::Span, wast::{Wast, block::Statement}};
+    use crate::node::{
+        span::Span,
+        wast::{block::Stmt, Wast},
+    };
     use smallvec::smallvec;
     use text::Graphemes;
 
@@ -38,13 +41,13 @@ mod tests {
     fn test_block() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            block(expression(meaningful_unit()))
+            block(expr(fact()))
                 .parse(Graphemes::new("{}"))
                 .into_result(),
             Ok(Block::new(vec![], vec![].into_spanned(1..1))),
         );
         assert_eq!(
-            block(expression(meaningful_unit()))
+            block(expr(fact()))
                 .parse(Graphemes::new("{"))
                 .into_output_errors(),
             (
@@ -67,7 +70,7 @@ mod tests {
             )
         );
         assert_eq!(
-            block(expression(meaningful_unit()))
+            block(expr(fact()))
                 .parse(Graphemes::new("{'a'}"))
                 .into_result(),
             Ok(Block::new(
@@ -78,7 +81,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            block(expression(meaningful_unit()))
+            block(expr(fact()))
                 .parse(Graphemes::new("{'a'"))
                 .into_output_errors(),
             (
@@ -109,11 +112,11 @@ mod tests {
             )
         );
         assert_eq!(
-            block(expression(meaningful_unit()))
+            block(expr(fact()))
                 .parse(Graphemes::new("{'a'; }"))
                 .into_result(),
             Ok(Block::new(
-                Statement::Expr(
+                Stmt::Expr(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(1..4)
                         .into_vec()
@@ -124,11 +127,11 @@ mod tests {
             )),
         );
         assert_eq!(
-            block(expression(meaningful_unit()))
+            block(expr(fact()))
                 .parse(Graphemes::new("{'a'; 'b'}"))
                 .into_result(),
             Ok(Block::new(
-                Statement::Expr(
+                Stmt::Expr(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(1..4)
                         .into_vec()
@@ -141,7 +144,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            block(expression(meaningful_unit()))
+            block(expr(fact()))
                 .parse(Graphemes::new(""))
                 .into_output_errors(),
             (

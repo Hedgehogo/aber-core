@@ -3,20 +3,19 @@ use super::{whitespace::whitespace, GraphemeParser};
 use crate::node::{wast::assign::Assign, Expr, Spanned};
 use chumsky::prelude::*;
 
-pub fn assign<'input, E>(
-    expression: E,
+pub fn assign<'input, X>(
+    expr: X,
 ) -> impl GraphemeParser<'input, Assign<'input>, Error<'input>> + Clone
 where
-    E: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
+    X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
     let special = just("=")
         .ignored()
         .map_err(|e: Error| e.replace_expected(Expected::AssignSpecial));
 
-    expression
-        .clone()
+    expr.clone()
         .then_ignore(whitespace().then(special).then(whitespace()))
-        .then(expression)
+        .then(expr)
         .map(|(left, right)| Assign::new(left, right))
 }
 
@@ -25,7 +24,7 @@ mod tests {
     use super::*;
 
     use super::super::super::error::Expected;
-    use super::super::{expression::expression, meaningful_unit::meaningful_unit};
+    use super::super::{expr::expr, fact::fact};
     use crate::node::{span::Span, wast::Wast};
     use smallvec::smallvec;
     use text::Graphemes;
@@ -34,7 +33,7 @@ mod tests {
     fn test_assign() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            assign(expression(meaningful_unit()))
+            assign(expr(fact()))
                 .parse(Graphemes::new("'a' = 'b'"))
                 .into_result(),
             Ok(Assign::new(
@@ -47,7 +46,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            assign(expression(meaningful_unit()))
+            assign(expr(fact()))
                 .parse(Graphemes::new("'a' = "))
                 .into_output_errors(),
             (
@@ -69,7 +68,7 @@ mod tests {
             )
         );
         assert_eq!(
-            assign(expression(meaningful_unit()))
+            assign(expr(fact()))
                 .parse(Graphemes::new(""))
                 .into_output_errors(),
             (

@@ -3,13 +3,13 @@ use super::{whitespace::whitespace, GraphemeParser};
 use crate::node::{Expr, ExprVec, Spanned};
 use chumsky::prelude::*;
 
-fn list<'input, E>(
-    expression: E,
+fn list<'input, X>(
+    expr: X,
     open: (&'static str, Expected),
     close: (&'static str, Expected),
 ) -> impl GraphemeParser<'input, ExprVec<'input>, Error<'input>> + Clone
 where
-    E: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
+    X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
     let open = just(open.0)
         .ignored()
@@ -24,7 +24,7 @@ where
         .map_err(move |e: Error| e.replace_expected(close.1));
 
     let close = close.recover_with(via_parser(empty()));
-    let item = expression.then_ignore(whitespace());
+    let item = expr.then_ignore(whitespace());
     let separator = comma.then_ignore(whitespace());
 
     open.ignore_then(whitespace())
@@ -32,27 +32,23 @@ where
         .then_ignore(close)
 }
 
-pub fn tuple<'input, E>(
-    expression: E,
+pub fn tuple<'input, X>(
+    expr: X,
 ) -> impl GraphemeParser<'input, ExprVec<'input>, Error<'input>> + Clone
 where
-    E: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
+    X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
-    list(
-        expression,
-        ("(", Expected::Tuple),
-        (")", Expected::TupleClose),
-    )
+    list(expr, ("(", Expected::Tuple), (")", Expected::TupleClose))
 }
 
-pub fn generics<'input, E>(
-    expression: E,
+pub fn generics<'input, X>(
+    expr: X,
 ) -> impl GraphemeParser<'input, ExprVec<'input>, Error<'input>> + Clone
 where
-    E: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
+    X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
     list(
-        expression,
+        expr,
         ("[", Expected::Generics),
         ("]", Expected::GenericsClose),
     )
@@ -63,7 +59,7 @@ mod tests {
     use super::*;
 
     use super::super::super::error::Expected;
-    use super::super::{expression::expression, meaningful_unit::meaningful_unit};
+    use super::super::{expr::expr, fact::fact};
     use crate::node::{span::Span, wast::Wast};
     use smallvec::smallvec;
     use text::Graphemes;
@@ -72,13 +68,13 @@ mod tests {
     fn test_tuple() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            tuple(expression(meaningful_unit()))
+            tuple(expr(fact()))
                 .parse(Graphemes::new("()"))
                 .into_result(),
             Ok(vec![]),
         );
         assert_eq!(
-            tuple(expression(meaningful_unit()))
+            tuple(expr(fact()))
                 .parse(Graphemes::new("("))
                 .into_output_errors(),
             (
@@ -101,23 +97,21 @@ mod tests {
             )
         );
         assert_eq!(
-            tuple(expression(meaningful_unit()))
+            tuple(expr(fact()))
                 .parse(Graphemes::new("('a')"))
                 .into_result(),
             Ok(vec![Spanned(
-                vec![Wast::Character(grapheme("a").into())
-                    .into_spanned_node(1..4)],
+                vec![Wast::Character(grapheme("a").into()).into_spanned_node(1..4)],
                 Span::new(1..4)
             )]),
         );
         assert_eq!(
-            tuple(expression(meaningful_unit()))
+            tuple(expr(fact()))
                 .parse(Graphemes::new("('a'"))
                 .into_output_errors(),
             (
                 Some(vec![Spanned(
-                    vec![Wast::Character(grapheme("a").into())
-                        .into_spanned_node(1..4)],
+                    vec![Wast::Character(grapheme("a").into()).into_spanned_node(1..4)],
                     Span::new(1..4)
                 )]),
                 vec![Error::new(
@@ -142,48 +136,43 @@ mod tests {
             )
         );
         assert_eq!(
-            tuple(expression(meaningful_unit()))
+            tuple(expr(fact()))
                 .parse(Graphemes::new("('a', )"))
                 .into_result(),
             Ok(vec![Spanned(
-                vec![Wast::Character(grapheme("a").into())
-                    .into_spanned_node(1..4)],
+                vec![Wast::Character(grapheme("a").into()).into_spanned_node(1..4)],
                 Span::new(1..4)
             )]),
         );
         assert_eq!(
-            tuple(expression(meaningful_unit()))
+            tuple(expr(fact()))
                 .parse(Graphemes::new("('a' 'b')"))
                 .into_result(),
             Ok(vec![Spanned(
                 vec![
-                    Wast::Character(grapheme("a").into())
-                        .into_spanned_node(1..4),
-                    Wast::Character(grapheme("b").into())
-                        .into_spanned_node(5..8)
+                    Wast::Character(grapheme("a").into()).into_spanned_node(1..4),
+                    Wast::Character(grapheme("b").into()).into_spanned_node(5..8)
                 ],
                 Span::new(1..8)
             )]),
         );
         assert_eq!(
-            tuple(expression(meaningful_unit()))
+            tuple(expr(fact()))
                 .parse(Graphemes::new("('a', 'b')"))
                 .into_result(),
             Ok(vec![
                 Spanned(
-                    vec![Wast::Character(grapheme("a").into())
-                        .into_spanned_node(1..4)],
+                    vec![Wast::Character(grapheme("a").into()).into_spanned_node(1..4)],
                     Span::new(1..4)
                 ),
                 Spanned(
-                    vec![Wast::Character(grapheme("b").into())
-                        .into_spanned_node(6..9)],
+                    vec![Wast::Character(grapheme("b").into()).into_spanned_node(6..9)],
                     Span::new(6..9)
                 ),
             ]),
         );
         assert_eq!(
-            tuple(expression(meaningful_unit()))
+            tuple(expr(fact()))
                 .parse(Graphemes::new(""))
                 .into_output_errors(),
             (

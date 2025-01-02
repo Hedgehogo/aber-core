@@ -2,9 +2,9 @@ pub mod assign;
 pub mod block;
 pub mod call;
 pub mod character;
-pub mod expression;
+pub mod expr;
+pub mod fact;
 pub mod list;
-pub mod meaningful_unit;
 pub mod number;
 pub mod raw_string;
 pub mod string;
@@ -12,7 +12,7 @@ pub mod whitespace;
 
 use super::error::{Error, Expected};
 use crate::node::{
-    wast::block::{Block, Statement},
+    wast::block::{Block, Stmt},
     Expr, Spanned,
 };
 use assign::assign;
@@ -48,33 +48,32 @@ where
     parser.map_with(|i, e| (i, e.span()))
 }
 
-pub fn parser<'input, E>(
-    expression: E,
+pub fn parser<'input, X>(
+    expr: X,
 ) -> impl GraphemeParser<'input, Block<'input>, Error<'input>> + Clone
 where
-    E: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
+    X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
     let semicolon = just(";")
         .ignored()
         .map_err(|e: Error| e.replace_expected(Expected::Semicolon));
 
-    let statement = choice((
-        expression.clone().map(|i| i.map(Statement::Expr)),
-        spanned(assign(expression.clone()))
+    let stmt = choice((
+        expr.clone().map(|i| i.map(Stmt::Expr)),
+        spanned(assign(expr.clone()))
             .map(Spanned::from)
-            .map(|i| i.map(Statement::Assign)),
+            .map(|i| i.map(Stmt::Assign)),
     ))
     .then_ignore(whitespace())
     .then_ignore(semicolon);
 
-    let expression = expression.or(spanned(empty().map(|_| vec![])).map(Spanned::from));
+    let expr = expr.or(spanned(empty().map(|_| vec![])).map(Spanned::from));
 
-    statement
-        .then_ignore(whitespace())
+    stmt.then_ignore(whitespace())
         .repeated()
         .collect()
-        .then(expression)
-        .map(|(statements, expr)| Block::new(statements, expr))
+        .then(expr)
+        .map(|(stmts, expr)| Block::new(stmts, expr))
 }
 
 #[cfg(test)]
@@ -83,8 +82,8 @@ mod tests {
 
     use crate::node::span::IntoSpanned;
     use crate::node::{span::Span, wast::Wast};
-    use expression::expression;
-    use meaningful_unit::meaningful_unit;
+    use expr::expr;
+    use fact::fact;
     use smallvec::smallvec;
     use text::Graphemes;
 
@@ -92,13 +91,11 @@ mod tests {
     fn test_parser() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            parser(expression(meaningful_unit()))
-                .parse(Graphemes::new(""))
-                .into_result(),
+            parser(expr(fact())).parse(Graphemes::new("")).into_result(),
             Ok(Block::new(vec![], vec![].into_spanned(0..0))),
         );
         assert_eq!(
-            parser(expression(meaningful_unit()))
+            parser(expr(fact()))
                 .parse(Graphemes::new("'a'"))
                 .into_result(),
             Ok(Block::new(
@@ -109,11 +106,11 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser(expression(meaningful_unit()))
+            parser(expr(fact()))
                 .parse(Graphemes::new("'a'; "))
                 .into_result(),
             Ok(Block::new(
-                Statement::Expr(
+                Stmt::Expr(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
                         .into_vec()
@@ -124,11 +121,11 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser(expression(meaningful_unit()))
+            parser(expr(fact()))
                 .parse(Graphemes::new("'a'; 'b'"))
                 .into_result(),
             Ok(Block::new(
-                Statement::Expr(
+                Stmt::Expr(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
                         .into_vec()
@@ -141,7 +138,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser(expression(meaningful_unit()))
+            parser(expr(fact()))
                 .parse(Graphemes::new("[]"))
                 .into_output_errors(),
             (
