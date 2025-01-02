@@ -58,6 +58,8 @@ where
         .ignored()
         .map_err(|e: Error| e.replace_expected(Expected::Semicolon));
 
+    let expr = expr.or(spanned(empty().map(|_| vec![])).map(Spanned::from));
+
     let stmt = choice((
         expr.clone().map(|i| i.map(Stmt::Expr)),
         spanned(assign(expr.clone()))
@@ -67,13 +69,14 @@ where
     .then_ignore(whitespace())
     .then_ignore(semicolon);
 
-    let expr = expr.or(spanned(empty().map(|_| vec![])).map(Spanned::from));
-
-    stmt.then_ignore(whitespace())
+    let content = stmt
+        .then_ignore(whitespace())
         .repeated()
         .collect()
         .then(expr)
-        .map(|(stmts, expr)| Block::new(stmts, expr))
+        .map(|(stmts, expr)| Block::new(stmts, expr));
+
+    whitespace().ignore_then(content).then_ignore(whitespace())
 }
 
 #[cfg(test)]
@@ -151,6 +154,7 @@ mod tests {
                         Expected::RawString,
                         Expected::Block,
                         Expected::Tuple,
+                        Expected::Semicolon,
                         Expected::Ident,
                         Expected::NegativeSpecial,
                         Expected::Eof,

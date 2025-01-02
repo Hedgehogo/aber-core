@@ -1,5 +1,5 @@
 use super::super::error::{Error, Expected};
-use super::{parser, whitespace::whitespace, GraphemeParser};
+use super::{parser, GraphemeParser};
 use crate::node::{wast::block::Block, Expr, Spanned};
 use chumsky::prelude::*;
 
@@ -18,9 +18,7 @@ where
         .map_err(move |e: Error| e.replace_expected(Expected::BlockClose))
         .recover_with(via_parser(empty()));
 
-    open.then(whitespace())
-        .ignore_then(parser(expr))
-        .then_ignore(whitespace().then(close))
+    open.ignore_then(parser(expr)).then_ignore(close)
 }
 
 #[cfg(test)]
@@ -61,6 +59,7 @@ mod tests {
                         Expected::Tuple,
                         Expected::Block,
                         Expected::BlockClose,
+                        Expected::Semicolon,
                         Expected::Ident,
                         Expected::NegativeSpecial,
                     ],
