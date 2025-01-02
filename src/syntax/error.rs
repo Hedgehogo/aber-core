@@ -145,6 +145,7 @@ fn merge_sorted_vec<T: PartialOrd>(
     first
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 

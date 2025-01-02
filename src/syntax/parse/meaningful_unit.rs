@@ -86,8 +86,8 @@ mod tests {
                 ),
                 vec![Error::new_expected(
                     Expected::CharClose,
-                    None,
-                    Span::new(2..2)
+                    Some(grapheme(":")),
+                    Span::new(2..3)
                 )]
             )
         );

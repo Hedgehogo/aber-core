@@ -154,7 +154,9 @@ mod tests {
                         Expected::RawString,
                         Expected::Block,
                         Expected::Tuple,
-                        Expected::Ident
+                        Expected::Ident,
+                        Expected::NegativeSpecial,
+                        Expected::Eof,
                     ],
                     Some(grapheme("[")),
                     Span::new(0..1)

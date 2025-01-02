@@ -8,8 +8,6 @@ use crate::node::{
     Expr, Spanned,
 };
 use chumsky::prelude::*;
-use chumsky::text::unicode::Grapheme;
-use text::Char;
 
 pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'input>> + Copy {
     let number_start = just("-").or_not().then(digit(Radix::DECIMAL));
@@ -17,11 +15,7 @@ pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'inpu
     let unit = whitespace()
         .at_least(1)
         .not()
-        .ignore_then(any().filter(|i: &&Grapheme| {
-            i.to_ascii()
-                .filter(|i| b".,;:'\"@(){}[]".contains(i))
-                .is_none()
-        }));
+        .ignore_then(none_of(".,;:'\"@(){}[]"));
 
     number_start
         .not()
@@ -38,9 +32,9 @@ pub fn call<'input, E>(
 where
     E: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
-    let generics = whitespace()
-        .ignore_then(spanned(generics(expression)))
-        .or(spanned(empty().map(|_| vec![])));
+    let generics = whitespace().ignore_then(spanned(
+        generics(expression).or_not().map(Option::unwrap_or_default),
+    ));
 
     spanned(ident())
         .map(Spanned::from)
@@ -54,6 +48,7 @@ mod tests {
 
     use super::super::{expression::expression, meaningful_unit::meaningful_unit};
     use crate::node::span::Span;
+    use smallvec::smallvec;
     use text::Graphemes;
 
     #[test]
@@ -111,7 +106,7 @@ mod tests {
                 vec![Error::new_expected(
                     Expected::Ident,
                     Some(grapheme("/")),
-                    Span::new(0..1)
+                    Span::new(0..7)
                 )]
             )
         );
@@ -148,13 +143,13 @@ mod tests {
             ))
         );
         assert_eq!(
-            ident()
+            call(expression(meaningful_unit()))
                 .parse(Graphemes::new("hello,[]"))
                 .into_output_errors(),
             (
                 None,
-                vec![Error::new_expected(
-                    Expected::Generics,
+                vec![Error::new(
+                    smallvec![Expected::Generics, Expected::Eof],
                     Some(grapheme(",")),
                     Span::new(5..6)
                 )]

@@ -103,7 +103,7 @@ mod tests {
             (
                 None,
                 vec![
-                    Error::new_expected(Expected::CharClose, None, Span::new(2..2)),
+                    Error::new_expected(Expected::CharClose, Some(grapheme("m")), Span::new(2..3)),
                     Error::new_expected(Expected::Eof, Some(grapheme("m")), Span::new(2..3)),
                 ]
             )
@@ -112,11 +112,7 @@ mod tests {
             character().parse(Graphemes::new("")).into_output_errors(),
             (
                 None,
-                vec![Error::new(
-                    smallvec![Expected::Char],
-                    None,
-                    Span::new(0..0)
-                )]
+                vec![Error::new(smallvec![Expected::Char], None, Span::new(0..0))]
             )
         );
     }

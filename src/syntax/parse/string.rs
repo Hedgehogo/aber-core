@@ -6,7 +6,6 @@ use text::{newline, Char, Grapheme, Graphemes};
 
 fn quote<'input>(expected: Expected) -> impl GraphemeParser<'input, (), Error<'input>> + Copy {
     just("\"")
-        .then_ignore(just("\"\"").not())
         .map_err(move |e: Error| e.replace_expected(expected))
         .ignored()
 }
@@ -63,12 +62,18 @@ pub fn string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> + 
 
     let recover_unit = newline().not().ignore_then(unit);
 
-    quote(Expected::String).ignore_then(
-        content(unit)
-            .then_ignore(quote(Expected::StringClose))
-            .then_ignore(separator())
-            .recover_with(via_parser(content(recover_unit))),
-    )
+    quote(Expected::String)
+        .ignore_then(
+            just("\"\"")
+                .not()
+                .map_err(|e: Error| e.replace_expected(Expected::String)),
+        )
+        .ignore_then(
+            content(unit)
+                .then_ignore(quote(Expected::StringClose))
+                .then_ignore(separator())
+                .recover_with(via_parser(content(recover_unit))),
+        )
 }
 
 #[cfg(test)]
@@ -169,11 +174,14 @@ mod tests {
             let input = r#""Hello Aber!""""#;
             assert_eq!(
                 string().parse(Graphemes::new(input)).into_result(),
-                Err(vec![Error::new_expected(
-                    Expected::NonZeroWhitespace,
-                    Some(grapheme("\"")),
-                    Span::new(12..13)
-                )])
+                Err(vec![
+                    Error::new_expected(
+                        Expected::NonZeroWhitespace,
+                        Some(grapheme("\"")),
+                        Span::new(13..14)
+                    ),
+                    Error::new_expected(Expected::Eof, Some(grapheme("\"")), Span::new(13..14))
+                ])
             );
         }
     }
