@@ -1,3 +1,5 @@
+//! Module that provides types to describe the compilation level that results in a weak abstract syntax tree (WAST).
+
 pub mod assign;
 pub mod block;
 pub mod call;
@@ -17,6 +19,7 @@ use negative_call::NegativeCall;
 use number::Number;
 use string::String;
 
+/// Type that describes a weak abstract syntax tree. In this case "weak" means that not all nestings can be explicitly resolved at this stage.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Wast<'input> {
     Number(Number<'input>),
@@ -32,12 +35,15 @@ pub enum Wast<'input> {
 }
 
 impl<'input> Wast<'input> {
+    /// Wraps in [`Node::Wast`].
     pub fn into_node(self) -> Node<'input> {
         self.into()
     }
-}
 
-impl<'input> Wast<'input> {
+    /// Wraps in [`Node::Wast`] and then in [`Spanned`].
+    /// 
+    /// # Arguments
+    /// * `span` Object of the type whose type is implements `Into<Span>`.
     pub fn into_spanned_node<S: Into<Span>>(self, span: S) -> Spanned<Node<'input>> {
         Spanned(self.into(), span.into())
     }
