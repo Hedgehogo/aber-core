@@ -8,7 +8,7 @@ use std::fmt;
 pub enum IdentError {}
 
 /// Type describing the syntactic construct *identifier*
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Ident<'input> {
     content: &'input str,
 }
