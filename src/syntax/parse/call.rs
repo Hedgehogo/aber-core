@@ -21,7 +21,13 @@ pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'inpu
         .not()
         .ignore_then(unit.repeated().at_least(1))
         .to_slice()
-        .filter(|i| i.as_str() != "=")
+        .try_map(|i, span| {
+            if i.as_str() != "=" {
+                Ok(i)
+            } else {
+                Err(Error::new_expected(Expected::ValidIdent, None, span.into()))
+            }
+        })
         .map_err(|e: Error| e.replace_expected(Expected::Ident))
         .map(|i| Ident::new(i.as_str()))
 }
@@ -30,13 +36,11 @@ pub fn call<'input, X>(expr: X) -> impl GraphemeParser<'input, Call<'input>, Err
 where
     X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
-    let generics = whitespace().ignore_then(spanned(
-        generics(expr).or_not().map(Option::unwrap_or_default),
-    ));
+    let generics = whitespace().ignore_then(spanned(generics(expr))).or_not();
 
     spanned(ident())
         .map(Spanned::from)
-        .then(generics.map(Spanned::from))
+        .then(generics.map(|i| i.map(Spanned::from)))
         .map(|(ident, generics)| Call::new(ident, generics))
 }
 
@@ -45,7 +49,7 @@ mod tests {
     use super::*;
 
     use super::super::{expr::expr, fact::fact};
-    use crate::node::span::Span;
+    use crate::node::span::{IntoSpanned, Span};
     use smallvec::smallvec;
     use text::Graphemes;
 
@@ -117,18 +121,15 @@ mod tests {
             call(expr(fact()))
                 .parse(Graphemes::new("hello"))
                 .into_result(),
-            Ok(Call::new(
-                (Ident::new("hello"), 0..5).into(),
-                (vec![], 5..5).into()
-            ))
+            Ok(Call::new((Ident::new("hello"), 0..5).into(), None))
         );
         assert_eq!(
             call(expr(fact()))
                 .parse(Graphemes::new("hello[]"))
                 .into_result(),
             Ok(Call::new(
-                (Ident::new("hello"), 0..5).into(),
-                (vec![], 5..7).into()
+                Ident::new("hello").into_spanned(0..5),
+                Some(vec![].into_spanned(5..7))
             ))
         );
         assert_eq!(
@@ -136,8 +137,8 @@ mod tests {
                 .parse(Graphemes::new("hello //hello\n []"))
                 .into_result(),
             Ok(Call::new(
-                (Ident::new("hello"), 0..5).into(),
-                (vec![], 15..17).into()
+                Ident::new("hello").into_spanned(0..5),
+                Some(vec![].into_spanned(15..17))
             ))
         );
         assert_eq!(

@@ -11,6 +11,11 @@ impl String {
     pub fn new(inner: std::string::String) -> Self {
         Self { inner }
     }
+
+    /// Creates a new `String`.
+    pub fn as_str(&self) -> &str {
+        self.inner.as_str()
+    }
 }
 
 impl<T: Into<std::string::String>> From<T> for String {

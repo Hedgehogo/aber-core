@@ -15,6 +15,7 @@ impl<'state, 'input> FunctionRef<'state, 'input> {
 
     fn unit(&self) -> &'state Function {
         let unit = self.state.get_unit(self.id).expect("Unit must exist");
+        
         match unit {
             Unit::Function(i) => i,
             _ => panic!("Unit was supposed to be a function"),
@@ -23,5 +24,9 @@ impl<'state, 'input> FunctionRef<'state, 'input> {
 
     pub fn argument_count(&self) -> Option<usize> {
         self.unit().arguments
+    }
+
+    pub fn id(&self) -> usize {
+        self.id
     }
 }

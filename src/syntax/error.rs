@@ -43,6 +43,7 @@ pub enum Expected {
     Comma,
     Semicolon,
     Ident,
+    ValidIdent,
     MethodSpecial,
     ChildSpecial,
     NegativeSpecial,

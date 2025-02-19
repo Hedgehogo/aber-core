@@ -1,5 +1,5 @@
 //! Module that provides types to describe the syntactic construct *call*.
-
+//!
 use super::super::span::Spanned;
 use super::ExprVec;
 use std::fmt;
@@ -25,6 +25,12 @@ impl<'input> Ident<'input> {
     }
 }
 
+impl<'input> Spanned<Ident<'input>> {
+    pub fn into_call(self) -> Call<'input> {
+        Call::new(self, None)
+    }
+}
+
 impl fmt::Debug for Ident<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.content)
@@ -35,12 +41,12 @@ impl fmt::Debug for Ident<'_> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Call<'input> {
     pub ident: Spanned<Ident<'input>>,
-    pub generics: Spanned<ExprVec<'input>>,
+    pub generics: Option<Spanned<ExprVec<'input>>>,
 }
 
 impl<'input> Call<'input> {
     /// Creates a new `Call`.
-    pub fn new(ident: Spanned<Ident<'input>>, generics: Spanned<ExprVec<'input>>) -> Self {
+    pub fn new(ident: Spanned<Ident<'input>>, generics: Option<Spanned<ExprVec<'input>>>) -> Self {
         Self { ident, generics }
     }
 }

@@ -22,8 +22,7 @@ impl<'input> State<'input> {
         self.units.get(id)
     }
 
-    pub fn get<'state>(&'state self, ident: Ident<'input>) -> Option<UnitRef<'state, 'input>> {
-        let id = self.idents.get(&ident).copied()?;
+    pub fn get<'state>(&'state self, id: usize) -> Option<UnitRef<'state, 'input>> {
         let unit = self.units.get(id)?;
 
         let unit_ref = match unit {
@@ -31,5 +30,10 @@ impl<'input> State<'input> {
         };
 
         Some(unit_ref)
+    }
+
+    pub fn find<'state>(&'state self, ident: Ident<'input>) -> Option<UnitRef<'state, 'input>> {
+        let id = self.idents.get(&ident).copied()?;
+        self.get(id)
     }
 }

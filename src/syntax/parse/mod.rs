@@ -58,13 +58,13 @@ where
         .ignored()
         .map_err(|e: Error| e.replace_expected(Expected::Semicolon));
 
-    let expr = expr.or(spanned(empty().map(|_| vec![])).map(Spanned::from));
+    let expr = expr.or(spanned(empty().map(|_| Expr::new())).map(Spanned::from));
 
     let stmt = choice((
-        expr.clone().map(|i| i.map(Stmt::Expr)),
         spanned(assign(expr.clone()))
             .map(Spanned::from)
             .map(|i| i.map(Stmt::Assign)),
+        expr.clone().map(|i| i.map(Stmt::Expr)),
     ))
     .then_ignore(whitespace())
     .then_ignore(semicolon);
@@ -84,6 +84,7 @@ mod tests {
     use super::*;
 
     use crate::node::span::IntoSpanned;
+    use crate::node::wast::assign::Assign;
     use crate::node::{span::Span, wast::Wast};
     use expr::expr;
     use fact::fact;
@@ -95,7 +96,10 @@ mod tests {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             parser(expr(fact())).parse(Graphemes::new("")).into_result(),
-            Ok(Block::new(vec![], vec![].into_spanned(0..0))),
+            Ok(Block::new(
+                vec![],
+                Expr::from_vec(vec![]).into_spanned(0..0)
+            )),
         );
         assert_eq!(
             parser(expr(fact()))
@@ -106,6 +110,7 @@ mod tests {
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
+                    .map(Expr::from_vec)
             )),
         );
         assert_eq!(
@@ -113,14 +118,14 @@ mod tests {
                 .parse(Graphemes::new("'a'; "))
                 .into_result(),
             Ok(Block::new(
-                Stmt::Expr(
+                Stmt::Expr(Expr::from_vec(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
                         .into_vec()
-                )
+                ))
                 .into_spanned(0..3)
                 .into_vec(),
-                vec![].into_spanned(5..5),
+                Expr::from_vec(vec![]).into_spanned(5..5),
             )),
         );
         assert_eq!(
@@ -128,16 +133,37 @@ mod tests {
                 .parse(Graphemes::new("'a'; 'b'"))
                 .into_result(),
             Ok(Block::new(
-                Stmt::Expr(
+                Stmt::Expr(Expr::from_vec(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
                         .into_vec()
-                )
+                ))
                 .into_spanned(0..3)
                 .into_vec(),
                 Wast::Character(grapheme("b").into())
                     .into_spanned_node(5..8)
-                    .into_spanned_vec(),
+                    .into_spanned_vec()
+                    .map(Expr::from_vec),
+            )),
+        );
+        assert_eq!(
+            parser(expr(fact()))
+                .parse(Graphemes::new("'a' = 'b';"))
+                .into_result(),
+            Ok(Block::new(
+                Stmt::Assign(Assign::new(
+                    Wast::Character(grapheme("a").into())
+                        .into_spanned_node(0..3)
+                        .into_spanned_vec()
+                        .map(Expr::from_vec),
+                    Wast::Character(grapheme("b").into())
+                        .into_spanned_node(6..9)
+                        .into_spanned_vec()
+                        .map(Expr::from_vec)
+                ))
+                .into_spanned(0..9)
+                .into_vec(),
+                Expr::new().into_spanned(10..10),
             )),
         );
         assert_eq!(
@@ -157,6 +183,7 @@ mod tests {
                         Expected::Semicolon,
                         Expected::Ident,
                         Expected::NegativeSpecial,
+                        Expected::AssignSpecial,
                         Expected::Eof,
                     ],
                     Some(grapheme("[")),

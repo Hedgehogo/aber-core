@@ -60,6 +60,7 @@ mod tests {
 
     use super::super::super::error::Expected;
     use super::super::{expr::expr, fact::fact};
+    use crate::node::span::IntoSpanned;
     use crate::node::{span::Span, wast::Wast};
     use smallvec::smallvec;
     use text::Graphemes;
@@ -100,20 +101,20 @@ mod tests {
             tuple(expr(fact()))
                 .parse(Graphemes::new("('a')"))
                 .into_result(),
-            Ok(vec![Spanned(
-                vec![Wast::Character(grapheme("a").into()).into_spanned_node(1..4)],
-                Span::new(1..4)
-            )]),
+            Ok(vec![Wast::Character(grapheme("a").into())
+                .into_spanned_node(1..4)
+                .into_spanned_vec()
+                .map(Expr::from_vec)]),
         );
         assert_eq!(
             tuple(expr(fact()))
                 .parse(Graphemes::new("('a'"))
                 .into_output_errors(),
             (
-                Some(vec![Spanned(
-                    vec![Wast::Character(grapheme("a").into()).into_spanned_node(1..4)],
-                    Span::new(1..4)
-                )]),
+                Some(vec![Wast::Character(grapheme("a").into())
+                    .into_spanned_node(1..4)
+                    .into_spanned_vec()
+                    .map(Expr::from_vec)]),
                 vec![Error::new(
                     smallvec![
                         Expected::Number,
@@ -139,36 +140,35 @@ mod tests {
             tuple(expr(fact()))
                 .parse(Graphemes::new("('a', )"))
                 .into_result(),
-            Ok(vec![Spanned(
-                vec![Wast::Character(grapheme("a").into()).into_spanned_node(1..4)],
-                Span::new(1..4)
-            )]),
+            Ok(vec![Wast::Character(grapheme("a").into())
+                .into_spanned_node(1..4)
+                .into_spanned_vec()
+                .map(Expr::from_vec)]),
         );
         assert_eq!(
             tuple(expr(fact()))
                 .parse(Graphemes::new("('a' 'b')"))
                 .into_result(),
-            Ok(vec![Spanned(
-                vec![
-                    Wast::Character(grapheme("a").into()).into_spanned_node(1..4),
-                    Wast::Character(grapheme("b").into()).into_spanned_node(5..8)
-                ],
-                Span::new(1..8)
-            )]),
+            Ok(vec![vec![
+                Wast::Character(grapheme("a").into()).into_spanned_node(1..4),
+                Wast::Character(grapheme("b").into()).into_spanned_node(5..8)
+            ]
+            .into_spanned(1..8)
+            .map(Expr::from_vec)]),
         );
         assert_eq!(
             tuple(expr(fact()))
                 .parse(Graphemes::new("('a', 'b')"))
                 .into_result(),
             Ok(vec![
-                Spanned(
-                    vec![Wast::Character(grapheme("a").into()).into_spanned_node(1..4)],
-                    Span::new(1..4)
-                ),
-                Spanned(
-                    vec![Wast::Character(grapheme("b").into()).into_spanned_node(6..9)],
-                    Span::new(6..9)
-                ),
+                Wast::Character(grapheme("a").into())
+                    .into_spanned_node(1..4)
+                    .into_spanned_vec()
+                    .map(Expr::from_vec),
+                Wast::Character(grapheme("b").into())
+                    .into_spanned_node(6..9)
+                    .into_spanned_vec()
+                    .map(Expr::from_vec),
             ]),
         );
         assert_eq!(

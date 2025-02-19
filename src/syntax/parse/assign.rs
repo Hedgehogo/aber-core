@@ -25,6 +25,8 @@ mod tests {
 
     use super::super::super::error::Expected;
     use super::super::{expr::expr, fact::fact};
+    use crate::node::span::IntoSpanned;
+    use crate::node::wast::call::Ident;
     use crate::node::{span::Span, wast::Wast};
     use smallvec::smallvec;
     use text::Graphemes;
@@ -39,10 +41,12 @@ mod tests {
             Ok(Assign::new(
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(0..3)
-                    .into_spanned_vec(),
+                    .into_spanned_vec()
+                    .map(Expr::from_vec),
                 Wast::Character(grapheme("b").into())
                     .into_spanned_node(6..9)
                     .into_spanned_vec()
+                    .map(Expr::from_vec)
             )),
         );
         assert_eq!(
@@ -66,6 +70,21 @@ mod tests {
                     Span::new(6..6)
                 )]
             )
+        );
+        assert_eq!(
+            assign(expr(fact()))
+                .parse(Graphemes::new("foo = bar"))
+                .into_result(),
+            Ok(Assign::new(
+                Wast::Call(Ident::new("foo").into_spanned(0..3).into_call())
+                    .into_spanned_node(0..3)
+                    .into_spanned_vec()
+                    .map(Expr::from_vec),
+                Wast::Call(Ident::new("bar").into_spanned(6..9).into_call())
+                    .into_spanned_node(6..9)
+                    .into_spanned_vec()
+                    .map(Expr::from_vec)
+            )),
         );
         assert_eq!(
             assign(expr(fact()))
