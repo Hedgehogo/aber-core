@@ -8,6 +8,7 @@ pub mod expr_call;
 pub mod negative_call;
 pub mod number;
 pub mod string;
+pub mod parser_output;
 
 use super::{span::Span, Expr, ExprVec, Node, Spanned};
 use assign::Assign;
