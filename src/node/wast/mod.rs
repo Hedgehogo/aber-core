@@ -116,3 +116,18 @@ where
 }
 
 impl<'input, N: ParserOutput<'input> + Eq> Eq for Wast<'input, N> where N::Expr: Eq {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WastNode<'input>(Wast<'input, Self>);
+
+impl<'input> ParserOutput<'input> for WastNode<'input> {
+    type Expr = Vec<Spanned<Self>>;
+
+    fn new_node(wast: Wast<'input, Self>) -> Self {
+        Self(wast)
+    }
+
+    fn new_expr(seq: Vec<Spanned<Self>>) -> Self::Expr {
+        seq
+    }
+}
