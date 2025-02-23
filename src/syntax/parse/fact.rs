@@ -1,13 +1,18 @@
 use super::super::error::{Error, Expected};
 use super::{
-    block::block, call::call, character::character, expr::expr, list::tuple,
-    number::number, raw_string::raw_string, spanned, string::string, whitespace::whitespace,
-    GraphemeParser,
+    block::block, call::call, character::character, expr::expr, list::tuple, number::number,
+    raw_string::raw_string, spanned, string::string, whitespace::whitespace, GraphemeParser,
 };
-use crate::node::{wast::Wast, Node, Spanned};
+use crate::node::{
+    wast::{parser_output::ParserOutput, Wast},
+    Spanned,
+};
 use chumsky::prelude::*;
 
-pub fn fact<'input>() -> impl GraphemeParser<'input, Spanned<Node<'input>>, Error<'input>> + Clone {
+pub fn fact<'input, N>() -> impl GraphemeParser<'input, Spanned<N>, Error<'input>> + Clone
+where
+    N: ParserOutput<'input> + 'input,
+{
     recursive(|fact| {
         let choice = choice((
             number().map(Wast::Number),
@@ -15,7 +20,7 @@ pub fn fact<'input>() -> impl GraphemeParser<'input, Spanned<Node<'input>>, Erro
             string().map(Wast::String),
             raw_string().map(Wast::String),
             call(expr(fact.clone())).map(Wast::Call),
-            tuple(expr(fact.clone())).map(Wast::Tuple),
+            tuple::<N, _>(expr(fact.clone())).map(Wast::Tuple),
             block(expr(fact)).map(Wast::Block),
         ));
 
@@ -23,7 +28,7 @@ pub fn fact<'input>() -> impl GraphemeParser<'input, Spanned<Node<'input>>, Erro
             .then(just(":").not())
             .map_err(|e: Error| e.replace_expected(Expected::PairSpecial));
 
-        spanned(choice.map(Node::Wast))
+        spanned(choice.map(N::new_node))
             .map(Spanned::from)
             .then(whitespace().ignore_then(pair_special).or_not())
             .map_with(|(i, pair), extra| match pair {
@@ -41,6 +46,7 @@ mod tests {
     use crate::node::{
         span::Span,
         wast::number::{Digits, Number, Radix},
+        Node,
     };
     use smallvec::smallvec;
     use text::Graphemes;
@@ -50,28 +56,32 @@ mod tests {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         let digits = |s| unsafe { Digits::from_str_unchecked(s) };
         assert_eq!(
-            fact().parse(Graphemes::new("10")).into_result(),
+            fact::<Node>().parse(Graphemes::new("10")).into_result(),
             Ok(
                 Wast::Number(Number::new(true, Radix::DECIMAL, digits("10"), None))
                     .into_spanned_node(0..2)
             )
         );
         assert_eq!(
-            fact().parse(Graphemes::new("'m'")).into_result(),
+            fact::<Node>().parse(Graphemes::new("'m'")).into_result(),
             Ok(Wast::Character(grapheme("m").into()).into_spanned_node(0..3))
         );
         assert_eq!(
-            fact().parse(Graphemes::new("\"Hello\"")).into_result(),
+            fact::<Node>()
+                .parse(Graphemes::new("\"Hello\""))
+                .into_result(),
             Ok(Wast::String("Hello".into()).into_spanned_node(0..7))
         );
         assert_eq!(
-            fact()
+            fact::<Node>()
                 .parse(Graphemes::new("\"\"\"\nHello\n\"\"\""))
                 .into_result(),
             Ok(Wast::String("Hello".into()).into_spanned_node(0..13))
         );
         assert_eq!(
-            fact().parse(Graphemes::new("'g:")).into_output_errors(),
+            fact::<Node>()
+                .parse(Graphemes::new("'g:"))
+                .into_output_errors(),
             (
                 Some(
                     Wast::Pair(Box::new(
@@ -87,7 +97,9 @@ mod tests {
             )
         );
         assert_eq!(
-            fact().parse(Graphemes::new(":")).into_output_errors(),
+            fact::<Node>()
+                .parse(Graphemes::new(":"))
+                .into_output_errors(),
             (
                 None,
                 vec![Error::new(

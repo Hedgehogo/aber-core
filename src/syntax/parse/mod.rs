@@ -12,8 +12,11 @@ pub mod whitespace;
 
 use super::error::{Error, Expected};
 use crate::node::{
-    wast::block::{Block, Stmt},
-    Expr, Spanned, Node
+    wast::{
+        block::{Block, Stmt},
+        parser_output::ParserOutput,
+    },
+    Spanned,
 };
 use assign::assign;
 use chumsky::{
@@ -48,17 +51,18 @@ where
     parser.map_with(|i, e| (i, e.span()))
 }
 
-pub fn parser<'input, X>(
+pub fn parser<'input, N, X>(
     expr: X,
-) -> impl GraphemeParser<'input, Block<'input, Node<'input>>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, Block<'input, N>, Error<'input>> + Clone
 where
-    X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
+    N: ParserOutput<'input>,
+    X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let semicolon = just(";")
         .ignored()
         .map_err(|e: Error| e.replace_expected(Expected::Semicolon));
 
-    let expr = expr.or(spanned(empty().map(|_| Expr::new())).map(Spanned::from));
+    let expr = expr.or(spanned(empty().map(|_| N::new_expr(vec![]))).map(Spanned::from));
 
     let stmt = choice((
         spanned(assign(expr.clone()))
@@ -83,9 +87,11 @@ where
 mod tests {
     use super::*;
 
-    use crate::node::span::IntoSpanned;
-    use crate::node::wast::assign::Assign;
-    use crate::node::{span::Span, wast::Wast};
+    use crate::node::{
+        span::{IntoSpanned, Span},
+        wast::{assign::Assign, Wast},
+        Expr, Node,
+    };
     use expr::expr;
     use fact::fact;
     use smallvec::smallvec;
@@ -95,14 +101,16 @@ mod tests {
     fn test_parser() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            parser(expr(fact())).parse(Graphemes::new("")).into_result(),
+            parser::<Node, _>(expr(fact::<Node>()))
+                .parse(Graphemes::new(""))
+                .into_result(),
             Ok(Block::new(
                 vec![],
                 Expr::from_vec(vec![]).into_spanned(0..0)
             )),
         );
         assert_eq!(
-            parser(expr(fact()))
+            parser::<Node, _>(expr(fact::<Node>()))
                 .parse(Graphemes::new("'a'"))
                 .into_result(),
             Ok(Block::new(
@@ -114,7 +122,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser(expr(fact()))
+            parser::<Node, _>(expr(fact::<Node>()))
                 .parse(Graphemes::new("'a'; "))
                 .into_result(),
             Ok(Block::new(
@@ -129,7 +137,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser(expr(fact()))
+            parser::<Node, _>(expr(fact::<Node>()))
                 .parse(Graphemes::new("'a'; 'b'"))
                 .into_result(),
             Ok(Block::new(
@@ -147,7 +155,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser(expr(fact()))
+            parser::<Node, _>(expr(fact::<Node>()))
                 .parse(Graphemes::new("'a' = 'b';"))
                 .into_result(),
             Ok(Block::new(
@@ -167,7 +175,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser(expr(fact()))
+            parser::<Node, _>(expr(fact::<Node>()))
                 .parse(Graphemes::new("[]"))
                 .into_output_errors(),
             (

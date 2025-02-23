@@ -10,7 +10,7 @@ pub mod number;
 pub mod parser_output;
 pub mod string;
 
-use super::{span::Span, Expr, ExprVec, Spanned};
+use super::{span::Span, ExprVec, Spanned};
 use assign::Assign;
 use block::Block;
 use call::Call;
@@ -118,7 +118,7 @@ where
 impl<'input, N: ParserOutput<'input> + Eq> Eq for Wast<'input, N> where N::Expr: Eq {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WastNode<'input>(Wast<'input, Self>);
+pub struct WastNode<'input>(pub Wast<'input, Self>);
 
 impl<'input> ParserOutput<'input> for WastNode<'input> {
     type Expr = Vec<Spanned<Self>>;

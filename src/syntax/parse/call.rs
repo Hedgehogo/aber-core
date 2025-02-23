@@ -4,8 +4,9 @@ use crate::node::{
     wast::{
         call::{Call, Ident},
         number::Radix,
+        parser_output::ParserOutput,
     },
-    Expr, Node, Spanned,
+    Spanned,
 };
 use chumsky::prelude::*;
 
@@ -32,13 +33,16 @@ pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'inpu
         .map(|i| Ident::new(i.as_str()))
 }
 
-pub fn call<'input, X>(
+pub fn call<'input, N, X>(
     expr: X,
-) -> impl GraphemeParser<'input, Call<'input, Node<'input>>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, Call<'input, N>, Error<'input>> + Clone
 where
-    X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
+    N: ParserOutput<'input>,
+    X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
-    let generics = whitespace().ignore_then(spanned(generics(expr))).or_not();
+    let generics = whitespace()
+        .ignore_then(spanned(generics::<N, _>(expr)))
+        .or_not();
 
     spanned(ident())
         .map(Spanned::from)
@@ -51,7 +55,10 @@ mod tests {
     use super::*;
 
     use super::super::{expr::expr, fact::fact};
-    use crate::node::span::{IntoSpanned, Span};
+    use crate::node::{
+        span::{IntoSpanned, Span},
+        Node,
+    };
     use smallvec::smallvec;
     use text::Graphemes;
 
@@ -120,13 +127,13 @@ mod tests {
     fn test_call() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            call(expr(fact()))
+            call::<Node, _>(expr(fact::<Node>()))
                 .parse(Graphemes::new("hello"))
                 .into_result(),
             Ok(Call::new((Ident::new("hello"), 0..5).into(), None))
         );
         assert_eq!(
-            call(expr(fact()))
+            call::<Node, _>(expr(fact::<Node>()))
                 .parse(Graphemes::new("hello[]"))
                 .into_result(),
             Ok(Call::new(
@@ -135,7 +142,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            call(expr(fact()))
+            call::<Node, _>(expr(fact::<Node>()))
                 .parse(Graphemes::new("hello //hello\n []"))
                 .into_result(),
             Ok(Call::new(
@@ -144,7 +151,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            call(expr(fact()))
+            call::<Node, _>(expr(fact::<Node>()))
                 .parse(Graphemes::new("hello,[]"))
                 .into_output_errors(),
             (
