@@ -35,7 +35,7 @@ where
         let child_special = expr_call("::", Expected::ChildSpecial);
         let whitespace = whitespace().then_ignore(choice((just("."), just("::"))).not());
 
-        let into_atom = move |wast: Wast<'input>, span: SimpleSpan| {
+        let into_atom = move |wast: Wast<'input, Node<'input>>, span: SimpleSpan| {
             Spanned(
                 vec![Spanned(wast.into_node(), Span::from(span))],
                 Span::from(span),

@@ -1,17 +1,17 @@
 //! Module that provides [`ExprCall`].
 
-use super::{call::Call, Expr, Spanned};
+use super::{call::Call, parser_output::ParserOutput, Spanned};
 
 /// Type describing syntactic constructs *method call* and *child call*.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExprCall<'input> {
-    pub expr: Spanned<Expr<'input>>,
-    pub call: Spanned<Call<'input>>,
+pub struct ExprCall<'input, N: ParserOutput<'input>> {
+    pub expr: Spanned<N::Expr>,
+    pub call: Spanned<Call<'input, N>>,
 }
 
-impl<'input> ExprCall<'input> {
+impl<'input, N: ParserOutput<'input>> ExprCall<'input, N> {
     /// Creates a new `ExprCall`.
-    pub fn new(expr: Spanned<Expr<'input>>, call: Spanned<Call<'input>>) -> Self {
+    pub fn new(expr: Spanned<N::Expr>, call: Spanned<Call<'input, N>>) -> Self {
         Self { expr, call }
     }
 }

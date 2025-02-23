@@ -1,11 +1,11 @@
 use super::super::error::{Error, Expected};
 use super::{parser, GraphemeParser};
-use crate::node::{wast::block::Block, Expr, Spanned};
+use crate::node::{wast::block::Block, Expr, Spanned, Node};
 use chumsky::prelude::*;
 
 pub fn block<'input, X>(
     expr: X,
-) -> impl GraphemeParser<'input, Block<'input>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, Block<'input, Node<'input>>, Error<'input>> + Clone
 where
     X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {

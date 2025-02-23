@@ -1,13 +1,13 @@
 use super::super::error::{Error, Expected};
 use super::{whitespace::whitespace, GraphemeParser};
-use crate::node::{Expr, ExprVec, Spanned};
+use crate::node::{Expr, ExprVec, Spanned, Node};
 use chumsky::prelude::*;
 
 fn list<'input, X>(
     expr: X,
     open: (&'static str, Expected),
     close: (&'static str, Expected),
-) -> impl GraphemeParser<'input, ExprVec<'input>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, ExprVec<'input, Node<'input>>, Error<'input>> + Clone
 where
     X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
@@ -34,7 +34,7 @@ where
 
 pub fn tuple<'input, X>(
     expr: X,
-) -> impl GraphemeParser<'input, ExprVec<'input>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, ExprVec<'input, Node<'input>>, Error<'input>> + Clone
 where
     X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {
@@ -43,7 +43,7 @@ where
 
 pub fn generics<'input, X>(
     expr: X,
-) -> impl GraphemeParser<'input, ExprVec<'input>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, ExprVec<'input, Node<'input>>, Error<'input>> + Clone
 where
     X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {

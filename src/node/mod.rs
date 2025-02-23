@@ -16,14 +16,14 @@ pub use wast::Wast;
 /// Type describing compilation units of any level.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Node<'input> {
-    Wast(Wast<'input>),
+    Wast(Wast<'input, Self>),
     Hir(Hir<'input>),
 }
 
 impl<'input> ParserOutput<'input> for Node<'input> {
     type Expr = Expr<'input>;
 
-    fn new_node(wast: Wast<'input>) -> Self {
+    fn new_node(wast: Wast<'input, Self>) -> Self {
         Self::Wast(wast)
     }
 

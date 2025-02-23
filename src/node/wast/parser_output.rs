@@ -12,7 +12,7 @@ pub trait ParserOutput<'input>: Sized {
     /// 
     /// # Arguments
     /// - `wast` WAST fact.
-    fn new_node(wast: Wast<'input>) -> Self;
+    fn new_node(wast: Wast<'input, Self>) -> Self;
 
     /// Creates an expression from a sequence of WAST facts.
     /// 

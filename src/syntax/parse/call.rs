@@ -5,7 +5,7 @@ use crate::node::{
         call::{Call, Ident},
         number::Radix,
     },
-    Expr, Spanned,
+    Expr, Node, Spanned,
 };
 use chumsky::prelude::*;
 
@@ -32,7 +32,9 @@ pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'inpu
         .map(|i| Ident::new(i.as_str()))
 }
 
-pub fn call<'input, X>(expr: X) -> impl GraphemeParser<'input, Call<'input>, Error<'input>> + Clone
+pub fn call<'input, X>(
+    expr: X,
+) -> impl GraphemeParser<'input, Call<'input, Node<'input>>, Error<'input>> + Clone
 where
     X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {

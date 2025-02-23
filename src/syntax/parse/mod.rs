@@ -13,7 +13,7 @@ pub mod whitespace;
 use super::error::{Error, Expected};
 use crate::node::{
     wast::block::{Block, Stmt},
-    Expr, Spanned,
+    Expr, Spanned, Node
 };
 use assign::assign;
 use chumsky::{
@@ -50,7 +50,7 @@ where
 
 pub fn parser<'input, X>(
     expr: X,
-) -> impl GraphemeParser<'input, Block<'input>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, Block<'input, Node<'input>>, Error<'input>> + Clone
 where
     X: GraphemeParser<'input, Spanned<Expr<'input>>, Error<'input>> + Clone,
 {

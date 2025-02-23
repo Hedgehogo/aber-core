@@ -1,13 +1,12 @@
 //! Module that provides types for describing expressions
 
-use super::Node;
-use super::span::Spanned;
+use super::{span::Spanned, wast::parser_output::ParserOutput, Node};
 
 /// Type that describes an expression.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr<'input> {
     Wast(Vec<Spanned<Node<'input>>>),
-    Hir(Box<Spanned<Node<'input>>>)
+    Hir(Box<Spanned<Node<'input>>>),
 }
 
 impl<'input> Expr<'input> {
@@ -27,4 +26,4 @@ impl<'input> From<Vec<Spanned<Node<'input>>>> for Expr<'input> {
 }
 
 /// Type that describes a sequence of expressions.
-pub type ExprVec<'input> = Vec<Spanned<Expr<'input>>>;
+pub type ExprVec<'input, N> = Vec<Spanned<<N as ParserOutput<'input>>::Expr>>;
