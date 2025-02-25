@@ -57,7 +57,7 @@ mod tests {
     use super::super::{expr::expr, fact::fact};
     use crate::node::{
         span::{IntoSpanned, Span},
-        Node,
+        CompNode,
     };
     use smallvec::smallvec;
     use text::Graphemes;
@@ -127,13 +127,13 @@ mod tests {
     fn test_call() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            call::<Node, _>(expr(fact::<Node>()))
+            call::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello"))
                 .into_result(),
             Ok(Call::new((Ident::new("hello"), 0..5).into(), None))
         );
         assert_eq!(
-            call::<Node, _>(expr(fact::<Node>()))
+            call::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello[]"))
                 .into_result(),
             Ok(Call::new(
@@ -142,7 +142,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            call::<Node, _>(expr(fact::<Node>()))
+            call::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello //hello\n []"))
                 .into_result(),
             Ok(Call::new(
@@ -151,7 +151,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            call::<Node, _>(expr(fact::<Node>()))
+            call::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello,[]"))
                 .into_output_errors(),
             (

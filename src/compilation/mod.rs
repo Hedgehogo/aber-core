@@ -6,18 +6,18 @@ use crate::node::{
     hir::{call::Call, pair::Pair},
     span::IntoSpanned,
     state::{unit_ref::UnitRef, State},
-    Expr, Hir, Node, Spanned, Wast,
+    CompExpr, Hir, CompNode, Spanned, Wast,
 };
 
 pub fn to_hir_expr_recursive<'input, 'expr>(
     state: &mut State,
-    expr: &'expr [Spanned<Node<'input>>],
-) -> Result<(Spanned<Node<'input>>, &'expr [Spanned<Node<'input>>]), ()> {
+    expr: &'expr [Spanned<CompNode<'input>>],
+) -> Result<(Spanned<CompNode<'input>>, &'expr [Spanned<CompNode<'input>>]), ()> {
     let Spanned(node, node_span) = expr.get(0).ok_or(())?;
     let (_, mut rest) = expr.split_at(0);
 
     match node {
-        Node::Wast(Wast::Call(call)) => {
+        CompNode::Wast(Wast::Call(call)) => {
             let Spanned(ident, mut span) = call.ident.clone();
 
             let function = match state.find(ident).ok_or(())? {
@@ -36,16 +36,16 @@ pub fn to_hir_expr_recursive<'input, 'expr>(
                 rest = expr;
             }
 
-            let node = Node::Hir(Hir::Call(Call::new(id, result)));
+            let node = CompNode::Hir(Hir::Call(Call::new(id, result)));
             Ok((node.into_spanned(span), rest))
         }
 
-        Node::Wast(Wast::Pair(pair)) => {
+        CompNode::Wast(Wast::Pair(pair)) => {
             let (right, rest) = to_hir_expr_recursive(state, rest)?;
             let left_node = to_hir(state, (**pair).clone().0)?;
             let left = left_node.into_spanned((*pair).1.clone());
             let span = left.1.start()..right.1.end();
-            let node = Node::Hir(Hir::Pair(Pair::new(Box::new(left), Box::new(right))));
+            let node = CompNode::Hir(Hir::Pair(Pair::new(Box::new(left), Box::new(right))));
 
             Ok((node.into_spanned(span), rest))
         }
@@ -59,25 +59,25 @@ pub fn to_hir_expr_recursive<'input, 'expr>(
 
 pub fn to_hir_expr<'input, 'expr>(
     state: &mut State,
-    expr: &'expr [Spanned<Node<'input>>],
-) -> Result<Node<'input>, ()> {
+    expr: &'expr [Spanned<CompNode<'input>>],
+) -> Result<CompNode<'input>, ()> {
     match expr.get(0) {
         Some(_) => to_hir_expr_recursive(state, expr).map(|(i, _)| i.0),
-        None => Ok(Node::Hir(Hir::Nil)),
+        None => Ok(CompNode::Hir(Hir::Nil)),
     }
 }
 
-pub fn to_hir<'input>(state: &mut State, node: Node<'input>) -> Result<Node<'input>, ()> {
+pub fn to_hir<'input>(state: &mut State, node: CompNode<'input>) -> Result<CompNode<'input>, ()> {
     match node {
-        Node::Wast(wast) => match wast {
+        CompNode::Wast(wast) => match wast {
             Wast::Tuple(mut tuple) => {
                 for Spanned(expr, span) in &mut tuple {
-                    if let Expr::Wast(i) = expr {
+                    if let CompExpr::Wast(i) = expr {
                         *expr = to_hir_expr(state, i.as_slice())
-                            .map(|i| Expr::Hir(Box::new(i.into_spanned(span.clone()))))?;
+                            .map(|i| CompExpr::Hir(Box::new(i.into_spanned(span.clone()))))?;
                     }
                 }
-                Ok(Node::Wast(Wast::Tuple(tuple)))
+                Ok(CompNode::Wast(Wast::Tuple(tuple)))
             }
 
             Wast::Block(block) => todo!(),
@@ -92,9 +92,9 @@ pub fn to_hir<'input>(state: &mut State, node: Node<'input>) -> Result<Node<'inp
 
             Wast::Call(_) => panic!("Call can't exist in this context"),
 
-            i => Ok(Node::Wast(i)),
+            i => Ok(CompNode::Wast(i)),
         },
 
-        Node::Hir(hir) => Ok(Node::Hir(hir)),
+        CompNode::Hir(hir) => Ok(CompNode::Hir(hir)),
     }
 }

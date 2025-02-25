@@ -1,14 +1,14 @@
 use super::super::state::{State, unit_ref::{UnitRef, FunctionRef}};
-use super::super::super::node::{Node, Spanned};
+use super::super::super::node::{CompNode, Spanned};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Call<'input> {
     id: usize,
-    args: Vec<Spanned<Node<'input>>>,
+    args: Vec<Spanned<CompNode<'input>>>,
 }
 
 impl<'input> Call<'input> {
-    pub fn new(id: usize, args: Vec<Spanned<Node<'input>>>) -> Self {
+    pub fn new(id: usize, args: Vec<Spanned<CompNode<'input>>>) -> Self {
         Self { id, args }
     }
 

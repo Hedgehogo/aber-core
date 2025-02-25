@@ -8,26 +8,26 @@ pub mod wast;
 
 use wast::parser_output::ParserOutput;
 
-pub use expr::{Expr, ExprVec};
+pub use expr::{CompExpr, ExprVec};
 pub use hir::Hir;
 pub use span::Spanned;
 pub use wast::Wast;
 
 /// Type describing compilation units of any level.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Node<'input> {
+pub enum CompNode<'input> {
     Wast(Wast<'input, Self>),
     Hir(Hir<'input>),
 }
 
-impl<'input> ParserOutput<'input> for Node<'input> {
-    type Expr = Expr<'input>;
+impl<'input> ParserOutput<'input> for CompNode<'input> {
+    type Expr = CompExpr<'input>;
 
     fn new_node(wast: Wast<'input, Self>) -> Self {
         Self::Wast(wast)
     }
 
     fn new_expr(seq: Vec<Spanned<Self>>) -> Self::Expr {
-        Expr::from_vec(seq)
+        CompExpr::from_vec(seq)
     }
 }

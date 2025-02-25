@@ -46,7 +46,7 @@ mod tests {
     use crate::node::{
         span::Span,
         wast::number::{Digits, Number, Radix},
-        Node,
+        CompNode,
     };
     use smallvec::smallvec;
     use text::Graphemes;
@@ -56,30 +56,30 @@ mod tests {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         let digits = |s| unsafe { Digits::from_str_unchecked(s) };
         assert_eq!(
-            fact::<Node>().parse(Graphemes::new("10")).into_result(),
+            fact::<CompNode>().parse(Graphemes::new("10")).into_result(),
             Ok(
                 Wast::Number(Number::new(true, Radix::DECIMAL, digits("10"), None))
                     .into_spanned_node(0..2)
             )
         );
         assert_eq!(
-            fact::<Node>().parse(Graphemes::new("'m'")).into_result(),
+            fact::<CompNode>().parse(Graphemes::new("'m'")).into_result(),
             Ok(Wast::Character(grapheme("m").into()).into_spanned_node(0..3))
         );
         assert_eq!(
-            fact::<Node>()
+            fact::<CompNode>()
                 .parse(Graphemes::new("\"Hello\""))
                 .into_result(),
             Ok(Wast::String("Hello".into()).into_spanned_node(0..7))
         );
         assert_eq!(
-            fact::<Node>()
+            fact::<CompNode>()
                 .parse(Graphemes::new("\"\"\"\nHello\n\"\"\""))
                 .into_result(),
             Ok(Wast::String("Hello".into()).into_spanned_node(0..13))
         );
         assert_eq!(
-            fact::<Node>()
+            fact::<CompNode>()
                 .parse(Graphemes::new("'g:"))
                 .into_output_errors(),
             (
@@ -97,7 +97,7 @@ mod tests {
             )
         );
         assert_eq!(
-            fact::<Node>()
+            fact::<CompNode>()
                 .parse(Graphemes::new(":"))
                 .into_output_errors(),
             (

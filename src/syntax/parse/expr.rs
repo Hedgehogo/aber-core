@@ -84,7 +84,7 @@ mod tests {
     use crate::node::{
         span::{IntoSpanned, Span},
         wast::{call::Ident, Wast},
-        Expr, Node,
+        CompExpr, CompNode,
     };
     use text::Graphemes;
 
@@ -101,23 +101,23 @@ mod tests {
     fn test_expr() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            expr(fact::<Node>())
+            expr(fact::<CompNode>())
                 .parse(Graphemes::new("'a'"))
                 .into_result(),
             Ok(Wast::Character(grapheme("a").into())
                 .into_spanned_node(0..3)
                 .into_spanned_vec()
-                .map(Expr::from_vec))
+                .map(CompExpr::from_vec))
         );
         assert_eq!(
-            expr(fact::<Node>())
+            expr(fact::<CompNode>())
                 .parse(Graphemes::new("'a'.foo"))
                 .into_result(),
             Ok(Wast::MethodCall(ExprCall::new(
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
-                    .map(Expr::from_vec),
+                    .map(CompExpr::from_vec),
                 Ident::new("foo")
                     .into_spanned(4..7)
                     .into_call()
@@ -125,17 +125,17 @@ mod tests {
             ))
             .into_spanned_node(0..7)
             .into_spanned_vec()
-            .map(Expr::from_vec)),
+            .map(CompExpr::from_vec)),
         );
         assert_eq!(
-            expr(fact::<Node>())
+            expr(fact::<CompNode>())
                 .parse(Graphemes::new("'a'::foo"))
                 .into_result(),
             Ok(Wast::ChildCall(ExprCall::new(
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
-                    .map(Expr::from_vec),
+                    .map(CompExpr::from_vec),
                 Ident::new("foo")
                     .into_spanned(5..8)
                     .into_call()
@@ -143,10 +143,10 @@ mod tests {
             ))
             .into_spanned_node(0..8)
             .into_spanned_vec()
-            .map(Expr::from_vec)),
+            .map(CompExpr::from_vec)),
         );
         assert_eq!(
-            expr(fact::<Node>())
+            expr(fact::<CompNode>())
                 .parse(Graphemes::new("'a'.foo::bar"))
                 .into_result(),
             Ok(Wast::ChildCall(ExprCall::new(
@@ -154,7 +154,7 @@ mod tests {
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
                         .into_spanned_vec()
-                        .map(Expr::from_vec),
+                        .map(CompExpr::from_vec),
                     Ident::new("foo")
                         .into_spanned(4..7)
                         .into_call()
@@ -162,7 +162,7 @@ mod tests {
                 ))
                 .into_spanned_node(0..7)
                 .into_spanned_vec()
-                .map(Expr::from_vec),
+                .map(CompExpr::from_vec),
                 Ident::new("bar")
                     .into_spanned(9..12)
                     .into_call()
@@ -170,10 +170,10 @@ mod tests {
             ))
             .into_spanned_node(0..12)
             .into_spanned_vec()
-            .map(Expr::from_vec)),
+            .map(CompExpr::from_vec)),
         );
         assert_eq!(
-            expr(fact::<Node>())
+            expr(fact::<CompNode>())
                 .parse(Graphemes::new("'a'::foo.bar"))
                 .into_result(),
             Ok(Wast::MethodCall(ExprCall::new(
@@ -181,7 +181,7 @@ mod tests {
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
                         .into_spanned_vec()
-                        .map(Expr::from_vec),
+                        .map(CompExpr::from_vec),
                     Ident::new("foo")
                         .into_spanned(5..8)
                         .into_call()
@@ -189,7 +189,7 @@ mod tests {
                 ))
                 .into_spanned_node(0..8)
                 .into_spanned_vec()
-                .map(Expr::from_vec),
+                .map(CompExpr::from_vec),
                 Ident::new("bar")
                     .into_spanned(9..12)
                     .into_call()
@@ -197,15 +197,15 @@ mod tests {
             ))
             .into_spanned_node(0..12)
             .into_spanned_vec()
-            .map(Expr::from_vec)),
+            .map(CompExpr::from_vec)),
         );
         assert_eq!(
-            expr(fact::<Node>())
+            expr(fact::<CompNode>())
                 .parse(Graphemes::new("@'a''b'::foo"))
                 .into_result(),
             Ok(Wast::ChildCall(ExprCall::new(
                 Wast::NegativeCall(NegativeCall::new(
-                    Expr::from_vec(vec![
+                    CompExpr::from_vec(vec![
                         Wast::Character(grapheme("a").into()).into_spanned_node(1..4),
                         Wast::Character(grapheme("b").into()).into_spanned_node(4..7),
                     ])
@@ -213,7 +213,7 @@ mod tests {
                 ))
                 .into_spanned_node(0..7)
                 .into_spanned_vec()
-                .map(Expr::from_vec),
+                .map(CompExpr::from_vec),
                 Ident::new("foo")
                     .into_spanned(9..12)
                     .into_call()
@@ -221,10 +221,10 @@ mod tests {
             ))
             .into_spanned_node(0..12)
             .into_spanned_vec()
-            .map(Expr::from_vec)),
+            .map(CompExpr::from_vec)),
         );
         assert_eq!(
-            expr(fact::<Node>())
+            expr(fact::<CompNode>())
                 .parse(Graphemes::new("\"hello\" //hello\n 'h"))
                 .into_output_errors(),
             (
@@ -234,7 +234,7 @@ mod tests {
                         Wast::Character(grapheme("h").into()).into_spanned_node(17..19),
                     ]
                     .into_spanned(0..19)
-                    .map(Expr::from_vec)
+                    .map(CompExpr::from_vec)
                 ),
                 vec![Error::new_expected(
                     Expected::CharClose,

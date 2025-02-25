@@ -32,7 +32,7 @@ mod tests {
     use crate::node::{
         span::{IntoSpanned, Span},
         wast::{call::Ident, Wast},
-        Expr, Node,
+        CompExpr, CompNode,
     };
     use smallvec::smallvec;
     use text::Graphemes;
@@ -41,22 +41,22 @@ mod tests {
     fn test_assign() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            assign::<Node, _>(expr(fact::<Node>()))
+            assign::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("'a' = 'b'"))
                 .into_result(),
             Ok(Assign::new(
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
-                    .map(Expr::from_vec),
+                    .map(CompExpr::from_vec),
                 Wast::Character(grapheme("b").into())
                     .into_spanned_node(6..9)
                     .into_spanned_vec()
-                    .map(Expr::from_vec)
+                    .map(CompExpr::from_vec)
             )),
         );
         assert_eq!(
-            assign::<Node, _>(expr(fact::<Node>()))
+            assign::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("'a' = "))
                 .into_output_errors(),
             (
@@ -78,22 +78,22 @@ mod tests {
             )
         );
         assert_eq!(
-            assign::<Node, _>(expr(fact::<Node>()))
+            assign::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("foo = bar"))
                 .into_result(),
             Ok(Assign::new(
                 Wast::Call(Ident::new("foo").into_spanned(0..3).into_call())
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
-                    .map(Expr::from_vec),
+                    .map(CompExpr::from_vec),
                 Wast::Call(Ident::new("bar").into_spanned(6..9).into_call())
                     .into_spanned_node(6..9)
                     .into_spanned_vec()
-                    .map(Expr::from_vec)
+                    .map(CompExpr::from_vec)
             )),
         );
         assert_eq!(
-            assign::<Node, _>(expr(fact::<Node>()))
+            assign::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new(""))
                 .into_output_errors(),
             (

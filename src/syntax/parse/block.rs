@@ -35,7 +35,7 @@ mod tests {
     use crate::node::{
         span::Span,
         wast::{block::Stmt, Wast},
-        Expr, Node,
+        CompExpr, CompNode,
     };
     use smallvec::smallvec;
     use text::Graphemes;
@@ -44,22 +44,22 @@ mod tests {
     fn test_block() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            block::<Node, _>(expr(fact::<Node>()))
+            block::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("{}"))
                 .into_result(),
             Ok(Block::new(
                 vec![],
-                Expr::from_vec(vec![]).into_spanned(1..1)
+                CompExpr::from_vec(vec![]).into_spanned(1..1)
             )),
         );
         assert_eq!(
-            block::<Node, _>(expr(fact::<Node>()))
+            block::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("{"))
                 .into_output_errors(),
             (
                 Some(Block::new(
                     vec![],
-                    Expr::from_vec(vec![]).into_spanned(1..1)
+                    CompExpr::from_vec(vec![]).into_spanned(1..1)
                 )),
                 vec![Error::new(
                     smallvec![
@@ -81,7 +81,7 @@ mod tests {
             )
         );
         assert_eq!(
-            block::<Node, _>(expr(fact::<Node>()))
+            block::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("{'a'}"))
                 .into_result(),
             Ok(Block::new(
@@ -89,11 +89,11 @@ mod tests {
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(1..4)
                     .into_spanned_vec()
-                    .map(Expr::from_vec)
+                    .map(CompExpr::from_vec)
             )),
         );
         assert_eq!(
-            block::<Node, _>(expr(fact::<Node>()))
+            block::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("{'a'"))
                 .into_output_errors(),
             (
@@ -102,7 +102,7 @@ mod tests {
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(1..4)
                         .into_spanned_vec()
-                        .map(Expr::from_vec)
+                        .map(CompExpr::from_vec)
                 )),
                 vec![Error::new(
                     smallvec![
@@ -125,26 +125,26 @@ mod tests {
             )
         );
         assert_eq!(
-            block::<Node, _>(expr(fact::<Node>()))
+            block::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("{'a'; }"))
                 .into_result(),
             Ok(Block::new(
-                Stmt::Expr(Expr::from_vec(
+                Stmt::Expr(CompExpr::from_vec(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(1..4)
                         .into_vec()
                 ))
                 .into_spanned(1..4)
                 .into_vec(),
-                Expr::from_vec(vec![]).into_spanned(6..6),
+                CompExpr::from_vec(vec![]).into_spanned(6..6),
             )),
         );
         assert_eq!(
-            block::<Node, _>(expr(fact::<Node>()))
+            block::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("{'a'; 'b'}"))
                 .into_result(),
             Ok(Block::new(
-                Stmt::Expr(Expr::from_vec(
+                Stmt::Expr(CompExpr::from_vec(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(1..4)
                         .into_vec()
@@ -154,11 +154,11 @@ mod tests {
                 Wast::Character(grapheme("b").into())
                     .into_spanned_node(6..9)
                     .into_spanned_vec()
-                    .map(Expr::from_vec),
+                    .map(CompExpr::from_vec),
             )),
         );
         assert_eq!(
-            block::<Node, _>(expr(fact::<Node>()))
+            block::<CompNode, _>(expr(fact::<CompNode>()))
                 .parse(Graphemes::new(""))
                 .into_output_errors(),
             (
