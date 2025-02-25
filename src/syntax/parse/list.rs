@@ -1,6 +1,6 @@
 use super::super::error::{Error, Expected};
 use super::{whitespace::whitespace, GraphemeParser};
-use crate::node::{wast::parser_output::ParserOutput, ExprVec, Spanned};
+use crate::node::{Node, ExprVec, Spanned};
 use chumsky::prelude::*;
 
 fn list<'input, N, X>(
@@ -9,7 +9,7 @@ fn list<'input, N, X>(
     close: (&'static str, Expected),
 ) -> impl GraphemeParser<'input, ExprVec<'input, N>, Error<'input>> + Clone
 where
-    N: ParserOutput<'input>,
+    N: Node<'input>,
     X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let open = just(open.0)
@@ -37,7 +37,7 @@ pub fn tuple<'input, N, X>(
     expr: X,
 ) -> impl GraphemeParser<'input, ExprVec<'input, N>, Error<'input>> + Clone
 where
-    N: ParserOutput<'input>,
+    N: Node<'input>,
     X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     list::<N, _>(expr, ("(", Expected::Tuple), (")", Expected::TupleClose))
@@ -47,7 +47,7 @@ pub fn generics<'input, N, X>(
     expr: X,
 ) -> impl GraphemeParser<'input, ExprVec<'input, N>, Error<'input>> + Clone
 where
-    N: ParserOutput<'input>,
+    N: Node<'input>,
     X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     list::<N, _>(

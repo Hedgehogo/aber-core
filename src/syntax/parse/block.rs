@@ -1,16 +1,13 @@
 use super::super::error::{Error, Expected};
 use super::{parser, GraphemeParser};
-use crate::node::{
-    wast::{block::Block, parser_output::ParserOutput},
-    Spanned,
-};
+use crate::node::{wast::block::Block, Node, Spanned};
 use chumsky::prelude::*;
 
 pub fn block<'input, N, X>(
     expr: X,
 ) -> impl GraphemeParser<'input, Block<'input, N>, Error<'input>> + Clone
 where
-    N: ParserOutput<'input>,
+    N: Node<'input>,
     X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let open = just("{")

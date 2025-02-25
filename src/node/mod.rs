@@ -1,33 +1,34 @@
 //! Module providing types for describing different levels of compilation.
 
-pub mod expr;
+pub mod comp_expr;
+pub mod comp_node;
 pub mod hir;
 pub mod span;
 pub mod state;
 pub mod wast;
 
-use wast::parser_output::ParserOutput;
-
-pub use expr::{CompExpr, ExprVec};
+pub use comp_expr::{CompExpr, ExprVec};
+pub use comp_node::CompNode;
 pub use hir::Hir;
 pub use span::Spanned;
 pub use wast::Wast;
 
-/// Type describing compilation units of any level.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CompNode<'input> {
-    Wast(Wast<'input, Self>),
-    Hir(Hir<'input>),
-}
+/// Trait realized by the types that the [`fact`](`crate::syntax::parse::fact`) function can 
+/// return. It is intended to avoid unnecessary conversion of the returned type into a type with a 
+/// larger set of values.
+pub trait Node<'input>: Sized {
+    /// Type describing the expression.
+    type Expr: Sized;
 
-impl<'input> ParserOutput<'input> for CompNode<'input> {
-    type Expr = CompExpr<'input>;
+    /// Creates a node from WAST fact.
+    /// 
+    /// # Arguments
+    /// - `wast` WAST fact.
+    fn new_node(wast: Wast<'input, Self>) -> Self;
 
-    fn new_node(wast: Wast<'input, Self>) -> Self {
-        Self::Wast(wast)
-    }
-
-    fn new_expr(seq: Vec<Spanned<Self>>) -> Self::Expr {
-        CompExpr::from_vec(seq)
-    }
+    /// Creates an expression from a sequence of WAST facts.
+    /// 
+    /// # Arguments
+    /// - `seq` WAST fact sequence with spans.
+    fn new_expr(seq: Vec<Spanned<Self>>) -> Self::Expr;
 }

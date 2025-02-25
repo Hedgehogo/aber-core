@@ -12,11 +12,8 @@ pub mod whitespace;
 
 use super::error::{Error, Expected};
 use crate::node::{
-    wast::{
-        block::{Block, Stmt},
-        parser_output::ParserOutput,
-    },
-    Spanned,
+    wast::block::{Block, Stmt},
+    Node, Spanned,
 };
 use assign::assign;
 use chumsky::{
@@ -55,7 +52,7 @@ pub fn parser<'input, N, X>(
     expr: X,
 ) -> impl GraphemeParser<'input, Block<'input, N>, Error<'input>> + Clone
 where
-    N: ParserOutput<'input>,
+    N: Node<'input>,
     X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let semicolon = just(";")

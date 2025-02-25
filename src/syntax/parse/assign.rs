@@ -1,16 +1,13 @@
 use super::super::error::{Error, Expected};
 use super::{whitespace::whitespace, GraphemeParser};
-use crate::node::{
-    wast::{assign::Assign, parser_output::ParserOutput},
-    Spanned,
-};
+use crate::node::{wast::assign::Assign, Node, Spanned};
 use chumsky::prelude::*;
 
 pub fn assign<'input, N, X>(
     expr: X,
 ) -> impl GraphemeParser<'input, Assign<'input, N>, Error<'input>> + Clone
 where
-    N: ParserOutput<'input>,
+    N: Node<'input>,
     X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let special = just("=")

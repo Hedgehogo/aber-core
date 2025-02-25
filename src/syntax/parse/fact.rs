@@ -3,15 +3,12 @@ use super::{
     block::block, call::call, character::character, expr::expr, list::tuple, number::number,
     raw_string::raw_string, spanned, string::string, whitespace::whitespace, GraphemeParser,
 };
-use crate::node::{
-    wast::{parser_output::ParserOutput, Wast},
-    Spanned,
-};
+use crate::node::{wast::Wast, Node, Spanned};
 use chumsky::prelude::*;
 
 pub fn fact<'input, N>() -> impl GraphemeParser<'input, Spanned<N>, Error<'input>> + Clone
 where
-    N: ParserOutput<'input> + 'input,
+    N: Node<'input> + 'input,
 {
     recursive(|fact| {
         let choice = choice((
@@ -63,7 +60,9 @@ mod tests {
             )
         );
         assert_eq!(
-            fact::<CompNode>().parse(Graphemes::new("'m'")).into_result(),
+            fact::<CompNode>()
+                .parse(Graphemes::new("'m'"))
+                .into_result(),
             Ok(Wast::Character(grapheme("m").into()).into_spanned_node(0..3))
         );
         assert_eq!(

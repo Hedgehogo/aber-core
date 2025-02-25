@@ -2,8 +2,8 @@ use super::super::error::{Error, Expected};
 use super::{call::call, spanned, whitespace::whitespace, GraphemeParser};
 use crate::node::{
     span::Span,
-    wast::{expr_call::ExprCall, negative_call::NegativeCall, parser_output::ParserOutput, Wast},
-    Spanned,
+    wast::{expr_call::ExprCall, negative_call::NegativeCall, Wast},
+    Node, Spanned,
 };
 use chumsky::pratt::*;
 use chumsky::prelude::*;
@@ -12,7 +12,7 @@ pub fn expr<'input, N, F>(
     fact: F,
 ) -> impl GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone
 where
-    N: ParserOutput<'input> + 'input,
+    N: Node<'input> + 'input,
     F: GraphemeParser<'input, Spanned<N>, Error<'input>> + Clone + 'input,
 {
     recursive(|expr| {

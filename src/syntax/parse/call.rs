@@ -4,9 +4,8 @@ use crate::node::{
     wast::{
         call::{Call, Ident},
         number::Radix,
-        parser_output::ParserOutput,
     },
-    Spanned,
+    Node, Spanned,
 };
 use chumsky::prelude::*;
 
@@ -37,7 +36,7 @@ pub fn call<'input, N, X>(
     expr: X,
 ) -> impl GraphemeParser<'input, Call<'input, N>, Error<'input>> + Clone
 where
-    N: ParserOutput<'input>,
+    N: Node<'input>,
     X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let generics = whitespace()

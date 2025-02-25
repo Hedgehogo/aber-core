@@ -7,10 +7,9 @@ pub mod character;
 pub mod expr_call;
 pub mod negative_call;
 pub mod number;
-pub mod parser_output;
 pub mod string;
 
-use super::{span::Span, ExprVec, Spanned};
+use super::{span::Span, ExprVec, Spanned, Node};
 use assign::Assign;
 use block::Block;
 use call::Call;
@@ -18,12 +17,11 @@ use character::Character;
 use expr_call::ExprCall;
 use negative_call::NegativeCall;
 use number::Number;
-use parser_output::ParserOutput;
 use std::fmt;
 use string::String;
 
 /// Type that describes a weak abstract syntax tree. In this case "weak" means that not all nestings can be explicitly resolved at this stage.
-pub enum Wast<'input, N: ParserOutput<'input>> {
+pub enum Wast<'input, N: Node<'input>> {
     Number(Number<'input>),
     Character(Character<'input>),
     String(String),
@@ -36,7 +34,7 @@ pub enum Wast<'input, N: ParserOutput<'input>> {
     NegativeCall(NegativeCall<'input, N>),
 }
 
-impl<'input, N: ParserOutput<'input>> Wast<'input, N> {
+impl<'input, N: Node<'input>> Wast<'input, N> {
     /// Wraps in [`Node::Wast`].
     pub fn into_node(self) -> N {
         N::new_node(self)
@@ -53,7 +51,7 @@ impl<'input, N: ParserOutput<'input>> Wast<'input, N> {
 
 impl<'input, N> fmt::Debug for Wast<'input, N>
 where
-    N: ParserOutput<'input> + fmt::Debug,
+    N: Node<'input> + fmt::Debug,
     N::Expr: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -74,7 +72,7 @@ where
 
 impl<'input, N> Clone for Wast<'input, N>
 where
-    N: ParserOutput<'input> + Clone,
+    N: Node<'input> + Clone,
     N::Expr: Clone,
 {
     fn clone(&self) -> Self {
@@ -93,9 +91,9 @@ where
     }
 }
 
-impl<'input, N: ParserOutput<'input>> PartialEq for Wast<'input, N>
+impl<'input, N: Node<'input>> PartialEq for Wast<'input, N>
 where
-    N: ParserOutput<'input> + PartialEq,
+    N: Node<'input> + PartialEq,
     N::Expr: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -115,12 +113,12 @@ where
     }
 }
 
-impl<'input, N: ParserOutput<'input> + Eq> Eq for Wast<'input, N> where N::Expr: Eq {}
+impl<'input, N: Node<'input> + Eq> Eq for Wast<'input, N> where N::Expr: Eq {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WastNode<'input>(pub Wast<'input, Self>);
 
-impl<'input> ParserOutput<'input> for WastNode<'input> {
+impl<'input> Node<'input> for WastNode<'input> {
     type Expr = Vec<Spanned<Self>>;
 
     fn new_node(wast: Wast<'input, Self>) -> Self {

@@ -1,7 +1,7 @@
 //! Module that provides types to describe the syntactic construct *call*.
 //!
-use super::super::span::Spanned;
-use super::{parser_output::ParserOutput, ExprVec};
+use super::super::{Node, Spanned};
+use super::ExprVec;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,7 +26,7 @@ impl<'input> Ident<'input> {
 }
 
 impl<'input> Spanned<Ident<'input>> {
-    pub fn into_call<N: ParserOutput<'input>>(self) -> Call<'input, N> {
+    pub fn into_call<N: Node<'input>>(self) -> Call<'input, N> {
         Call::new(self, None)
     }
 }
@@ -38,12 +38,12 @@ impl fmt::Debug for Ident<'_> {
 }
 
 /// Type describing the syntactic construct *call*
-pub struct Call<'input, N: ParserOutput<'input>> {
+pub struct Call<'input, N: Node<'input>> {
     pub ident: Spanned<Ident<'input>>,
     pub generics: Option<Spanned<ExprVec<'input, N>>>,
 }
 
-impl<'input, N: ParserOutput<'input>> Call<'input, N> {
+impl<'input, N: Node<'input>> Call<'input, N> {
     /// Creates a new `Call`.
     pub fn new(
         ident: Spanned<Ident<'input>>,
@@ -55,7 +55,7 @@ impl<'input, N: ParserOutput<'input>> Call<'input, N> {
 
 impl<'input, N> fmt::Debug for Call<'input, N>
 where
-    N: ParserOutput<'input>,
+    N: Node<'input>,
     N::Expr: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -68,7 +68,7 @@ where
 
 impl<'input, N> Clone for Call<'input, N>
 where
-    N: ParserOutput<'input>,
+    N: Node<'input>,
     N::Expr: Clone,
 {
     fn clone(&self) -> Self {
@@ -81,7 +81,7 @@ where
 
 impl<'input, N> PartialEq for Call<'input, N>
 where
-    N: ParserOutput<'input>,
+    N: Node<'input>,
     N::Expr: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -89,4 +89,4 @@ where
     }
 }
 
-impl<'input, N: ParserOutput<'input>> Eq for Call<'input, N> where N::Expr: Eq {}
+impl<'input, N: Node<'input>> Eq for Call<'input, N> where N::Expr: Eq {}
