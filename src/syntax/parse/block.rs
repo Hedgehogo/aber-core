@@ -3,12 +3,12 @@ use super::{parser, GraphemeParser};
 use crate::node::{wast::block::Block, Node, Spanned};
 use chumsky::prelude::*;
 
-pub fn block<'input, N, X>(
-    expr: X,
+pub fn block<'input, N, P>(
+    expr: P,
 ) -> impl GraphemeParser<'input, Block<'input, N>, Error<'input>> + Clone
 where
     N: Node<'input>,
-    X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let open = just("{")
         .ignored()

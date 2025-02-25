@@ -32,12 +32,12 @@ pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'inpu
         .map(|i| Ident::new(i.as_str()))
 }
 
-pub fn call<'input, N, X>(
-    expr: X,
+pub fn call<'input, N, P>(
+    expr: P,
 ) -> impl GraphemeParser<'input, Call<'input, N>, Error<'input>> + Clone
 where
     N: Node<'input>,
-    X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let generics = whitespace()
         .ignore_then(spanned(generics::<N, _>(expr)))

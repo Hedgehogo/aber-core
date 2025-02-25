@@ -48,12 +48,12 @@ where
     parser.map_with(|i, e| (i, e.span()))
 }
 
-pub fn parser<'input, N, X>(
-    expr: X,
+pub fn parser<'input, N, P>(
+    expr: P,
 ) -> impl GraphemeParser<'input, Block<'input, N>, Error<'input>> + Clone
 where
     N: Node<'input>,
-    X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let semicolon = just(";")
         .ignored()

@@ -8,12 +8,12 @@ use crate::node::{
 use chumsky::pratt::*;
 use chumsky::prelude::*;
 
-pub fn expr<'input, N, F>(
-    fact: F,
+pub fn expr<'input, N, P>(
+    fact: P,
 ) -> impl GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone
 where
     N: Node<'input> + 'input,
-    F: GraphemeParser<'input, Spanned<N>, Error<'input>> + Clone + 'input,
+    P: GraphemeParser<'input, Spanned<N>, Error<'input>> + Clone + 'input,
 {
     recursive(|expr| {
         let atom = fact.map(|i| {

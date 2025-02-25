@@ -3,12 +3,12 @@ use super::{whitespace::whitespace, GraphemeParser};
 use crate::node::{wast::assign::Assign, Node, Spanned};
 use chumsky::prelude::*;
 
-pub fn assign<'input, N, X>(
-    expr: X,
+pub fn assign<'input, N, P>(
+    expr: P,
 ) -> impl GraphemeParser<'input, Assign<'input, N>, Error<'input>> + Clone
 where
     N: Node<'input>,
-    X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let special = just("=")
         .ignored()

@@ -3,14 +3,14 @@ use super::{whitespace::whitespace, GraphemeParser};
 use crate::node::{Node, ExprVec, Spanned};
 use chumsky::prelude::*;
 
-fn list<'input, N, X>(
-    expr: X,
+fn list<'input, N, P>(
+    expr: P,
     open: (&'static str, Expected),
     close: (&'static str, Expected),
 ) -> impl GraphemeParser<'input, ExprVec<'input, N>, Error<'input>> + Clone
 where
     N: Node<'input>,
-    X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     let open = just(open.0)
         .ignored()
@@ -33,12 +33,12 @@ where
         .then_ignore(close)
 }
 
-pub fn tuple<'input, N, X>(
-    expr: X,
+pub fn tuple<'input, N, P>(
+    expr: P,
 ) -> impl GraphemeParser<'input, ExprVec<'input, N>, Error<'input>> + Clone
 where
     N: Node<'input>,
-    X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
 {
     list::<N, _>(expr, ("(", Expected::Tuple), (")", Expected::TupleClose))
 }
