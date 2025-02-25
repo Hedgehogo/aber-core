@@ -1,25 +1,25 @@
 //! Module that provides types to describe the syntactic construct *block*.
 
+use super::super::Expr;
 use super::{Assign, Spanned};
-use super::super::Node;
 
 /// Type describing the syntactic construct *statement*.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Stmt<'input, N: Node<'input>> {
-    Expr(N::Expr),
-    Assign(Assign<'input, N>),
+pub enum Stmt<'input, X: Expr<'input>> {
+    Expr(X),
+    Assign(Assign<'input, X>),
 }
 
 /// Type describing the syntactic construct *block*.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Block<'input, N: Node<'input>> {
-    pub stmts: Vec<Spanned<Stmt<'input, N>>>,
-    pub expr: Spanned<N::Expr>,
+pub struct Block<'input, X: Expr<'input>> {
+    pub stmts: Vec<Spanned<Stmt<'input, X>>>,
+    pub expr: Spanned<X>,
 }
 
-impl<'input, N: Node<'input>> Block<'input, N> {
+impl<'input, X: Expr<'input>> Block<'input, X> {
     /// Creates a new `Block`.
-    pub fn new(stmts: Vec<Spanned<Stmt<'input, N>>>, expr: Spanned<N::Expr>) -> Self {
+    pub fn new(stmts: Vec<Spanned<Stmt<'input, X>>>, expr: Spanned<X>) -> Self {
         Self { stmts, expr }
     }
 }

@@ -1,6 +1,6 @@
 //! Module that provides types for describing expressions
 
-use super::{Spanned, Node, CompNode};
+use super::{Spanned, CompNode};
 
 /// Type that describes an expression.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,6 +24,3 @@ impl<'input> From<Vec<Spanned<CompNode<'input>>>> for CompExpr<'input> {
         Self::Wast(value)
     }
 }
-
-/// Type that describes a sequence of expressions.
-pub type ExprVec<'input, N> = Vec<Spanned<<N as Node<'input>>::Expr>>;

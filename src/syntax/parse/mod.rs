@@ -13,7 +13,7 @@ pub mod whitespace;
 use super::error::{Error, Expected};
 use crate::node::{
     wast::block::{Block, Stmt},
-    Node, Spanned,
+    Expr, Spanned,
 };
 use assign::assign;
 use chumsky::{
@@ -48,18 +48,18 @@ where
     parser.map_with(|i, e| (i, e.span()))
 }
 
-pub fn parser<'input, N, P>(
+pub fn parser<'input, X, P>(
     expr: P,
-) -> impl GraphemeParser<'input, Block<'input, N>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, Block<'input, X>, Error<'input>> + Clone
 where
-    N: Node<'input>,
-    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    X: Expr<'input>,
+    P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
 {
     let semicolon = just(";")
         .ignored()
         .map_err(|e: Error| e.replace_expected(Expected::Semicolon));
 
-    let expr = expr.or(spanned(empty().map(|_| N::new_expr(vec![]))).map(Spanned::from));
+    let expr = expr.or(spanned(empty().map(|_| X::from_seq(vec![]))).map(Spanned::from));
 
     let stmt = choice((
         spanned(assign(expr.clone()))
@@ -98,7 +98,7 @@ mod tests {
     fn test_parser() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            parser::<CompNode, _>(expr(fact::<CompNode>()))
+            parser(expr(fact::<CompNode>()))
                 .parse(Graphemes::new(""))
                 .into_result(),
             Ok(Block::new(
@@ -107,7 +107,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser::<CompNode, _>(expr(fact::<CompNode>()))
+            parser(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("'a'"))
                 .into_result(),
             Ok(Block::new(
@@ -119,7 +119,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser::<CompNode, _>(expr(fact::<CompNode>()))
+            parser(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("'a'; "))
                 .into_result(),
             Ok(Block::new(
@@ -134,7 +134,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser::<CompNode, _>(expr(fact::<CompNode>()))
+            parser(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("'a'; 'b'"))
                 .into_result(),
             Ok(Block::new(
@@ -152,7 +152,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser::<CompNode, _>(expr(fact::<CompNode>()))
+            parser(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("'a' = 'b';"))
                 .into_result(),
             Ok(Block::new(
@@ -172,7 +172,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            parser::<CompNode, _>(expr(fact::<CompNode>()))
+            parser(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("[]"))
                 .into_output_errors(),
             (

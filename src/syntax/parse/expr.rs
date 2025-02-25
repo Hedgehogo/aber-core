@@ -3,7 +3,7 @@ use super::{call::call, spanned, whitespace::whitespace, GraphemeParser};
 use crate::node::{
     span::Span,
     wast::{expr_call::ExprCall, negative_call::NegativeCall, Wast},
-    Node, Spanned,
+    Expr, Node, Spanned,
 };
 use chumsky::pratt::*;
 use chumsky::prelude::*;
@@ -28,7 +28,7 @@ where
         let expr_call = |s: &'static str, expected| {
             just(s)
                 .padded_by(whitespace())
-                .ignore_then(spanned(call::<N, _>(expr.clone())).map(Spanned::from))
+                .ignore_then(spanned(call::<N::Expr, _>(expr.clone())).map(Spanned::from))
                 .map_err(move |e: Error| e.replace_expected(expected))
         };
 
@@ -51,19 +51,19 @@ where
         atom.pratt((
             postfix(1, method_special, move |i, call, extra| {
                 into_atom(
-                    Wast::MethodCall(ExprCall::new(Spanned::map(i, N::new_expr), call)),
+                    Wast::MethodCall(ExprCall::new(Spanned::map(i, N::Expr::from_seq), call)),
                     extra.span(),
                 )
             }),
             postfix(1, child_special, move |i, call, extra| {
                 into_atom(
-                    Wast::ChildCall(ExprCall::new(Spanned::map(i, N::new_expr), call)),
+                    Wast::ChildCall(ExprCall::new(Spanned::map(i, N::Expr::from_seq), call)),
                     extra.span(),
                 )
             }),
             prefix(2, negative_special, move |_, i, extra| {
                 into_atom(
-                    Wast::NegativeCall(NegativeCall::new(Spanned::map(i, N::new_expr))),
+                    Wast::NegativeCall(NegativeCall::new(Spanned::map(i, N::Expr::from_seq))),
                     extra.span(),
                 )
             }),
@@ -71,7 +71,7 @@ where
                 concat_spanned(i, j, extra.span())
             }),
         ))
-        .map(|i| i.map(N::new_expr))
+        .map(|i| i.map(N::Expr::from_seq))
     })
 }
 

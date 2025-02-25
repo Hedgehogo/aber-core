@@ -17,7 +17,7 @@ where
             string().map(Wast::String),
             raw_string().map(Wast::String),
             call(expr(fact.clone())).map(Wast::Call),
-            tuple::<N, _>(expr(fact.clone())).map(Wast::Tuple),
+            tuple::<N::Expr, _>(expr(fact.clone())).map(Wast::Tuple),
             block(expr(fact)).map(Wast::Block),
         ));
 
@@ -25,7 +25,7 @@ where
             .then(just(":").not())
             .map_err(|e: Error| e.replace_expected(Expected::PairSpecial));
 
-        spanned(choice.map(N::new_node))
+        spanned(choice.map(N::from_wast))
             .map(Spanned::from)
             .then(whitespace().ignore_then(pair_special).or_not())
             .map_with(|(i, pair), extra| match pair {

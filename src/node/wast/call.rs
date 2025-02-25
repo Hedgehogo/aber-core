@@ -1,6 +1,6 @@
 //! Module that provides types to describe the syntactic construct *call*.
 //!
-use super::super::{Node, Spanned};
+use super::super::{Expr, Spanned};
 use super::ExprVec;
 use std::fmt;
 
@@ -26,7 +26,7 @@ impl<'input> Ident<'input> {
 }
 
 impl<'input> Spanned<Ident<'input>> {
-    pub fn into_call<N: Node<'input>>(self) -> Call<'input, N> {
+    pub fn into_call<X: Expr<'input>>(self) -> Call<'input, X> {
         Call::new(self, None)
     }
 }
@@ -38,55 +38,18 @@ impl fmt::Debug for Ident<'_> {
 }
 
 /// Type describing the syntactic construct *call*
-pub struct Call<'input, N: Node<'input>> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Call<'input, X: Expr<'input>> {
     pub ident: Spanned<Ident<'input>>,
-    pub generics: Option<Spanned<ExprVec<'input, N>>>,
+    pub generics: Option<Spanned<ExprVec<'input, X>>>,
 }
 
-impl<'input, N: Node<'input>> Call<'input, N> {
+impl<'input, X: Expr<'input>> Call<'input, X> {
     /// Creates a new `Call`.
     pub fn new(
         ident: Spanned<Ident<'input>>,
-        generics: Option<Spanned<ExprVec<'input, N>>>,
+        generics: Option<Spanned<ExprVec<'input, X>>>,
     ) -> Self {
         Self { ident, generics }
     }
 }
-
-impl<'input, N> fmt::Debug for Call<'input, N>
-where
-    N: Node<'input>,
-    N::Expr: fmt::Debug,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Call")
-            .field("ident", &self.ident)
-            .field("generics", &self.generics)
-            .finish()
-    }
-}
-
-impl<'input, N> Clone for Call<'input, N>
-where
-    N: Node<'input>,
-    N::Expr: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            ident: self.ident.clone(),
-            generics: self.generics.clone(),
-        }
-    }
-}
-
-impl<'input, N> PartialEq for Call<'input, N>
-where
-    N: Node<'input>,
-    N::Expr: PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.ident == other.ident && self.generics == other.generics
-    }
-}
-
-impl<'input, N: Node<'input>> Eq for Call<'input, N> where N::Expr: Eq {}

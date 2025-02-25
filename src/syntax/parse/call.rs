@@ -5,7 +5,7 @@ use crate::node::{
         call::{Call, Ident},
         number::Radix,
     },
-    Node, Spanned,
+    Expr, Spanned,
 };
 use chumsky::prelude::*;
 
@@ -32,15 +32,15 @@ pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'inpu
         .map(|i| Ident::new(i.as_str()))
 }
 
-pub fn call<'input, N, P>(
+pub fn call<'input, X, P>(
     expr: P,
-) -> impl GraphemeParser<'input, Call<'input, N>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, Call<'input, X>, Error<'input>> + Clone
 where
-    N: Node<'input>,
-    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    X: Expr<'input>,
+    P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
 {
     let generics = whitespace()
-        .ignore_then(spanned(generics::<N, _>(expr)))
+        .ignore_then(spanned(generics::<X, _>(expr)))
         .or_not();
 
     spanned(ident())
@@ -126,13 +126,13 @@ mod tests {
     fn test_call() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            call::<CompNode, _>(expr(fact::<CompNode>()))
+            call(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello"))
                 .into_result(),
             Ok(Call::new((Ident::new("hello"), 0..5).into(), None))
         );
         assert_eq!(
-            call::<CompNode, _>(expr(fact::<CompNode>()))
+            call(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello[]"))
                 .into_result(),
             Ok(Call::new(
@@ -141,7 +141,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            call::<CompNode, _>(expr(fact::<CompNode>()))
+            call(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello //hello\n []"))
                 .into_result(),
             Ok(Call::new(
@@ -150,7 +150,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            call::<CompNode, _>(expr(fact::<CompNode>()))
+            call(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello,[]"))
                 .into_output_errors(),
             (

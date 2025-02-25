@@ -1,18 +1,24 @@
 //! Module that provides [`Assign`].
 
+use super::super::Expr;
 use super::Spanned;
-use super::super::Node;
+use std::marker::PhantomData;
 
 /// Type describing the syntactic construct *assign*
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Assign<'input, N: Node<'input>> {
-    pub left: Spanned<N::Expr>,
-    pub right: Spanned<N::Expr>,
+pub struct Assign<'input, X: Expr<'input>> {
+    pub left: Spanned<X>,
+    pub right: Spanned<X>,
+    phanthom: PhantomData<&'input str>,
 }
 
-impl<'input, N: Node<'input>> Assign<'input, N> {
+impl<'input, X: Expr<'input>> Assign<'input, X> {
     /// Creates a new `Assign`.
-    pub fn new(left: Spanned<N::Expr>, right: Spanned<N::Expr>) -> Self {
-        Self { left, right }
+    pub fn new(left: Spanned<X>, right: Spanned<X>) -> Self {
+        Self {
+            left,
+            right,
+            phanthom: PhantomData
+        }
     }
 }

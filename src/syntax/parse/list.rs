@@ -1,16 +1,16 @@
 use super::super::error::{Error, Expected};
 use super::{whitespace::whitespace, GraphemeParser};
-use crate::node::{Node, ExprVec, Spanned};
+use crate::node::{Expr, ExprVec, Spanned};
 use chumsky::prelude::*;
 
-fn list<'input, N, P>(
+fn list<'input, X, P>(
     expr: P,
     open: (&'static str, Expected),
     close: (&'static str, Expected),
-) -> impl GraphemeParser<'input, ExprVec<'input, N>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, ExprVec<'input, X>, Error<'input>> + Clone
 where
-    N: Node<'input>,
-    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    X: Expr<'input>,
+    P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
 {
     let open = just(open.0)
         .ignored()
@@ -33,24 +33,24 @@ where
         .then_ignore(close)
 }
 
-pub fn tuple<'input, N, P>(
+pub fn tuple<'input, X, P>(
     expr: P,
-) -> impl GraphemeParser<'input, ExprVec<'input, N>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, ExprVec<'input, X>, Error<'input>> + Clone
 where
-    N: Node<'input>,
-    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    X: Expr<'input>,
+    P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
 {
-    list::<N, _>(expr, ("(", Expected::Tuple), (")", Expected::TupleClose))
+    list::<X, _>(expr, ("(", Expected::Tuple), (")", Expected::TupleClose))
 }
 
-pub fn generics<'input, N, X>(
-    expr: X,
-) -> impl GraphemeParser<'input, ExprVec<'input, N>, Error<'input>> + Clone
+pub fn generics<'input, X, P>(
+    expr: P,
+) -> impl GraphemeParser<'input, ExprVec<'input, X>, Error<'input>> + Clone
 where
-    N: Node<'input>,
-    X: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    X: Expr<'input>,
+    P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
 {
-    list::<N, _>(
+    list::<X, _>(
         expr,
         ("[", Expected::Generics),
         ("]", Expected::GenericsClose),
@@ -66,7 +66,7 @@ mod tests {
     use crate::node::{
         span::{IntoSpanned, Span},
         wast::Wast,
-        CompExpr, CompNode
+        CompExpr, CompNode,
     };
     use smallvec::smallvec;
     use text::Graphemes;
@@ -75,13 +75,13 @@ mod tests {
     fn test_tuple() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            tuple::<CompNode, _>(expr(fact::<CompNode>()))
+            tuple(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("()"))
                 .into_result(),
             Ok(vec![]),
         );
         assert_eq!(
-            tuple::<CompNode, _>(expr(fact::<CompNode>()))
+            tuple(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("("))
                 .into_output_errors(),
             (
@@ -104,7 +104,7 @@ mod tests {
             )
         );
         assert_eq!(
-            tuple::<CompNode, _>(expr(fact::<CompNode>()))
+            tuple(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("('a')"))
                 .into_result(),
             Ok(vec![Wast::Character(grapheme("a").into())
@@ -113,7 +113,7 @@ mod tests {
                 .map(CompExpr::from_vec)]),
         );
         assert_eq!(
-            tuple::<CompNode, _>(expr(fact::<CompNode>()))
+            tuple(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("('a'"))
                 .into_output_errors(),
             (
@@ -143,7 +143,7 @@ mod tests {
             )
         );
         assert_eq!(
-            tuple::<CompNode, _>(expr(fact::<CompNode>()))
+            tuple(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("('a', )"))
                 .into_result(),
             Ok(vec![Wast::Character(grapheme("a").into())
@@ -152,7 +152,7 @@ mod tests {
                 .map(CompExpr::from_vec)]),
         );
         assert_eq!(
-            tuple::<CompNode, _>(expr(fact::<CompNode>()))
+            tuple(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("('a' 'b')"))
                 .into_result(),
             Ok(vec![vec![
@@ -163,7 +163,7 @@ mod tests {
             .map(CompExpr::from_vec)]),
         );
         assert_eq!(
-            tuple::<CompNode, _>(expr(fact::<CompNode>()))
+            tuple(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("('a', 'b')"))
                 .into_result(),
             Ok(vec![
@@ -178,7 +178,7 @@ mod tests {
             ]),
         );
         assert_eq!(
-            tuple::<CompNode, _>(expr(fact::<CompNode>()))
+            tuple(expr(fact::<CompNode>()))
                 .parse(Graphemes::new(""))
                 .into_output_errors(),
             (

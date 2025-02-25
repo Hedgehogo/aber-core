@@ -1,4 +1,4 @@
-use super::{CompExpr, Hir, Spanned, Node, Wast};
+use super::{CompExpr, Hir, Spanned, Node, Wast, Expr};
 
 /// Type describing compilation units of any level.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -10,11 +10,15 @@ pub enum CompNode<'input> {
 impl<'input> Node<'input> for CompNode<'input> {
     type Expr = CompExpr<'input>;
 
-    fn new_node(wast: Wast<'input, Self>) -> Self {
+    fn from_wast(wast: Wast<'input, Self>) -> Self {
         Self::Wast(wast)
     }
+}
 
-    fn new_expr(seq: Vec<Spanned<Self>>) -> Self::Expr {
+impl<'input> Expr<'input> for CompExpr<'input> {
+    type Node = CompNode<'input>;
+
+    fn from_seq(seq: Vec<Spanned<Self::Node>>) -> Self {
         CompExpr::from_vec(seq)
     }
 }

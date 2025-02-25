@@ -8,6 +8,7 @@ pub mod expr_call;
 pub mod negative_call;
 pub mod number;
 pub mod string;
+pub mod wast_node;
 
 use super::{span::Span, ExprVec, Spanned, Node};
 use assign::Assign;
@@ -26,18 +27,18 @@ pub enum Wast<'input, N: Node<'input>> {
     Character(Character<'input>),
     String(String),
     Pair(Box<Spanned<N>>),
-    Tuple(ExprVec<'input, N>),
-    Block(Block<'input, N>),
-    Call(Call<'input, N>),
-    MethodCall(ExprCall<'input, N>),
-    ChildCall(ExprCall<'input, N>),
-    NegativeCall(NegativeCall<'input, N>),
+    Tuple(ExprVec<'input, N::Expr>),
+    Block(Block<'input, N::Expr>),
+    Call(Call<'input, N::Expr>),
+    MethodCall(ExprCall<'input, N::Expr>),
+    ChildCall(ExprCall<'input, N::Expr>),
+    NegativeCall(NegativeCall<'input, N::Expr>),
 }
 
 impl<'input, N: Node<'input>> Wast<'input, N> {
     /// Wraps in [`Node::Wast`].
     pub fn into_node(self) -> N {
-        N::new_node(self)
+        N::from_wast(self)
     }
 
     /// Wraps in [`Node::Wast`] and then in [`Spanned`].
@@ -114,18 +115,3 @@ where
 }
 
 impl<'input, N: Node<'input> + Eq> Eq for Wast<'input, N> where N::Expr: Eq {}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WastNode<'input>(pub Wast<'input, Self>);
-
-impl<'input> Node<'input> for WastNode<'input> {
-    type Expr = Vec<Spanned<Self>>;
-
-    fn new_node(wast: Wast<'input, Self>) -> Self {
-        Self(wast)
-    }
-
-    fn new_expr(seq: Vec<Spanned<Self>>) -> Self::Expr {
-        seq
-    }
-}

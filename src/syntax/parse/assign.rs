@@ -1,14 +1,14 @@
 use super::super::error::{Error, Expected};
 use super::{whitespace::whitespace, GraphemeParser};
-use crate::node::{wast::assign::Assign, Node, Spanned};
+use crate::node::{wast::assign::Assign, Expr, Spanned};
 use chumsky::prelude::*;
 
-pub fn assign<'input, N, P>(
+pub fn assign<'input, X, P>(
     expr: P,
-) -> impl GraphemeParser<'input, Assign<'input, N>, Error<'input>> + Clone
+) -> impl GraphemeParser<'input, Assign<'input, X>, Error<'input>> + Clone
 where
-    N: Node<'input>,
-    P: GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone,
+    X: Expr<'input>,
+    P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
 {
     let special = just("=")
         .ignored()
@@ -38,7 +38,7 @@ mod tests {
     fn test_assign() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            assign::<CompNode, _>(expr(fact::<CompNode>()))
+            assign(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("'a' = 'b'"))
                 .into_result(),
             Ok(Assign::new(
@@ -53,7 +53,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            assign::<CompNode, _>(expr(fact::<CompNode>()))
+            assign(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("'a' = "))
                 .into_output_errors(),
             (
@@ -75,7 +75,7 @@ mod tests {
             )
         );
         assert_eq!(
-            assign::<CompNode, _>(expr(fact::<CompNode>()))
+            assign(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("foo = bar"))
                 .into_result(),
             Ok(Assign::new(
@@ -90,7 +90,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            assign::<CompNode, _>(expr(fact::<CompNode>()))
+            assign(expr(fact::<CompNode>()))
                 .parse(Graphemes::new(""))
                 .into_output_errors(),
             (
