@@ -17,7 +17,7 @@ where
             string().map(Wast::String),
             raw_string().map(Wast::String),
             call(expr(fact.clone())).map(Wast::Call),
-            tuple::<N::Expr, _>(expr(fact.clone())).map(Wast::Tuple),
+            tuple(expr(fact.clone())).map(Wast::Tuple),
             block(expr(fact)).map(Wast::Block),
         ));
 

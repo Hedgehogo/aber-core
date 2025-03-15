@@ -79,30 +79,6 @@ mod tests {
     use text::Graphemes;
 
     #[test]
-    fn test() {
-        use chumsky::error::{Error, Rich};
-
-        let parser = just::<_, &str, extra::Err<Rich<_>>>("-")
-            .or_not()
-            .then(just("0").map_err(move |e: Rich<_>| {
-                Error::<&str>::expected_found(
-                    vec![Some('n'.into())],
-                    e.found().map(|i| From::from(*i)),
-                    e.span().clone(),
-                )
-            }));
-
-        assert_eq!(
-            parser.parse("_0").into_result(),
-            Err(vec![Error::<&str>::expected_found(
-                vec![Some('-'.into()), Some('n'.into()),],
-                Some('_'.into()),
-                SimpleSpan::from(0..1),
-            )])
-        );
-    }
-
-    #[test]
     fn test_number() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         let digits = |s| unsafe { Digits::from_str_unchecked(s) };

@@ -72,6 +72,36 @@ mod tests {
     use text::Graphemes;
 
     #[test]
+    fn test() {
+        use crate::node::wast::character::Ascii;
+        use text::{whitespace, Grapheme};
+
+        fn tuple<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + Clone {
+            just("a")
+                .repeated()
+                .then_ignore(whitespace())
+                .separated_by(just(","))
+                .then_ignore(just(")"))
+        }
+
+        assert_eq!(
+            tuple().parse(Graphemes::new("a")).into_output_errors(),
+            (
+                None,
+                vec![Error::new(
+                    smallvec![
+                        Expected::Ascii(Ascii::new(b')').unwrap()),
+                        Expected::Ascii(Ascii::new(b',').unwrap()),
+                        Expected::Ascii(Ascii::new(b'a').unwrap()),
+                    ],
+                    None,
+                    Span::new(1..1)
+                )]
+            )
+        );
+    }
+
+    #[test]
     fn test_tuple() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(

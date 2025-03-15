@@ -2,12 +2,15 @@ use std::fmt::Debug;
 
 use crate::node::{
     span::Span,
-    wast::{character::Ascii, number::Radix},
+    wast::{
+        character::Ascii,
+        number::{Digit, Radix},
+    },
 };
 use chumsky::{
-    span::SimpleSpan,
-    text::{Char, Grapheme, Graphemes},
+    text::{Char, Grapheme, Graphemes, TextExpected},
     util::MaybeRef,
+    DefaultExpected,
 };
 use smallvec::{smallvec, SmallVec};
 
@@ -98,30 +101,81 @@ impl<'input> Error<'input> {
     }
 }
 
-impl<'input> chumsky::error::Error<'input, &'input Graphemes> for Error<'input> {
+impl<'input>
+    chumsky::error::LabelError<'input, &'input Graphemes, DefaultExpected<'input, &'input Grapheme>>
+    for Error<'input>
+{
     fn expected_found<E>(
         expected: E,
-        found: Option<MaybeRef<'input, &'input Grapheme>>,
-        span: SimpleSpan,
+        found: Option<
+            MaybeRef<'input, <&'input Graphemes as chumsky::prelude::Input<'input>>::Token>,
+        >,
+        span: <&'input Graphemes as chumsky::prelude::Input<'input>>::Span,
     ) -> Self
     where
-        E: IntoIterator<Item = Option<MaybeRef<'input, &'input Grapheme>>>,
+        E: IntoIterator<Item = DefaultExpected<'input, &'input Grapheme>>,
     {
         let found = found.map(MaybeRef::into_inner);
         let expected = expected
             .into_iter()
-            .filter_map(|i| match i.map(MaybeRef::into_inner) {
-                Some(i) => i
+            .filter_map(|i| match i.to_owned() {
+                DefaultExpected::Token(i) => i
+                    .into_inner()
                     .to_ascii()
                     .map(|i| Expected::Ascii(Ascii::new(i).unwrap())),
 
-                None => Some(Expected::Eof),
+                DefaultExpected::EndOfInput => Some(Expected::Eof),
+
+                _ => None,
             })
             .collect();
 
         Self::new(expected, found, span.into())
     }
+}
 
+impl<'input>
+    chumsky::error::LabelError<'input, &'input Graphemes, TextExpected<'input, &'input Graphemes>>
+    for Error<'input>
+{
+    fn expected_found<E>(
+        expected: E,
+        found: Option<
+            MaybeRef<'input, <&'input Graphemes as chumsky::prelude::Input<'input>>::Token>,
+        >,
+        span: <&'input Graphemes as chumsky::prelude::Input<'input>>::Span,
+    ) -> Self
+    where
+        E: IntoIterator<Item = TextExpected<'input, &'input Graphemes>>,
+    {
+        let found = found.map(MaybeRef::into_inner);
+        let expected = expected
+            .into_iter()
+            .filter_map(|i| match i {
+                TextExpected::Whitespace => None,
+
+                TextExpected::InlineWhitespace => None,
+
+                TextExpected::Newline => None,
+
+                TextExpected::Digit(range) => matches!(range.end, 0..36)
+                    .then_some(range.end as u8)
+                    .and_then(Digit::new)
+                    .map(|i| Expected::Digit(i.min_radix())),
+
+                TextExpected::IdentifierPart => Some(Expected::Ident),
+
+                TextExpected::Identifier(_) => Some(Expected::Ident),
+
+                _ => None,
+            })
+            .collect();
+
+        Self::new(expected, found, span.into())
+    }
+}
+
+impl<'input> chumsky::error::Error<'input, &'input Graphemes> for Error<'input> {
     fn merge(mut self, other: Self) -> Self {
         self.expected = merge_sorted_vec(self.expected, other.expected);
         self
