@@ -1,5 +1,6 @@
 pub mod call;
 pub mod pair;
+pub mod string;
 
 use super::{CompNode, Spanned};
 use call::Call;
