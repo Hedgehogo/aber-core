@@ -1,6 +1,6 @@
 use super::super::error::{Error, Expected};
 use super::GraphemeParser;
-use crate::node::wast::string::String;
+use crate::node::string::{EscapedString, StringData};
 use chumsky::prelude::*;
 use extra::ParserExtra;
 use text::{newline, Char, Grapheme, Graphemes};
@@ -32,17 +32,20 @@ fn escape_sequence<'input>() -> impl GraphemeParser<'input, &'input str, Error<'
         .recover_with(via_parser(any().or_not().map(|_| "\u{FFFD}")))
 }
 
-fn content<'input, P>(unit: P) -> impl GraphemeParser<'input, String, Error<'input>> + Copy
+fn content<'input, O, P>(section: P) -> impl GraphemeParser<'input, O, Error<'input>> + Copy
 where
+    O: EscapedString<'input>,
     P: GraphemeParser<'input, &'input str, Error<'input>> + Copy,
 {
     empty()
-        .map(|_| std::string::String::new())
-        .foldl(unit.repeated(), |mut result, unit| {
-            result.push_str(unit);
-            result
+        .map(|_| O::Data::with_capacity(0))
+        .foldl(section.repeated(), |data, section| {
+            data.with_next_section(section)
         })
-        .map(String::new)
+        .map_with(|data, e| unsafe {
+            let inner_repr = e.slice().as_str();
+            O::from_data_unchecked(data, inner_repr)
+        })
 }
 
 pub fn separator<'input, E>() -> impl Parser<'input, &'input Graphemes, (), E> + Copy
@@ -55,19 +58,24 @@ where
         .recover_with(via_parser(empty()))
 }
 
-pub fn string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> + Copy {
-    let escape = just("\\").map_err(|e: Error| e.replace_expected(Expected::StringEscape));
+pub fn string<'input, O>() -> impl GraphemeParser<'input, O, Error<'input>> + Copy
+where
+    O: EscapedString<'input>,
+{
+    let escape_section = just("\\")
+        .map_err(|e: Error| e.replace_expected(Expected::StringEscape))
+        .ignore_then(escape_sequence());
 
-    let escaped = escape.ignore_then(escape_sequence());
-
-    let unescaped = none_of("\\\"")
+    let unescaped_section = none_of("\\\"")
+        .map_err(|e: Error| e.replace_expected(Expected::StringUnescaped))
+        .repeated()
+        .at_least(1)
         .to_slice()
-        .map(Graphemes::as_str)
-        .map_err(|e: Error| e.replace_expected(Expected::StringUnescaped));
+        .map(Graphemes::as_str);
 
-    let unit = unescaped.or(escaped);
+    let section = unescaped_section.or(escape_section);
 
-    let recover_unit = newline().not().ignore_then(unit);
+    let recover_section = newline().not().ignore_then(section);
 
     quote(Expected::String)
         .ignore_then(
@@ -76,10 +84,10 @@ pub fn string<'input>() -> impl GraphemeParser<'input, String, Error<'input>> + 
                 .map_err(|e: Error| e.replace_expected(Expected::String)),
         )
         .ignore_then(
-            content(unit)
+            content(section)
                 .then_ignore(quote(Expected::StringClose))
                 .then_ignore(separator())
-                .recover_with(via_parser(content(recover_unit))),
+                .recover_with(via_parser(content(recover_section))),
         )
 }
 
@@ -88,6 +96,7 @@ mod tests {
     use super::*;
 
     use crate::node::span::Span;
+    use crate::node::wast;
     use indoc::indoc;
     use smallvec::smallvec;
 
@@ -97,61 +106,81 @@ mod tests {
         {
             let input = r#""Hello Aber!""#;
             assert_eq!(
-                string().parse(Graphemes::new(input)).into_result(),
+                string::<wast::String>()
+                    .parse(Graphemes::new(input))
+                    .into_result(),
                 Ok("Hello Aber!".into())
             );
         }
         {
             let input = r#""Hello Aber!"#;
             assert_eq!(
-                string().parse(Graphemes::new(input)).into_result(),
-                Err(vec![Error::new(
-                    smallvec![
-                        Expected::StringUnescaped,
-                        Expected::StringEscape,
-                        Expected::StringClose
-                    ],
-                    None,
-                    Span::new(12..12)
-                )])
+                string::<wast::String>()
+                    .parse(Graphemes::new(input))
+                    .into_output_errors(),
+                (
+                    Some("Hello Aber!".into()),
+                    vec![Error::new(
+                        smallvec![
+                            Expected::StringUnescaped,
+                            Expected::StringEscape,
+                            Expected::StringClose
+                        ],
+                        None,
+                        Span::new(12..12)
+                    )]
+                )
             );
         }
         {
             let input = r#"Hello Aber!""#;
             assert_eq!(
-                string().parse(Graphemes::new(input)).into_result(),
-                Err(vec![Error::new_expected(
-                    Expected::String,
-                    Some(grapheme("H")),
-                    Span::new(0..1)
-                )])
+                string::<wast::String>()
+                    .parse(Graphemes::new(input))
+                    .into_output_errors(),
+                (
+                    None,
+                    vec![Error::new_expected(
+                        Expected::String,
+                        Some(grapheme("H")),
+                        Span::new(0..1)
+                    )]
+                )
             );
         }
         {
             let input = r#""Hello Aber!\"""#;
             assert_eq!(
-                string().parse(Graphemes::new(input)).into_result(),
+                string::<wast::String>()
+                    .parse(Graphemes::new(input))
+                    .into_result(),
                 Ok("Hello Aber!\"".into())
             );
         }
         {
             let input = r#""Hello Aber!\\""#;
             assert_eq!(
-                string().parse(Graphemes::new(input)).into_result(),
+                string::<wast::String>()
+                    .parse(Graphemes::new(input))
+                    .into_result(),
                 Ok("Hello Aber!\\".into())
             );
         }
         {
             let input = r#""Hello Aber!\n""#;
             assert_eq!(
-                string().parse(Graphemes::new(input)).into_result(),
+                string::<wast::String>()
+                    .parse(Graphemes::new(input))
+                    .into_result(),
                 Ok("Hello Aber!\n".into())
             );
         }
         {
             let input = r#""Hello Aber!\t""#;
             assert_eq!(
-                string().parse(Graphemes::new(input)).into_result(),
+                string::<wast::String>()
+                    .parse(Graphemes::new(input))
+                    .into_result(),
                 Ok("Hello Aber!\t".into())
             );
         }
@@ -160,35 +189,45 @@ mod tests {
             "Hello Aber!\
             ""#};
             assert_eq!(
-                string().parse(Graphemes::new(input)).into_result(),
+                string::<wast::String>()
+                    .parse(Graphemes::new(input))
+                    .into_result(),
                 Ok("Hello Aber!".into())
             );
         }
         {
             let input = r#""Hello Aber!\m""#;
-            let result = string().parse(Graphemes::new(input));
-            assert_eq!(result.output().cloned(), Some("Hello Aber!\u{FFFD}".into()));
             assert_eq!(
-                result.into_errors(),
-                vec![Error::new_expected(
-                    Expected::StringEscaped,
-                    Some(grapheme("m")),
-                    Span::new(13..14)
-                )]
+                string::<wast::String>()
+                    .parse(Graphemes::new(input))
+                    .into_output_errors(),
+                (
+                    Some("Hello Aber!\u{FFFD}".into()),
+                    vec![Error::new_expected(
+                        Expected::StringEscaped,
+                        Some(grapheme("m")),
+                        Span::new(13..14)
+                    )]
+                )
             );
         }
         {
             let input = r#""Hello Aber!""""#;
             assert_eq!(
-                string().parse(Graphemes::new(input)).into_result(),
-                Err(vec![
-                    Error::new_expected(
-                        Expected::NonZeroWhitespace,
-                        Some(grapheme("\"")),
-                        Span::new(13..14)
-                    ),
-                    Error::new_expected(Expected::Eof, Some(grapheme("\"")), Span::new(13..14))
-                ])
+                string::<wast::String>()
+                    .parse(Graphemes::new(input))
+                    .into_output_errors(),
+                (
+                    None,
+                    vec![
+                        Error::new_expected(
+                            Expected::NonZeroWhitespace,
+                            Some(grapheme("\"")),
+                            Span::new(13..14)
+                        ),
+                        Error::new_expected(Expected::Eof, Some(grapheme("\"")), Span::new(13..14))
+                    ]
+                )
             );
         }
     }
