@@ -13,7 +13,7 @@ pub fn to_hir_expr_recursive<'input, 'expr>(
     state: &mut State,
     expr: &'expr [Spanned<CompNode<'input>>],
 ) -> Result<(Spanned<CompNode<'input>>, &'expr [Spanned<CompNode<'input>>]), ()> {
-    let Spanned(node, node_span) = expr.get(0).ok_or(())?;
+    let Spanned(node, node_span) = expr.first().ok_or(())?;
     let (_, mut rest) = expr.split_at(0);
 
     match node {
@@ -43,7 +43,7 @@ pub fn to_hir_expr_recursive<'input, 'expr>(
         CompNode::Wast(Wast::Pair(pair)) => {
             let (right, rest) = to_hir_expr_recursive(state, rest)?;
             let left_node = to_hir(state, (**pair).clone().0)?;
-            let left = left_node.into_spanned((*pair).1.clone());
+            let left = left_node.into_spanned(pair.1.clone());
             let span = left.1.start()..right.1.end();
             let node = CompNode::Hir(Hir::Pair(Pair::new(Box::new(left), Box::new(right))));
 
@@ -57,11 +57,11 @@ pub fn to_hir_expr_recursive<'input, 'expr>(
     }
 }
 
-pub fn to_hir_expr<'input, 'expr>(
+pub fn to_hir_expr<'input>(
     state: &mut State,
-    expr: &'expr [Spanned<CompNode<'input>>],
+    expr: &[Spanned<CompNode<'input>>],
 ) -> Result<CompNode<'input>, ()> {
-    match expr.get(0) {
+    match expr.first() {
         Some(_) => to_hir_expr_recursive(state, expr).map(|(i, _)| i.0),
         None => Ok(CompNode::Hir(Hir::Nil)),
     }

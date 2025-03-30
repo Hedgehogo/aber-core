@@ -12,20 +12,20 @@ where
 {
     recursive(|fact| {
         let choice = choice((
-            number().map(Wast::Number),
-            character().map(Wast::Character),
-            string().map(Wast::String),
-            raw_string().map(Wast::String),
-            call(expr(fact.clone())).map(Wast::Call),
-            tuple(expr(fact.clone())).map(Wast::Tuple),
-            block(expr(fact)).map(Wast::Block),
+            number().map(Wast::Number).map(N::from_wast),
+            character().map(Wast::Character).map(N::from_wast),
+            string().map(Wast::String).map(N::from_wast),
+            raw_string().map(Wast::String).map(N::from_wast),
+            call(expr(fact.clone())).map(Wast::Call).map(N::from_wast),
+            tuple(expr(fact.clone())).map(Wast::Tuple).map(N::from_wast),
+            block(expr(fact)).map(Wast::Block).map(N::from_wast),
         ));
 
         let pair_special = just(":")
             .then(just(":").not())
             .map_err(|e: Error| e.replace_expected(Expected::PairSpecial));
 
-        spanned(choice.map(N::from_wast))
+        spanned(choice)
             .map(Spanned::from)
             .then(whitespace().ignore_then(pair_special).or_not())
             .map_with(|(i, pair), extra| match pair {

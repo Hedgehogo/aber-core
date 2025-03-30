@@ -18,7 +18,7 @@ impl<'input> State<'input> {
         Self { units, idents }
     }
 
-    fn get_unit<'state>(&'state self, id: usize) -> Option<&'state Unit> {
+    fn get_unit(&self, id: usize) -> Option<&Unit> {
         self.units.get(id)
     }
 
@@ -35,5 +35,11 @@ impl<'input> State<'input> {
     pub fn find<'state>(&'state self, ident: Ident<'input>) -> Option<UnitRef<'state, 'input>> {
         let id = self.idents.get(&ident).copied()?;
         self.get(id)
+    }
+}
+
+impl Default for State<'_> {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -10,16 +10,17 @@ pub mod number;
 pub mod string;
 pub mod wast_node;
 
-use super::{span::Span, ExprVec, Spanned, Node};
-use assign::Assign;
-use block::Block;
-use call::Call;
-use character::Character;
-use expr_call::ExprCall;
-use negative_call::NegativeCall;
-use number::Number;
-use std::fmt;
-use string::String;
+use super::{span::Span, ExprVec, Node, Spanned};
+
+pub use assign::Assign;
+pub use block::Block;
+pub use call::Call;
+pub use character::Character;
+pub use expr_call::ExprCall;
+pub use negative_call::NegativeCall;
+pub use number::Number;
+pub use std::fmt;
+pub use string::String;
 
 /// Type that describes a weak abstract syntax tree. In this case "weak" means that not all nestings can be explicitly resolved at this stage.
 pub enum Wast<'input, N: Node<'input>> {
@@ -36,12 +37,12 @@ pub enum Wast<'input, N: Node<'input>> {
 }
 
 impl<'input, N: Node<'input>> Wast<'input, N> {
-    /// Wraps in [`Node::Wast`].
+    /// Wraps in [`Node::from_wast`].
     pub fn into_node(self) -> N {
         N::from_wast(self)
     }
 
-    /// Wraps in [`Node::Wast`] and then in [`Spanned`].
+    /// Wraps in [`Node::from_wast`] and then in [`Spanned`].
     ///
     /// # Arguments
     /// * `span` Object of the type whose type is implements `Into<Span>`.
@@ -78,8 +79,8 @@ where
 {
     fn clone(&self) -> Self {
         match self {
-            Self::Number(arg0) => Self::Number(arg0.clone()),
-            Self::Character(arg0) => Self::Character(arg0.clone()),
+            Self::Number(arg0) => Self::Number(*arg0),
+            Self::Character(arg0) => Self::Character(*arg0),
             Self::String(arg0) => Self::String(arg0.clone()),
             Self::Pair(arg0) => Self::Pair(arg0.clone()),
             Self::Tuple(arg0) => Self::Tuple(arg0.clone()),

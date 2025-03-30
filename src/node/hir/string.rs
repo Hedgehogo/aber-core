@@ -27,7 +27,7 @@ impl<T: Into<std::string::String>> From<T> for String {
 impl<'input> EscapedString<'input> for String {
     type Data = std::string::String;
 
-    unsafe fn from_data(data: Self::Data, _inner_repr: &'input str) -> Self {
+    unsafe fn from_data_unchecked(data: Self::Data, _inner_repr: &'input str) -> Self {
         Self::new(data)
     }
 }
@@ -35,7 +35,11 @@ impl<'input> EscapedString<'input> for String {
 impl<'input> RawString<'input> for String {
     type Data = std::string::String;
 
-    unsafe fn from_data(data: Self::Data, _indent: &'input str, _inner_repr: &'input str) -> Self {
+    unsafe fn from_data_unchecked(
+        data: Self::Data,
+        _indent: &'input str,
+        _inner_repr: &'input str,
+    ) -> Self {
         Self::new(data)
     }
 }

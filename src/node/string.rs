@@ -6,12 +6,12 @@ pub trait StringData<'input>: Sized {
     /// - `capacity` String capacity in bytes.
     fn with_capacity(capacity: usize) -> Self;
 
-    /// Adds information about the next section of the string to the
-    /// data.
+    /// Creates data based on the previous data and adds information
+    /// about the next section of the string to it.
     ///
     /// # Arguments
-    /// - `string` The next section of the string.
-    fn push_str(&mut self, string: &'input str);
+    /// - `section` The next section of the string.
+    fn with_next_section(self, section: &'input str) -> Self;
 }
 
 impl<'input> StringData<'input> for std::string::String {
@@ -19,15 +19,16 @@ impl<'input> StringData<'input> for std::string::String {
         Self::with_capacity(capacity)
     }
 
-    fn push_str(&mut self, string: &'input str) {
-        self.push_str(string);
+    fn with_next_section(mut self, section: &'input str) -> Self {
+        std::string::String::push_str(&mut self, section);
+        self
     }
 }
 
 impl<'input> StringData<'input> for () {
     fn with_capacity(_capacity: usize) -> Self {}
 
-    fn push_str(#[allow(unused)] &mut self, _string: &'input str) {}
+    fn with_next_section(#[allow(unused)] self, _section: &'input str) -> Self {}
 }
 
 /// Trait describing a type storing information about a string
@@ -40,14 +41,14 @@ pub trait EscapedString<'input>: Sized {
     ///
     /// # Arguments
     /// - `data` Collected string data.
-    /// - `inner_repr` Representation of a string between the `"`
-    ///   characters, not including them.
+    /// - `inner_repr` Representation of a string between opening and
+    ///   closing sequences.
     ///
     /// # Safety
     /// `inner_repr` must be a valid string representation, that is,
     /// it must not contain `\` or `"` characters outside of escape
     /// sequences and must contain only existing escape sequences.
-    unsafe fn from_data(data: Self::Data, inner_repr: &'input str) -> Self;
+    unsafe fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self;
 }
 
 /// Trait describing a type storing information about a raw string
@@ -62,8 +63,9 @@ pub trait RawString<'input>: Sized {
     /// - `data` Collected string data.
     /// - `indent` Non-informative indentation at the beginning of
     ///   each line (In specification sequence W).
-    /// - `inner_repr` Representation of a string between the `"`
-    ///   characters, not including them.
+    /// - `inner_repr` Representation of the string between the
+    ///   opening sequence and the last line break as part of the raw
+    ///   string.
     ///
     /// # Safety
     /// `indent` must be a valid indent, that is, it must contain
@@ -72,5 +74,9 @@ pub trait RawString<'input>: Sized {
     /// `inner_repr` must be a valid representation of the raw
     /// string, that is, each line break must be followed by
     /// `indent`.
-    unsafe fn from_data(data: Self::Data, indent: &'input str, inner_repr: &'input str) -> Self;
+    unsafe fn from_data_unchecked(
+        data: Self::Data,
+        indent: &'input str,
+        inner_repr: &'input str,
+    ) -> Self;
 }

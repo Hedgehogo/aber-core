@@ -2,9 +2,13 @@ use super::super::error::{Error, Expected};
 use super::GraphemeParser;
 use crate::node::wast::string::String;
 use chumsky::prelude::*;
+use extra::ParserExtra;
 use text::{newline, Char, Grapheme, Graphemes};
 
-fn quote<'input>(expected: Expected) -> impl GraphemeParser<'input, (), Error<'input>> + Copy {
+fn quote<'input, E>(expected: Expected) -> impl Parser<'input, &'input Graphemes, (), E> + Copy
+where
+    E: ParserExtra<'input, &'input Graphemes, Error = Error<'input>>,
+{
     just("\"")
         .map_err(move |e: Error| e.replace_expected(expected))
         .ignored()
@@ -41,10 +45,13 @@ where
         .map(String::new)
 }
 
-pub fn separator<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + Copy {
+pub fn separator<'input, E>() -> impl Parser<'input, &'input Graphemes, (), E> + Copy
+where
+    E: ParserExtra<'input, &'input Graphemes, Error = Error<'input>>,
+{
     quote(Expected::String)
         .not()
-        .map_err(|e| e.replace_expected(Expected::NonZeroWhitespace))
+        .map_err(|e: Error| e.replace_expected(Expected::NonZeroWhitespace))
         .recover_with(via_parser(empty()))
 }
 

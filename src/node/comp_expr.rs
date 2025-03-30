@@ -24,3 +24,9 @@ impl<'input> From<Vec<Spanned<CompNode<'input>>>> for CompExpr<'input> {
         Self::Wast(value)
     }
 }
+
+impl Default for CompExpr<'_> {
+    fn default() -> Self {
+        CompExpr::new()
+    }
+}
