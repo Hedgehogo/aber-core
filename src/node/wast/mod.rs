@@ -9,6 +9,7 @@ pub mod negative_call;
 pub mod number;
 pub mod string;
 pub mod wast_node;
+pub mod escaped_string;
 
 use super::{span::Span, ExprVec, Node, Spanned};
 
