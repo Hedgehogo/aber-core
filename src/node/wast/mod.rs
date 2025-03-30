@@ -26,7 +26,7 @@ pub use string::String;
 pub enum Wast<'input, N: Node<'input>> {
     Number(Number<'input>),
     Character(Character<'input>),
-    String(String),
+    String(N::String),
     Pair(Box<Spanned<N>>),
     Tuple(ExprVec<'input, N::Expr>),
     Block(Block<'input, N::Expr>),
@@ -55,6 +55,7 @@ impl<'input, N> fmt::Debug for Wast<'input, N>
 where
     N: Node<'input> + fmt::Debug,
     N::Expr: fmt::Debug,
+    N::String: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -76,6 +77,7 @@ impl<'input, N> Clone for Wast<'input, N>
 where
     N: Node<'input> + Clone,
     N::Expr: Clone,
+    N::String: Clone,
 {
     fn clone(&self) -> Self {
         match self {
@@ -97,6 +99,7 @@ impl<'input, N: Node<'input>> PartialEq for Wast<'input, N>
 where
     N: Node<'input> + PartialEq,
     N::Expr: PartialEq,
+    N::String: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -115,4 +118,9 @@ where
     }
 }
 
-impl<'input, N: Node<'input> + Eq> Eq for Wast<'input, N> where N::Expr: Eq {}
+impl<'input, N: Node<'input> + Eq> Eq for Wast<'input, N>
+where
+    N::Expr: Eq,
+    N::String: Eq,
+{
+}

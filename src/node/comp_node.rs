@@ -1,4 +1,4 @@
-use super::{CompExpr, Hir, Spanned, Node, Wast, Expr};
+use super::{hir::String, CompExpr, Expr, Hir, Node, Spanned, Wast};
 
 /// Type describing compilation units of any level.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -9,6 +9,7 @@ pub enum CompNode<'input> {
 
 impl<'input> Node<'input> for CompNode<'input> {
     type Expr = CompExpr<'input>;
+    type String = String;
 
     fn from_wast(wast: Wast<'input, Self>) -> Self {
         Self::Wast(wast)

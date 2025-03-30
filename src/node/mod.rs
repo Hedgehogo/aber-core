@@ -14,6 +14,7 @@ pub use comp_node::CompNode;
 pub use expr::{Expr, ExprVec};
 pub use hir::Hir;
 pub use span::Spanned;
+use string::{EscapedString, RawString};
 pub use wast::Wast;
 
 /// Trait realized by the types that the [`fact`](`crate::syntax::parse::fact`) function can
@@ -22,6 +23,9 @@ pub use wast::Wast;
 pub trait Node<'input>: Sized {
     /// Type describing the expression.
     type Expr: Expr<'input, Node = Self>;
+
+    /// Type describing the string.
+    type String: EscapedString<'input> + RawString<'input>;
 
     /// Creates a node from WAST fact.
     ///
