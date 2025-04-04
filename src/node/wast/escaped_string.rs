@@ -1,7 +1,7 @@
 //! Module that provides [`EscapedString`].
 
 use super::super::string;
-use chumsky::text::{Char, Grapheme, Graphemes};
+use chumsky::text::{Char, Graphemes};
 
 /// Type describing a escaped string literal.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -12,16 +12,16 @@ pub struct EscapedString<'input> {
 }
 
 impl<'input> EscapedString<'input> {
-    /// Gets the length of the contents in bytes, if the string has
-    /// errors, the maximum possible.
-    pub fn capacity(&self) -> usize {
-        self.capacity
-    }
-
     /// Gets representation of a string between opening and closing
     /// sequences.
     pub fn inner_repr(&self) -> &'input str {
         self.inner_repr
+    }
+
+    /// Gets the length of the contents in bytes, if the string has
+    /// errors, the maximum possible.
+    pub fn capacity(&self) -> usize {
+        self.capacity
     }
 
     /// Gets an iterator over sections.
@@ -44,7 +44,8 @@ pub enum Escape {
 }
 
 impl Escape {
-    /// Creates an `Escape` from an escape sequence written as a string.
+    /// Creates an `Escape` from an escape sequence written as a
+    /// string.
     pub fn from_repr(repr: &str) -> Option<Self> {
         match repr {
             "\"" => Some(Escape::Quote),
@@ -56,17 +57,16 @@ impl Escape {
         }
     }
 
-    /// Gets the contents of the escape sequence.
-    pub fn content(&self) -> Option<&'static Grapheme> {
-        let inner = match self {
-            Escape::Quote => "\"",
-            Escape::Slash => "\\",
-            Escape::Newline => "\n",
-            Escape::Tab => "\t",
-            Escape::Nothing => "",
-        };
-
-        Graphemes::new(inner).iter().next()
+    /// Gets the contents of the escape sequence. `None` means that
+    /// the content is a sequence of zero-length code points.
+    pub fn content(&self) -> Option<char> {
+        match self {
+            Escape::Quote => Some('\"'),
+            Escape::Slash => Some('\\'),
+            Escape::Newline => Some('\n'),
+            Escape::Tab => Some('\t'),
+            Escape::Nothing => None,
+        }
     }
 
     /// Gets a representation of the escape sequence.
@@ -194,7 +194,7 @@ mod tests {
                     section_count: 5,
                     capacity: 13,
                 },
-                r#"hello\n\mworld\"#,
+                r#"Hello\n\mAber!\"#,
             )
         };
 
@@ -203,10 +203,10 @@ mod tests {
         assert_eq!(
             escaped_string.sections().collect::<Vec<_>>(),
             vec![
-                Section::Characters(r#"hello"#),
+                Section::Characters(r#"Hello"#),
                 Section::Escape(r#"\n"#),
                 Section::Escape(r#"\m"#),
-                Section::Characters(r#"world"#),
+                Section::Characters(r#"Aber!"#),
                 Section::Escape(r#"\"#),
             ]
         );

@@ -21,7 +21,7 @@ struct Ctx<C> {
 #[derive(Clone, Copy)]
 struct ContentCtx<'input> {
     capacity: usize,
-    newline_count: usize,
+    line_break_count: usize,
     indent: &'input str,
 }
 
@@ -32,7 +32,7 @@ struct ContentCtx<'input> {
 #[derive(Clone, Copy)]
 struct ContentInfo {
     precapacity: usize,
-    newline_count: usize,
+    line_break_count: usize,
 }
 
 /// Creates a parser that parses some number of opening quotes.
@@ -106,11 +106,11 @@ where
     line()
         .map(|i| ContentInfo {
             precapacity: i.as_bytes().len(),
-            newline_count: 0,
+            line_break_count: 0,
         })
         .foldl(repeated, |mut info, (newline, line)| {
             info.precapacity += newline.as_bytes().len() + line.as_bytes().len();
-            info.newline_count += 1;
+            info.line_break_count += 1;
             info
         })
 }
@@ -158,7 +158,7 @@ where
     })
     .foldl(
         repeated.configure(|cfg, ctx: &Ctx<ContentCtx<'input>>| {
-            cfg.exactly(ctx.additional.newline_count)
+            cfg.exactly(ctx.additional.line_break_count)
         }),
         |data, (newline, line)| {
             data.with_next_section(newline.as_str())
@@ -192,11 +192,11 @@ where
             quotes_count: ctx.quotes_count,
             additional: ContentCtx {
                 capacity: {
-                    let line_count = info.newline_count + 1;
+                    let line_count = info.line_break_count + 1;
                     let indent_capacity = line_count * indent.as_bytes().len();
                     info.precapacity.saturating_sub(indent_capacity)
                 },
-                newline_count: info.newline_count,
+                line_break_count: info.line_break_count,
                 indent: indent.as_str(),
             },
         })
