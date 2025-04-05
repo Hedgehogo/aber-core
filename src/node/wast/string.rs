@@ -1,47 +1,54 @@
 //! Module that provides [`String`].
 
-use super::super::string::{EscapedString, RawString};
+use super::super::string;
+use super::{
+    escaped_string::{EscapedString, EscapedStringData},
+    raw_string::{RawString, RawStringData},
+};
 
 /// Type describing a string literal.
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct String {
-    inner: std::string::String,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum String<'input> {
+    Escaped(EscapedString<'input>),
+    Raw(RawString<'input>),
 }
 
-impl String {
-    /// Creates a new `String`.
-    pub fn new(inner: std::string::String) -> Self {
-        Self { inner }
-    }
-
-    /// Creates a new `String`.
-    pub fn as_str(&self) -> &str {
-        self.inner.as_str()
-    }
-}
-
-impl<T: Into<std::string::String>> From<T> for String {
-    fn from(value: T) -> Self {
-        String::new(value.into())
+impl String<'_> {
+    /// Gets the length of the contents in bytes, if the string has
+    /// errors, the maximum possible.
+    pub fn capacity(&self) -> usize {
+        match self {
+            String::Escaped(i) => i.capacity(),
+            String::Raw(i) => i.capacity(),
+        }
     }
 }
 
-impl<'input> EscapedString<'input> for String {
-    type Data = std::string::String;
-
-    unsafe fn from_data_unchecked(data: Self::Data, _inner_repr: &'input str) -> Self {
-        Self::new(data)
+impl<'input> From<String<'input>> for std::string::String {
+    fn from(value: String<'input>) -> Self {
+        match value {
+            String::Escaped(i) => i.into(),
+            String::Raw(i) => i.into(),
+        }
     }
 }
 
-impl<'input> RawString<'input> for String {
-    type Data = std::string::String;
+impl<'input> string::EscapedString<'input> for String<'input> {
+    type Data = EscapedStringData;
+
+    unsafe fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self {
+        Self::Escaped(EscapedString::from_data_unchecked(data, inner_repr))
+    }
+}
+
+impl<'input> string::RawString<'input> for String<'input> {
+    type Data = RawStringData;
 
     unsafe fn from_data_unchecked(
         data: Self::Data,
-        _indent: &'input str,
-        _inner_repr: &'input str,
+        indent: &'input str,
+        inner_repr: &'input str,
     ) -> Self {
-        Self::new(data)
+        Self::Raw(RawString::from_data_unchecked(data, indent, inner_repr))
     }
 }

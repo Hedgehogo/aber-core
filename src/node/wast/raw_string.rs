@@ -2,9 +2,10 @@
 
 use super::super::string;
 use chumsky::text::{Char, Graphemes};
+use std::fmt;
 
 /// Type describing a escaped string literal.
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct RawString<'input> {
     indent: &'input str,
     inner_repr: &'input str,
@@ -21,7 +22,7 @@ impl<'input> RawString<'input> {
 
     /// Gets indentation (sequence W in the specification).
     pub fn indent(&self) -> &'input str {
-        self.inner_repr
+        self.indent
     }
 
     /// Gets the number of line breaks between the opening sequence
@@ -46,9 +47,32 @@ impl<'input> RawString<'input> {
     }
 }
 
+impl<'input> From<RawString<'input>> for String {
+    fn from(value: RawString<'input>) -> Self {
+        value
+            .lines()
+            .fold(String::with_capacity(value.capacity), |mut result, line| {
+                result.push_str(line);
+                result
+            })
+    }
+}
+
+impl fmt::Debug for RawString<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RawString")
+            .field("indent", &self.indent)
+            .field("inner_repr", &self.inner_repr)
+            .field("line_break_count", &self.line_break_count)
+            .field("capacity", &self.capacity)
+            .field("lines", &self.lines().collect::<Vec<_>>())
+            .finish()
+    }
+}
+
 /// Type describing an iterator over sections of an escaped string
 /// literal.
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LineIter<'input> {
     rest: &'input str,
     indent_length: usize,
@@ -90,7 +114,7 @@ impl<'input> Iterator for LineIter<'input> {
     }
 }
 
-impl<'input> ExactSizeIterator for LineIter<'input> {
+impl ExactSizeIterator for LineIter<'_> {
     fn len(&self) -> usize {
         self.length
     }
@@ -157,5 +181,6 @@ mod tests {
             raw_string.lines().collect::<Vec<_>>(),
             vec!["Hello\r\n", " Aber!"]
         );
+        assert_eq!(String::from(raw_string), "Hello\r\n Aber!");
     }
 }

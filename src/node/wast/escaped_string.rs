@@ -2,9 +2,10 @@
 
 use super::super::string;
 use chumsky::text::{Char, Graphemes};
+use std::fmt;
 
 /// Type describing a escaped string literal.
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct EscapedString<'input> {
     inner_repr: &'input str,
     section_count: usize,
@@ -33,6 +34,40 @@ impl<'input> EscapedString<'input> {
     }
 }
 
+impl<'input> From<EscapedString<'input>> for String {
+    fn from(value: EscapedString<'input>) -> Self {
+        value.sections().fold(
+            String::with_capacity(value.capacity),
+            |mut result, section| {
+                match section {
+                    Section::Escape(repr) => match Escape::from_repr(repr) {
+                        Some(escape) => {
+                            escape.content().inspect(|i| result.push(*i));
+                        }
+
+                        None => result.push('\u{FFFD}'),
+                    },
+
+                    Section::Characters(repr) => result.push_str(repr),
+                }
+
+                result
+            },
+        )
+    }
+}
+
+impl fmt::Debug for EscapedString<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EscapedString")
+            .field("inner_repr", &self.inner_repr)
+            .field("section_count", &self.section_count)
+            .field("capacity", &self.capacity)
+            .field("sections", &self.sections().collect::<Vec<_>>())
+            .finish()
+    }
+}
+
 /// Type describing an escape sequence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Escape {
@@ -48,11 +83,11 @@ impl Escape {
     /// string.
     pub fn from_repr(repr: &str) -> Option<Self> {
         match repr {
-            "\"" => Some(Escape::Quote),
-            "\\" => Some(Escape::Slash),
-            "n" => Some(Escape::Newline),
-            "t" => Some(Escape::Tab),
-            "\n" => Some(Escape::Nothing),
+            "\\\"" => Some(Escape::Quote),
+            "\\\\" => Some(Escape::Slash),
+            "\\n" => Some(Escape::Newline),
+            "\\t" => Some(Escape::Tab),
+            "\\\n" => Some(Escape::Nothing),
             _ => None,
         }
     }
@@ -83,7 +118,7 @@ impl Escape {
 
 /// Type describing a single segment of the escaped string, i.e.,
 /// either an escape sequence or a sequence of characters.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Section<'input> {
     Escape(&'input str),
     Characters(&'input str),
@@ -91,7 +126,7 @@ pub enum Section<'input> {
 
 /// Type describing an iterator over sections of an escaped string
 /// literal.
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SectionIter<'input> {
     rest: &'input str,
     length: usize,
@@ -101,7 +136,7 @@ impl<'input> Iterator for SectionIter<'input> {
     type Item = Section<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut iter = Graphemes::new(&self.rest).iter();
+        let mut iter = Graphemes::new(self.rest).iter();
         let mut rest = self.rest;
 
         let is_escape = match iter.next().and_then(|i| i.to_ascii()) {
@@ -142,7 +177,7 @@ impl<'input> Iterator for SectionIter<'input> {
     }
 }
 
-impl<'input> ExactSizeIterator for SectionIter<'input> {
+impl ExactSizeIterator for SectionIter<'_> {
     fn len(&self) -> usize {
         self.length
     }
@@ -210,5 +245,6 @@ mod tests {
                 Section::Escape(r#"\"#),
             ]
         );
+        assert_eq!(String::from(escaped_string), "Hello\n\u{FFFD}Aber!\u{FFFD}");
     }
 }

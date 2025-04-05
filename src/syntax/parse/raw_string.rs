@@ -210,12 +210,31 @@ where
 mod tests {
     use super::*;
 
-    use crate::node::{span::Span, wast};
+    use crate::node::{
+        span::Span,
+        string::{self, StringData},
+        wast::{self, raw_string::RawStringData},
+    };
     use indoc::indoc;
 
     #[test]
     fn test_raw_string() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
+        let new_string = |capacity, sections: Vec<_>, indent, inner_repr| {
+            wast::String::Raw(unsafe {
+                string::RawString::from_data_unchecked(
+                    {
+                        let mut data = RawStringData::with_capacity(capacity);
+                        for section in sections {
+                            data = data.with_next_section(section);
+                        }
+                        data
+                    },
+                    indent,
+                    inner_repr,
+                )
+            })
+        };
         {
             let input = indoc! {r#"
                 """
@@ -225,7 +244,7 @@ mod tests {
                 raw_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
-                Ok("Hello Aber!".into())
+                Ok(new_string(11, vec!["Hello Aber!"], "", "Hello Aber!"))
             );
         }
         {
@@ -237,7 +256,7 @@ mod tests {
                 raw_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
-                Ok("Hello Aber!".into())
+                Ok(new_string(11, vec!["Hello Aber!"], "  ", "  Hello Aber!"))
             );
         }
         {
@@ -249,7 +268,7 @@ mod tests {
                 raw_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
-                Ok(" Hello Aber!".into())
+                Ok(new_string(12, vec![" Hello Aber!"], " ", "  Hello Aber!"))
             );
         }
         {
@@ -260,12 +279,15 @@ mod tests {
             assert_eq!(
                 raw_string::<wast::String>()
                     .parse(Graphemes::new(input))
-                    .into_result(),
-                Err(vec![Error::new_expected(
-                    Expected::RawStringIndent,
-                    Some(grapheme("H")),
-                    Span::new(5..6)
-                )])
+                    .into_output_errors(),
+                (
+                    None,
+                    vec![Error::new_expected(
+                        Expected::RawStringIndent,
+                        Some(grapheme("H")),
+                        Span::new(5..6)
+                    )]
+                )
             );
         }
         {
@@ -277,7 +299,7 @@ mod tests {
                 raw_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
-                Ok(" Hello Aber!".into())
+                Ok(new_string(12, vec![" Hello Aber!"], " ", "  Hello Aber!"))
             );
         }
         {
@@ -288,12 +310,15 @@ mod tests {
             assert_eq!(
                 raw_string::<wast::String>()
                     .parse(Graphemes::new(input))
-                    .into_result(),
-                Err(vec![Error::new_expected(
-                    Expected::RawStringClose,
+                    .into_output_errors(),
+                (
                     None,
-                    Span::new(23..23)
-                )])
+                    vec![Error::new_expected(
+                        Expected::RawStringClose,
+                        None,
+                        Span::new(23..23)
+                    )]
+                )
             );
         }
         {
@@ -304,15 +329,18 @@ mod tests {
             assert_eq!(
                 raw_string::<wast::String>()
                     .parse(Graphemes::new(input))
-                    .into_result(),
-                Err(vec![
-                    Error::new_expected(
-                        Expected::NonZeroWhitespace,
-                        Some(grapheme("\"")),
-                        Span::new(22..23)
-                    ),
-                    Error::new_expected(Expected::Eof, Some(grapheme("\"")), Span::new(22..23))
-                ])
+                    .into_output_errors(),
+                (
+                    None,
+                    vec![
+                        Error::new_expected(
+                            Expected::NonZeroWhitespace,
+                            Some(grapheme("\"")),
+                            Span::new(22..23)
+                        ),
+                        Error::new_expected(Expected::Eof, Some(grapheme("\"")), Span::new(22..23))
+                    ]
+                )
             );
         }
     }

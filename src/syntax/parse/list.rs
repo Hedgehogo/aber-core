@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn test() {
         use crate::node::wast::character::Ascii;
-        use text::{whitespace, Grapheme};
+        use text::whitespace;
 
         fn tuple<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + Clone {
             just("a")
