@@ -7,7 +7,7 @@ pub mod fact;
 pub mod list;
 pub mod number;
 pub mod raw_string;
-pub mod string;
+pub mod escaped_string;
 pub mod whitespace;
 
 use super::error::{Error, Expected};

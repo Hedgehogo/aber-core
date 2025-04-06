@@ -1,5 +1,5 @@
 use super::super::error::{Error, Expected};
-use super::{string::separator, GraphemeParser};
+use super::{escaped_string::separator, GraphemeParser};
 use crate::node::string::{RawString, StringData};
 use chumsky::{
     combinator::Repeated,

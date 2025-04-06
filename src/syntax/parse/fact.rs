@@ -1,7 +1,8 @@
 use super::super::error::{Error, Expected};
 use super::{
-    block::block, call::call, character::character, expr::expr, list::tuple, number::number,
-    raw_string::raw_string, spanned, string::string, whitespace::whitespace, GraphemeParser,
+    block::block, call::call, character::character, escaped_string::escaped_string, expr::expr,
+    list::tuple, number::number, raw_string::raw_string, spanned, whitespace::whitespace,
+    GraphemeParser,
 };
 use crate::node::{wast::Wast, Node, Spanned};
 use chumsky::prelude::*;
@@ -14,7 +15,7 @@ where
         let choice = choice((
             number().map(Wast::Number).map(N::from_wast),
             character().map(Wast::Character).map(N::from_wast),
-            string().map(Wast::String).map(N::from_wast),
+            escaped_string().map(Wast::String).map(N::from_wast),
             raw_string().map(Wast::String).map(N::from_wast),
             call(expr(fact.clone())).map(Wast::Call).map(N::from_wast),
             tuple(expr(fact.clone())).map(Wast::Tuple).map(N::from_wast),

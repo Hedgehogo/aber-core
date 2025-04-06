@@ -58,7 +58,7 @@ where
         .recover_with(via_parser(empty()))
 }
 
-pub fn string<'input, O>() -> impl GraphemeParser<'input, O, Error<'input>> + Copy
+pub fn escaped_string<'input, O>() -> impl GraphemeParser<'input, O, Error<'input>> + Copy
 where
     O: EscapedString<'input>,
 {
@@ -104,7 +104,7 @@ mod tests {
     use smallvec::smallvec;
 
     #[test]
-    fn test_string() {
+    fn test_escaped_string() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         let new_string = |capacity, sections: Vec<_>, inner_repr| {
             wast::String::Escaped(unsafe {
@@ -123,7 +123,7 @@ mod tests {
         {
             let input = r#""Hello Aber!""#;
             assert_eq!(
-                string::<wast::String>()
+                escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(11, vec!["Hello Aber!"], "Hello Aber!"))
@@ -132,7 +132,7 @@ mod tests {
         {
             let input = r#""Hello Aber!"#;
             assert_eq!(
-                string::<wast::String>()
+                escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_output_errors(),
                 (
@@ -152,7 +152,7 @@ mod tests {
         {
             let input = r#"Hello Aber!""#;
             assert_eq!(
-                string::<wast::String>()
+                escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_output_errors(),
                 (
@@ -168,7 +168,7 @@ mod tests {
         {
             let input = r#""Hello Aber!\"""#;
             assert_eq!(
-                string::<wast::String>()
+                escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(
@@ -181,7 +181,7 @@ mod tests {
         {
             let input = r#""Hello Aber!\\""#;
             assert_eq!(
-                string::<wast::String>()
+                escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(
@@ -194,7 +194,7 @@ mod tests {
         {
             let input = r#""Hello Aber!\n""#;
             assert_eq!(
-                string::<wast::String>()
+                escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(
@@ -207,7 +207,7 @@ mod tests {
         {
             let input = r#""Hello Aber!\t""#;
             assert_eq!(
-                string::<wast::String>()
+                escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(
@@ -222,7 +222,7 @@ mod tests {
             "Hello Aber!\
             ""#};
             assert_eq!(
-                string::<wast::String>()
+                escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(
@@ -235,7 +235,7 @@ mod tests {
         {
             let input = r#""Hello Aber!\m""#;
             assert_eq!(
-                string::<wast::String>()
+                escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_output_errors(),
                 (
@@ -255,7 +255,7 @@ mod tests {
         {
             let input = r#""Hello Aber!""""#;
             assert_eq!(
-                string::<wast::String>()
+                escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_output_errors(),
                 (
