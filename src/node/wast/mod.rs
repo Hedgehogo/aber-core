@@ -11,6 +11,7 @@ pub mod string;
 pub mod wast_node;
 pub mod escaped_string;
 pub mod raw_string;
+pub mod whitespace;
 
 use super::{span::Span, ExprVec, Node, Spanned};
 
