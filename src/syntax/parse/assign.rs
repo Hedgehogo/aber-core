@@ -15,7 +15,7 @@ where
         .map_err(|e: Error| e.replace_expected(Expected::AssignSpecial));
 
     expr.clone()
-        .then_ignore(whitespace().then(special).then(whitespace()))
+        .then_ignore(whitespace(0).then(special).then(whitespace(0)))
         .then(expr)
         .map(|(left, right)| Assign::new(left, right))
 }
@@ -79,14 +79,22 @@ mod tests {
                 .parse(Graphemes::new("foo = bar"))
                 .into_result(),
             Ok(Assign::new(
-                Wast::Call(Ident::from_repr_unchecked("foo").into_spanned(0..3).into_call())
-                    .into_spanned_node(0..3)
-                    .into_spanned_vec()
-                    .map(CompExpr::from_vec),
-                Wast::Call(Ident::from_repr_unchecked("bar").into_spanned(6..9).into_call())
-                    .into_spanned_node(6..9)
-                    .into_spanned_vec()
-                    .map(CompExpr::from_vec)
+                Wast::Call(
+                    Ident::from_repr_unchecked("foo")
+                        .into_spanned(0..3)
+                        .into_call()
+                )
+                .into_spanned_node(0..3)
+                .into_spanned_vec()
+                .map(CompExpr::from_vec),
+                Wast::Call(
+                    Ident::from_repr_unchecked("bar")
+                        .into_spanned(6..9)
+                        .into_call()
+                )
+                .into_spanned_node(6..9)
+                .into_spanned_vec()
+                .map(CompExpr::from_vec)
             )),
         );
         assert_eq!(

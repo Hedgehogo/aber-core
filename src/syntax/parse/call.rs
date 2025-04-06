@@ -12,10 +12,7 @@ use chumsky::prelude::*;
 pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'input>> + Copy {
     let number_start = just("-").or_not().then(digit(Radix::DECIMAL));
 
-    let unit = whitespace()
-        .at_least(1)
-        .not()
-        .ignore_then(none_of(".,;:'\"@(){}[]"));
+    let unit = whitespace(1).not().ignore_then(none_of(".,;:'\"@(){}[]"));
 
     number_start
         .not()
@@ -39,7 +36,7 @@ where
     X: Expr<'input>,
     P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
 {
-    let generics = whitespace()
+    let generics = whitespace(0)
         .ignore_then(spanned(generics::<X, _>(expr)))
         .or_not();
 
@@ -129,7 +126,10 @@ mod tests {
             call(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello"))
                 .into_result(),
-            Ok(Call::new((Ident::from_repr_unchecked("hello"), 0..5).into(), None))
+            Ok(Call::new(
+                (Ident::from_repr_unchecked("hello"), 0..5).into(),
+                None
+            ))
         );
         assert_eq!(
             call(expr(fact::<CompNode>()))

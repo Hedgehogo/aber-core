@@ -1,7 +1,7 @@
 //! Module that provides [`Whitespace`].
 
 /// Type describing a whitespace.
-#[derive(Default, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct Whitespace<'input> {
     repr: &'input str,
 }
@@ -13,7 +13,7 @@ impl<'input> Whitespace<'input> {
     /// The representation must be valid whitespace.
     /// 
     /// That is, contain only comments and whitespace as defined by the Unicode standard.
-    #[expect(dead_code)] pub(crate) fn from_repr_unchecked(repr: &'input str) -> Self {
+    pub(crate) fn from_repr_unchecked(repr: &'input str) -> Self {
         Self { repr }
     }
 

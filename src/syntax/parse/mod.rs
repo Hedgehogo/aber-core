@@ -2,12 +2,12 @@ pub mod assign;
 pub mod block;
 pub mod call;
 pub mod character;
+pub mod escaped_string;
 pub mod expr;
 pub mod fact;
 pub mod list;
 pub mod number;
 pub mod raw_string;
-pub mod escaped_string;
 pub mod whitespace;
 
 use super::error::{Error, Expected};
@@ -67,17 +67,19 @@ where
             .map(|i| i.map(Stmt::Assign)),
         expr.clone().map(|i| i.map(Stmt::Expr)),
     ))
-    .then_ignore(whitespace())
+    .then_ignore(whitespace(0))
     .then_ignore(semicolon);
 
     let content = stmt
-        .then_ignore(whitespace())
+        .then_ignore(whitespace(0))
         .repeated()
         .collect()
         .then(expr)
         .map(|(stmts, expr)| Block::new(stmts, expr));
 
-    whitespace().ignore_then(content).then_ignore(whitespace())
+    whitespace(0)
+        .ignore_then(content)
+        .then_ignore(whitespace(0))
 }
 
 #[cfg(test)]

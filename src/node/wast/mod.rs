@@ -26,6 +26,7 @@ pub use std::fmt;
 pub use string::String;
 pub use escaped_string::EscapedString;
 pub use raw_string::RawString;
+pub use whitespace::Whitespace;
 
 /// Type that describes a weak abstract syntax tree. In this case "weak" means that not all nestings can be explicitly resolved at this stage.
 pub enum Wast<'input, N: Node<'input>> {
