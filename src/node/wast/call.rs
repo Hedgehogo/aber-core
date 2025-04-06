@@ -14,9 +14,22 @@ pub struct Ident<'input> {
 }
 
 impl<'input> Ident<'input> {
-    /// Creates a new `Ident`.
-    pub fn new(content: &'input str) -> Self {
-        Self { content }
+    /// Creates a `Ident` from its representation.
+    /// 
+    /// # Arguments
+    /// - `repr` Representation of the identifier in the source document.
+    ///
+    /// # Safeguards
+    /// The representation must be a valid identifier.
+    /// 
+    /// That is, meet the following requirements:
+    /// - It must not start with a decimal digit.
+    /// - It must not start with the character `-` followed by a decimal digit.
+    /// - It must not contain sequences `.`, `,`, `;`, `:`, `'`, `"`, `@`, `//`, `(`, `)`, `{`, `}`, `[`, `]`.
+    /// - It must not contain whitespace.
+    /// - It doesn't have to be `=`.
+    pub(crate) fn from_repr_unchecked(repr: &'input str) -> Self {
+        Self { content: repr }
     }
 
     /// Gets a slice of the string.

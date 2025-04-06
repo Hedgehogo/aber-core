@@ -28,12 +28,14 @@ impl<'input> StringData<'input> for std::string::String {
 impl<'input> StringData<'input> for () {
     fn with_capacity(_capacity: usize) -> Self {}
 
-    fn with_next_section(#[allow(unused)] self, _section: &'input str) -> Self {}
+    fn with_next_section(self, _section: &'input str) -> Self {
+        self
+    }
 }
 
 /// Trait describing a type storing information about a string
 /// literal containing escape sequences.
-pub trait EscapedString<'input>: Sized {
+pub(crate) trait EscapedStringSealed<'input>: Sized {
     type Data: StringData<'input>;
 
     /// Creates an instance of the type based on the collected data
@@ -44,16 +46,21 @@ pub trait EscapedString<'input>: Sized {
     /// - `inner_repr` Representation of a string between opening and
     ///   closing sequences.
     ///
-    /// # Safety
+    /// # Safeguards
     /// `inner_repr` must be a valid string representation, that is,
     /// it must not contain `\` or `"` characters outside of escape
     /// sequences and must contain only existing escape sequences.
-    unsafe fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self;
+    fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self;
 }
+
+/// Trait describing a type storing information about a string
+/// literal containing escape sequences.
+#[expect(private_bounds)]
+pub trait EscapedString<'input>: EscapedStringSealed<'input> + Sized {}
 
 /// Trait describing a type storing information about a raw string
 /// literal.
-pub trait RawString<'input>: Sized {
+pub(crate) trait RawStringSealed<'input>: Sized {
     type Data: StringData<'input>;
 
     /// Creates an instance of the type based on the collected data
@@ -67,16 +74,17 @@ pub trait RawString<'input>: Sized {
     ///   opening sequence and the last line break as part of the raw
     ///   string.
     ///
-    /// # Safety
+    /// # Safeguards
     /// `indent` must be a valid indent, that is, it must contain
     /// only inline whitespace.
     ///
     /// `inner_repr` must be a valid representation of the raw
     /// string, that is, each line break must be followed by
     /// `indent`.
-    unsafe fn from_data_unchecked(
-        data: Self::Data,
-        indent: &'input str,
-        inner_repr: &'input str,
-    ) -> Self;
+    fn from_data_unchecked(data: Self::Data, indent: &'input str, inner_repr: &'input str) -> Self;
 }
+
+/// Trait describing a type storing information about a raw string
+/// literal.
+#[expect(private_bounds)]
+pub trait RawString<'input>: RawStringSealed<'input> + Sized {}

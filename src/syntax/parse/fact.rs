@@ -52,7 +52,7 @@ mod tests {
     #[test]
     fn test_fact() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
-        let digits = |s| unsafe { Digits::from_str_unchecked(s) };
+        let digits = |s| Digits::from_repr_unchecked(s);
         assert_eq!(
             fact::<CompNode>().parse(Graphemes::new("10")).into_result(),
             Ok(

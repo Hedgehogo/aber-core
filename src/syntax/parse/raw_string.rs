@@ -201,7 +201,7 @@ where
             },
         })
         .then_with_ctx(rest)
-        .map(|(ctx, (data, inner_repr))| unsafe {
+        .map(|(ctx, (data, inner_repr))| {
             O::from_data_unchecked(data, ctx.additional.indent, inner_repr.as_str())
         })
 }
@@ -221,19 +221,17 @@ mod tests {
     fn test_raw_string() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         let new_string = |capacity, sections: Vec<_>, indent, inner_repr| {
-            wast::String::Raw(unsafe {
-                string::RawString::from_data_unchecked(
-                    {
-                        let mut data = RawStringData::with_capacity(capacity);
-                        for section in sections {
-                            data = data.with_next_section(section);
-                        }
-                        data
-                    },
-                    indent,
-                    inner_repr,
-                )
-            })
+            wast::String::Raw(string::RawStringSealed::from_data_unchecked(
+                {
+                    let mut data = RawStringData::with_capacity(capacity);
+                    for section in sections {
+                        data = data.with_next_section(section);
+                    }
+                    data
+                },
+                indent,
+                inner_repr,
+            ))
         };
         {
             let input = indoc! {r#"

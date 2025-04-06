@@ -33,18 +33,20 @@ impl<'input> From<String<'input>> for std::string::String {
     }
 }
 
-impl<'input> string::EscapedString<'input> for String<'input> {
+impl<'input> string::EscapedStringSealed<'input> for String<'input> {
     type Data = EscapedStringData;
 
-    unsafe fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self {
+    fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self {
         Self::Escaped(EscapedString::from_data_unchecked(data, inner_repr))
     }
 }
 
-impl<'input> string::RawString<'input> for String<'input> {
+impl<'input> string::EscapedString<'input> for String<'input> {}
+
+impl<'input> string::RawStringSealed<'input> for String<'input> {
     type Data = RawStringData;
 
-    unsafe fn from_data_unchecked(
+    fn from_data_unchecked(
         data: Self::Data,
         indent: &'input str,
         inner_repr: &'input str,
@@ -52,3 +54,5 @@ impl<'input> string::RawString<'input> for String<'input> {
         Self::Raw(RawString::from_data_unchecked(data, indent, inner_repr))
     }
 }
+
+impl<'input> string::RawString<'input> for String<'input> {}

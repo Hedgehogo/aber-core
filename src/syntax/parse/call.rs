@@ -29,7 +29,7 @@ pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'inpu
             }
         })
         .map_err(|e: Error| e.replace_expected(Expected::Ident))
-        .map(|i| Ident::new(i.as_str()))
+        .map(|i| Ident::from_repr_unchecked(i.as_str()))
 }
 
 pub fn call<'input, X, P>(
@@ -66,11 +66,11 @@ mod tests {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             ident().parse(Graphemes::new("hello")).into_result(),
-            Ok(Ident::new("hello"))
+            Ok(Ident::from_repr_unchecked("hello"))
         );
         assert_eq!(
             ident().parse(Graphemes::new("-hello")).into_result(),
-            Ok(Ident::new("-hello"))
+            Ok(Ident::from_repr_unchecked("-hello"))
         );
         assert_eq!(
             ident().parse(Graphemes::new("9hello")).into_output_errors(),
@@ -129,14 +129,14 @@ mod tests {
             call(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello"))
                 .into_result(),
-            Ok(Call::new((Ident::new("hello"), 0..5).into(), None))
+            Ok(Call::new((Ident::from_repr_unchecked("hello"), 0..5).into(), None))
         );
         assert_eq!(
             call(expr(fact::<CompNode>()))
                 .parse(Graphemes::new("hello[]"))
                 .into_result(),
             Ok(Call::new(
-                Ident::new("hello").into_spanned(0..5),
+                Ident::from_repr_unchecked("hello").into_spanned(0..5),
                 Some(vec![].into_spanned(5..7))
             ))
         );
@@ -145,7 +145,7 @@ mod tests {
                 .parse(Graphemes::new("hello //hello\n []"))
                 .into_result(),
             Ok(Call::new(
-                Ident::new("hello").into_spanned(0..5),
+                Ident::from_repr_unchecked("hello").into_spanned(0..5),
                 Some(vec![].into_spanned(15..17))
             ))
         );

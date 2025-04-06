@@ -15,6 +15,7 @@ impl<'input> Call<'input> {
     pub fn function<'state>(&self, state: &'state State<'input>) -> FunctionRef<'state, 'input> {
         let unit_ref = state.get(self.id).expect("Unit must exist");
         
+        #[expect(unreachable_patterns)]
         match unit_ref {
             UnitRef::Function(i) => i,
             _ => panic!("Unit was supposed to be a function"),

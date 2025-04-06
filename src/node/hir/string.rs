@@ -1,6 +1,6 @@
 //! Module that provides [`String`].
 
-use super::super::string::{EscapedString, RawString};
+use super::super::string::{EscapedStringSealed, EscapedString, RawStringSealed, RawString};
 
 /// Type describing the contents of a string literal.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -24,18 +24,20 @@ impl<T: Into<std::string::String>> From<T> for String {
     }
 }
 
-impl<'input> EscapedString<'input> for String {
+impl<'input> EscapedStringSealed<'input> for String {
     type Data = std::string::String;
 
-    unsafe fn from_data_unchecked(data: Self::Data, _inner_repr: &'input str) -> Self {
+    fn from_data_unchecked(data: Self::Data, _inner_repr: &'input str) -> Self {
         Self::new(data)
     }
 }
 
-impl<'input> RawString<'input> for String {
+impl EscapedString<'_> for String {}
+
+impl<'input> RawStringSealed<'input> for String {
     type Data = std::string::String;
 
-    unsafe fn from_data_unchecked(
+    fn from_data_unchecked(
         data: Self::Data,
         _indent: &'input str,
         _inner_repr: &'input str,
@@ -43,3 +45,5 @@ impl<'input> RawString<'input> for String {
         Self::new(data)
     }
 }
+
+impl RawString<'_> for String {}

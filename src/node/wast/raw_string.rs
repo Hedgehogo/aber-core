@@ -142,14 +142,10 @@ impl<'input> string::StringData<'input> for RawStringData {
     }
 }
 
-impl<'input> string::RawString<'input> for RawString<'input> {
+impl<'input> string::RawStringSealed<'input> for RawString<'input> {
     type Data = RawStringData;
 
-    unsafe fn from_data_unchecked(
-        data: Self::Data,
-        indent: &'input str,
-        inner_repr: &'input str,
-    ) -> Self {
+    fn from_data_unchecked(data: Self::Data, indent: &'input str, inner_repr: &'input str) -> Self {
         Self {
             indent,
             inner_repr,
@@ -159,22 +155,22 @@ impl<'input> string::RawString<'input> for RawString<'input> {
     }
 }
 
+impl<'input> string::RawString<'input> for RawString<'input> {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_raw_string() {
-        let raw_string: RawString = unsafe {
-            string::RawString::from_data_unchecked(
-                RawStringData {
-                    section_count: 3,
-                    capacity: 13,
-                },
-                "\t  ",
-                "\t  Hello\r\n\t   Aber!",
-            )
-        };
+        let raw_string: RawString = string::RawStringSealed::from_data_unchecked(
+            RawStringData {
+                section_count: 3,
+                capacity: 13,
+            },
+            "\t  ",
+            "\t  Hello\r\n\t   Aber!",
+        );
 
         assert_eq!(raw_string.capacity(), 13);
         assert_eq!(

@@ -1,3 +1,4 @@
+#[expect(clippy::module_inception)]
 pub mod next_stage;
 pub mod custom;
 pub mod or;

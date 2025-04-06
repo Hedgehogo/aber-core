@@ -102,28 +102,28 @@ impl Debug for Digit {
     }
 }
 
-/// Type that stores consecutive digits as they were written.
+/// Type describing consecutive digits.
 #[derive(Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub struct Digits<'input> {
-    inner: &'input str,
+    repr: &'input str,
 }
 
 impl<'input> Digits<'input> {
     /// Creates a sequence of numbers from a string without checking the string for validity.
     ///
-    /// # Safety
+    /// # Safeguards
     /// The string must contain only the characters `0` - `9`, `A` - `Z` and `_`.
-    pub unsafe fn from_str_unchecked(inner: &'input str) -> Self {
-        Self { inner }
+    pub fn from_repr_unchecked(repr: &'input str) -> Self {
+        Self { repr }
     }
 
     /// Gets a slice of code points, which is a representation of a sequence of digits.
     pub fn as_str(&self) -> &'input str {
-        self.inner
+        self.repr
     }
     /// Gets the iterator by digits.
     pub fn iter(&self) -> DigitIter<'input> {
-        DigitIter::new(self.inner.as_bytes().iter())
+        DigitIter::new(self.repr.as_bytes().iter())
     }
 }
 
@@ -135,7 +135,7 @@ impl AsRef<str> for Digits<'_> {
 
 impl Debug for Digits<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Digits({:?})", self.inner)
+        write!(f, "Digits({:?})", self.repr)
     }
 }
 
@@ -152,7 +152,7 @@ impl<'input> DigitIter<'input> {
     fn iter(&mut self) -> impl DoubleEndedIterator<Item = Digit> + use<'_, 'input> {
         (&mut self.iter)
             .filter(|&i| (*i != b'_'))
-            .map(|i| unsafe { Digit::from_ascii(*i, Radix::MAX).unwrap_unchecked() })
+            .map(|i| Digit::from_ascii(*i, Radix::MAX).unwrap())
     }
 }
 
@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_digits() {
-        let digits = unsafe { Digits::from_str_unchecked("0_12_") };
+        let digits = Digits::from_repr_unchecked("0_12_");
         assert_eq!(
             digits.iter().map(u8::from).collect::<Vec<_>>(),
             vec![0, 1, 2]

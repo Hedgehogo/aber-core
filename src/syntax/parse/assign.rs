@@ -79,11 +79,11 @@ mod tests {
                 .parse(Graphemes::new("foo = bar"))
                 .into_result(),
             Ok(Assign::new(
-                Wast::Call(Ident::new("foo").into_spanned(0..3).into_call())
+                Wast::Call(Ident::from_repr_unchecked("foo").into_spanned(0..3).into_call())
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec),
-                Wast::Call(Ident::new("bar").into_spanned(6..9).into_call())
+                Wast::Call(Ident::from_repr_unchecked("bar").into_spanned(6..9).into_call())
                     .into_spanned_node(6..9)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec)

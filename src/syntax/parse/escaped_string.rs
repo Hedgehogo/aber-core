@@ -42,7 +42,7 @@ where
         .foldl(section.repeated(), |data, section| {
             data.with_next_section(section)
         })
-        .map_with(|data, e| unsafe {
+        .map_with(|data, e| {
             let inner_repr = e.slice().as_str();
             O::from_data_unchecked(data, inner_repr)
         })
@@ -107,18 +107,16 @@ mod tests {
     fn test_escaped_string() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         let new_string = |capacity, sections: Vec<_>, inner_repr| {
-            wast::String::Escaped(unsafe {
-                string::EscapedString::from_data_unchecked(
-                    {
-                        let mut data = EscapedStringData::with_capacity(capacity);
-                        for section in sections {
-                            data = data.with_next_section(section);
-                        }
-                        data
-                    },
-                    inner_repr,
-                )
-            })
+            wast::String::Escaped(string::EscapedStringSealed::from_data_unchecked(
+                {
+                    let mut data = EscapedStringData::with_capacity(capacity);
+                    for section in sections {
+                        data = data.with_next_section(section);
+                    }
+                    data
+                },
+                inner_repr,
+            ))
         };
         {
             let input = r#""Hello Aber!""#;
@@ -225,11 +223,7 @@ mod tests {
                 escaped_string::<wast::String>()
                     .parse(Graphemes::new(input))
                     .into_result(),
-                Ok(new_string(
-                    12,
-                    vec!["Hello Aber!", ""],
-                    "Hello Aber!\\\n"
-                ))
+                Ok(new_string(12, vec!["Hello Aber!", ""], "Hello Aber!\\\n"))
             );
         }
         {

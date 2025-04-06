@@ -118,7 +118,7 @@ mod tests {
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec),
-                Ident::new("foo")
+                Ident::from_repr_unchecked("foo")
                     .into_spanned(4..7)
                     .into_call()
                     .into_spanned(4..7)
@@ -136,7 +136,7 @@ mod tests {
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec),
-                Ident::new("foo")
+                Ident::from_repr_unchecked("foo")
                     .into_spanned(5..8)
                     .into_call()
                     .into_spanned(5..8)
@@ -155,7 +155,7 @@ mod tests {
                         .into_spanned_node(0..3)
                         .into_spanned_vec()
                         .map(CompExpr::from_vec),
-                    Ident::new("foo")
+                    Ident::from_repr_unchecked("foo")
                         .into_spanned(4..7)
                         .into_call()
                         .into_spanned(4..7)
@@ -163,7 +163,7 @@ mod tests {
                 .into_spanned_node(0..7)
                 .into_spanned_vec()
                 .map(CompExpr::from_vec),
-                Ident::new("bar")
+                Ident::from_repr_unchecked("bar")
                     .into_spanned(9..12)
                     .into_call()
                     .into_spanned(9..12)
@@ -182,7 +182,7 @@ mod tests {
                         .into_spanned_node(0..3)
                         .into_spanned_vec()
                         .map(CompExpr::from_vec),
-                    Ident::new("foo")
+                    Ident::from_repr_unchecked("foo")
                         .into_spanned(5..8)
                         .into_call()
                         .into_spanned(5..8)
@@ -190,7 +190,7 @@ mod tests {
                 .into_spanned_node(0..8)
                 .into_spanned_vec()
                 .map(CompExpr::from_vec),
-                Ident::new("bar")
+                Ident::from_repr_unchecked("bar")
                     .into_spanned(9..12)
                     .into_call()
                     .into_spanned(9..12)
@@ -214,7 +214,7 @@ mod tests {
                 .into_spanned_node(0..7)
                 .into_spanned_vec()
                 .map(CompExpr::from_vec),
-                Ident::new("foo")
+                Ident::from_repr_unchecked("foo")
                     .into_spanned(9..12)
                     .into_call()
                     .into_spanned(9..12)

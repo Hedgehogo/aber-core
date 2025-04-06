@@ -9,6 +9,7 @@ use crate::node::{
     CompExpr, Hir, CompNode, Spanned, Wast,
 };
 
+#[expect(clippy::result_unit_err)]
 pub fn to_hir_expr_recursive<'input, 'expr>(
     state: &mut State,
     expr: &'expr [Spanned<CompNode<'input>>],
@@ -20,6 +21,7 @@ pub fn to_hir_expr_recursive<'input, 'expr>(
         CompNode::Wast(Wast::Call(call)) => {
             let Spanned(ident, mut span) = call.ident.clone();
 
+            #[expect(clippy::infallible_destructuring_match)]
             let function = match state.find(ident).ok_or(())? {
                 UnitRef::Function(function) => function,
             };
@@ -57,6 +59,7 @@ pub fn to_hir_expr_recursive<'input, 'expr>(
     }
 }
 
+#[expect(clippy::result_unit_err)]
 pub fn to_hir_expr<'input>(
     state: &mut State,
     expr: &[Spanned<CompNode<'input>>],
@@ -67,6 +70,7 @@ pub fn to_hir_expr<'input>(
     }
 }
 
+#[expect(clippy::result_unit_err)]
 pub fn to_hir<'input>(state: &mut State, node: CompNode<'input>) -> Result<CompNode<'input>, ()> {
     match node {
         CompNode::Wast(wast) => match wast {
@@ -80,12 +84,16 @@ pub fn to_hir<'input>(state: &mut State, node: CompNode<'input>) -> Result<CompN
                 Ok(CompNode::Wast(Wast::Tuple(tuple)))
             }
 
+            #[expect(unused_variables)]
             Wast::Block(block) => todo!(),
 
+            #[expect(unused_variables)]
             Wast::MethodCall(method_call) => todo!(),
 
+            #[expect(unused_variables)]
             Wast::ChildCall(child_call) => todo!(),
 
+            #[expect(unused_variables)]
             Wast::NegativeCall(negative_call) => todo!(),
 
             Wast::Pair(_) => panic!("Pair can't exist in this context"),

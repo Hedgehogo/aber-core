@@ -205,10 +205,10 @@ impl<'input> string::StringData<'input> for EscapedStringData {
     }
 }
 
-impl<'input> string::EscapedString<'input> for EscapedString<'input> {
+impl<'input> string::EscapedStringSealed<'input> for EscapedString<'input> {
     type Data = EscapedStringData;
 
-    unsafe fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self {
+    fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self {
         Self {
             inner_repr,
             section_count: data.section_count,
@@ -217,21 +217,21 @@ impl<'input> string::EscapedString<'input> for EscapedString<'input> {
     }
 }
 
+impl<'input> string::EscapedString<'input> for EscapedString<'input> {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_escaped_string() {
-        let escaped_string: EscapedString = unsafe {
-            string::EscapedString::from_data_unchecked(
-                EscapedStringData {
-                    section_count: 5,
-                    capacity: 13,
-                },
-                r#"Hello\n\mAber!\"#,
-            )
-        };
+        let escaped_string: EscapedString = string::EscapedStringSealed::from_data_unchecked(
+            EscapedStringData {
+                section_count: 5,
+                capacity: 13,
+            },
+            r#"Hello\n\mAber!\"#,
+        );
 
         assert_eq!(escaped_string.capacity(), 13);
         assert_eq!(escaped_string.sections().len(), 5);

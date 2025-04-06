@@ -9,8 +9,11 @@ pub struct Whitespace<'input> {
 impl<'input> Whitespace<'input> {
     /// Creates a `Whitespace` from its representation.
     ///
+    /// # Safeguards
     /// The representation must be valid whitespace.
-    pub fn from_repr_unchecked(repr: &'input str) -> Self {
+    /// 
+    /// That is, contain only comments and whitespace as defined by the Unicode standard.
+    #[expect(dead_code)] pub(crate) fn from_repr_unchecked(repr: &'input str) -> Self {
         Self { repr }
     }
 

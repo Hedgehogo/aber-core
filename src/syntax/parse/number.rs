@@ -24,7 +24,7 @@ pub fn digits<'input>(
         .map_err(move |e: Error| e.replace_expected(expected))
         .then(digit(radix).ignored().or(spacer.ignored()).repeated())
         .to_slice()
-        .map(|i| unsafe { Digits::from_str_unchecked(i.as_str()) })
+        .map(|i| Digits::from_repr_unchecked(i.as_str()))
 }
 
 pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'input>> + Copy {
@@ -81,7 +81,7 @@ mod tests {
     #[test]
     fn test_number() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
-        let digits = |s| unsafe { Digits::from_str_unchecked(s) };
+        let digits = |s| Digits::from_repr_unchecked(s);
         assert_eq!(
             number().parse(Graphemes::new("10")).into_result(),
             Ok(Number::new(true, Radix::DECIMAL, digits("10"), None))
