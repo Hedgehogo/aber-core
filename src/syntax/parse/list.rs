@@ -73,32 +73,43 @@ mod tests {
 
     #[test]
     fn test() {
-        use crate::node::wast::character::Ascii;
-        use text::whitespace;
-
-        fn tuple<'input>() -> impl GraphemeParser<'input, (), Error<'input>> + Clone {
-            just("a")
-                .repeated()
-                .then_ignore(whitespace())
-                .separated_by(just(","))
-                .then_ignore(just(")"))
-        }
-
-        assert_eq!(
-            tuple().parse(Graphemes::new("a")).into_output_errors(),
-            (
+use chumsky::{
+    error::{Error, LabelError, Rich},
+    extra,
+    text::{whitespace, TextExpected},
+    DefaultExpected,
+};
+fn tuple<'input>(
+) -> impl Parser<'input, &'input str, (), extra::Err<Rich<'input, char, SimpleSpan>>>
+{
+    just("a")
+        .repeated()
+        .then_ignore(whitespace())
+        .separated_by(just(","))
+        .then_ignore(just(")"))
+}
+assert_eq!(
+    tuple().parse("a").into_output_errors(),
+    (
+        None,
+        vec![Error::<&str>::merge(
+            LabelError::<&str, _>::expected_found(
+                vec![TextExpected::<&str>::Whitespace],
                 None,
-                vec![Error::new(
-                    smallvec![
-                        Expected::Ascii(Ascii::new(b')').unwrap()),
-                        Expected::Ascii(Ascii::new(b',').unwrap()),
-                        Expected::Ascii(Ascii::new(b'a').unwrap()),
-                    ],
-                    None,
-                    Span::new(1..1)
-                )]
+                SimpleSpan::new((), 1..1)
+            ),
+            LabelError::<&str, _>::expected_found(
+                vec![
+                    DefaultExpected::Token('a'.into()),
+                    DefaultExpected::Token(','.into()),
+                    DefaultExpected::Token(')'.into()),
+                ],
+                None,
+                SimpleSpan::new((), 1..1)
             )
-        );
+        )]
+    )
+);
     }
 
     #[test]

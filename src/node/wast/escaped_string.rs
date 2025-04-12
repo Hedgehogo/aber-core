@@ -139,26 +139,19 @@ impl<'input> Iterator for SectionIter<'input> {
         let mut iter = Graphemes::new(self.rest).iter();
         let mut rest = self.rest;
 
-        let is_escape = match iter.next().and_then(|i| i.to_ascii()) {
-            Some(b'\\') => {
-                iter.next();
+        let is_escape = if iter.next()?.to_ascii() == Some(b'\\') {
+            iter.next();
+            rest = iter.clone().as_str();
+            true
+        } else {
+            while iter
+                .next()
+                .filter(|i| i.to_ascii().filter(|i| *i == b'\\').is_none())
+                .is_some()
+            {
                 rest = iter.clone().as_str();
-                true
             }
-
-            Some(_) => {
-                while iter
-                    .next()
-                    .and_then(|i| i.to_ascii())
-                    .filter(|i| *i == b'\\')
-                    .is_none()
-                {
-                    rest = iter.clone().as_str();
-                }
-                false
-            }
-
-            None => return None,
+            false
         };
 
         let len = self.rest.len() - rest.len();
@@ -225,26 +218,49 @@ mod tests {
 
     #[test]
     fn test_escaped_string() {
-        let escaped_string: EscapedString = string::EscapedStringSealed::from_data_unchecked(
-            EscapedStringData {
-                section_count: 5,
-                capacity: 13,
-            },
-            r#"Hello\n\mAber!\"#,
-        );
+        {
+            let escaped_string: EscapedString = string::EscapedStringSealed::from_data_unchecked(
+                EscapedStringData {
+                    section_count: 5,
+                    capacity: 13,
+                },
+                r#"Hello\n\mAber!\"#,
+            );
 
-        assert_eq!(escaped_string.capacity(), 13);
-        assert_eq!(escaped_string.sections().len(), 5);
-        assert_eq!(
-            escaped_string.sections().collect::<Vec<_>>(),
-            vec![
-                Section::Characters(r#"Hello"#),
-                Section::Escape(r#"\n"#),
-                Section::Escape(r#"\m"#),
-                Section::Characters(r#"Aber!"#),
-                Section::Escape(r#"\"#),
-            ]
-        );
-        assert_eq!(String::from(escaped_string), "Hello\n\u{FFFD}Aber!\u{FFFD}");
+            assert_eq!(escaped_string.capacity(), 13);
+            assert_eq!(escaped_string.sections().len(), 5);
+
+            let mut sections = escaped_string.sections();
+            assert_eq!(sections.next(), Some(Section::Characters(r#"Hello"#)));
+            assert_eq!(sections.next(), Some(Section::Escape(r#"\n"#)));
+            assert_eq!(sections.next(), Some(Section::Escape(r#"\m"#)));
+            assert_eq!(sections.next(), Some(Section::Characters(r#"Aber!"#)));
+            assert_eq!(sections.next(), Some(Section::Escape(r#"\"#)));
+            assert_eq!(sections.next(), None);
+            assert_eq!(String::from(escaped_string), "Hello\n\u{FFFD}Aber!\u{FFFD}");
+        }
+        {
+            let escaped_string: EscapedString = string::EscapedStringSealed::from_data_unchecked(
+                EscapedStringData {
+                    section_count: 1,
+                    capacity: 12,
+                },
+                r#"Hello World!"#,
+            );
+
+            assert_eq!(escaped_string.capacity(), 12);
+            assert_eq!(escaped_string.sections().len(), 1);
+
+            let mut sections = escaped_string.sections();
+            assert_eq!(
+                sections.next(),
+                Some(Section::Characters(r#"Hello World!"#))
+            );
+            assert_eq!(sections.next(), None);
+            assert_eq!(String::from(escaped_string), "Hello World!");
+        }
     }
+
+    #[test]
+    fn test_debug() {}
 }
