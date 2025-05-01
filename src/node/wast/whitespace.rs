@@ -1,5 +1,7 @@
 //! Module that provides [`Whitespace`].
 
+use super::super::whitespace;
+
 /// Type describing a whitespace.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct Whitespace<'input> {
@@ -21,5 +23,11 @@ impl<'input> Whitespace<'input> {
     /// sequences.
     pub fn repr(&self) -> &'input str {
         self.repr
+    }
+}
+
+impl<'input> whitespace::Whitespace<'input> for Whitespace<'input> {
+    fn from_repr_unchecked(repr: &'input str) -> Self {
+        Self::from_repr_unchecked(repr)
     }
 }

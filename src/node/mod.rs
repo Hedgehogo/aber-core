@@ -8,6 +8,7 @@ pub mod span;
 pub mod state;
 pub mod wast;
 pub mod string;
+pub mod whitespace;
 
 pub use comp_expr::CompExpr;
 pub use comp_node::CompNode;
