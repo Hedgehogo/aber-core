@@ -15,7 +15,7 @@ where
         .map_err(|e: Error| e.replace_expected(Expected::AssignSpecial));
 
     expr.clone()
-        .then_ignore(whitespace(0).then(special).then(whitespace(0)))
+        .then_ignore(whitespace::<()>(0).then(special).then(whitespace::<()>(0)))
         .then(expr)
         .map(|(left, right)| Assign::new(left, right))
 }

@@ -28,7 +28,7 @@ where
 
         spanned(choice)
             .map(Spanned::from)
-            .then(whitespace(0).ignore_then(pair_special).or_not())
+            .then(whitespace::<()>(0).ignore_then(pair_special).or_not())
             .map_with(|(i, pair), extra| match pair {
                 Some(_) => Wast::Pair(Box::new(i)).into_spanned_node(extra.span()),
                 None => i,

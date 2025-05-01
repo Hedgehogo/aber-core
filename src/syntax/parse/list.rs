@@ -25,10 +25,10 @@ where
         .map_err(move |e: Error| e.replace_expected(close.1));
 
     let close = close.recover_with(via_parser(empty()));
-    let item = expr.then_ignore(whitespace(0));
-    let separator = comma.then_ignore(whitespace(0));
+    let item = expr.then_ignore(whitespace::<()>(0));
+    let separator = comma.then_ignore(whitespace::<()>(0));
 
-    open.ignore_then(whitespace(0))
+    open.ignore_then(whitespace::<()>(0))
         .ignore_then(item.separated_by(separator).allow_trailing().collect())
         .then_ignore(close)
 }

@@ -22,19 +22,19 @@ where
         });
 
         let negative_special = just("@")
-            .then_ignore(whitespace(0))
+            .then_ignore(whitespace::<()>(0))
             .map_err(|e: Error| e.replace_expected(Expected::NegativeSpecial));
 
         let expr_call = |s: &'static str, expected| {
             just(s)
-                .padded_by(whitespace(0))
+                .padded_by(whitespace::<()>(0))
                 .ignore_then(spanned(call::<N::Expr, _>(expr.clone())).map(Spanned::from))
                 .map_err(move |e: Error| e.replace_expected(expected))
         };
 
         let method_special = expr_call(".", Expected::MethodSpecial);
         let child_special = expr_call("::", Expected::ChildSpecial);
-        let whitespace = whitespace(0).then_ignore(choice((just("."), just("::"))).not());
+        let whitespace = whitespace::<()>(0).then_ignore(choice((just("."), just("::"))).not());
 
         let into_atom = move |wast: Wast<'input, N>, span: SimpleSpan| {
             Spanned(

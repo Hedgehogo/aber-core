@@ -67,19 +67,19 @@ where
             .map(|i| i.map(Stmt::Assign)),
         expr.clone().map(|i| i.map(Stmt::Expr)),
     ))
-    .then_ignore(whitespace(0))
+    .then_ignore(whitespace::<()>(0))
     .then_ignore(semicolon);
 
     let content = stmt
-        .then_ignore(whitespace(0))
+        .then_ignore(whitespace::<()>(0))
         .repeated()
         .collect()
         .then(expr)
         .map(|(stmts, expr)| Block::new(stmts, expr));
 
-    whitespace(0)
+    whitespace::<()>(0)
         .ignore_then(content)
-        .then_ignore(whitespace(0))
+        .then_ignore(whitespace::<()>(0))
 }
 
 #[cfg(test)]
