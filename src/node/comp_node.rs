@@ -10,9 +10,14 @@ pub enum CompNode<'input> {
 impl<'input> Node<'input> for CompNode<'input> {
     type Expr = CompExpr<'input>;
     type String = String;
+    type Whitespace = ();
 
     fn from_wast(wast: Wast<'input, Self>) -> Self {
         Self::Wast(wast)
+    }
+
+    fn whitespaced(self, _whitespace: Self::Whitespace, _side: super::Side) -> Self {
+        self
     }
 }
 

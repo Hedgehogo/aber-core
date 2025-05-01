@@ -1,3 +1,5 @@
+//! Module providing abstractions related to string literals.
+
 /// Trait describing some data from which a string can be created.
 pub trait StringData<'input>: Sized {
     /// Creates data based on string capacity information.

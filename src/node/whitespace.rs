@@ -1,3 +1,8 @@
+//! Module providing abstractions related to whitespace.
+
+/// Trait describing a type that stores information about whitespace
+/// content (amount of indentation, comments, documentation
+/// comments).
 pub trait Whitespace<'input>: Sized {
     /// Creates a whitespace from a sequence of nodes.
     ///
@@ -14,4 +19,9 @@ pub trait Whitespace<'input>: Sized {
 
 impl<'input> Whitespace<'input> for () {
     fn from_repr_unchecked(_repr: &'input str) -> Self {}
+}
+
+pub enum Side {
+    Right,
+    Left
 }
