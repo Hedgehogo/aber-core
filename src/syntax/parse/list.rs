@@ -1,6 +1,6 @@
 use super::super::error::{Error, Expected};
 use super::{whitespace::whitespace, GraphemeParser};
-use crate::node::{Expr, ExprVec, Spanned};
+use crate::node::{whitespace::Side, Expr, ExprVec, Spanned};
 use chumsky::prelude::*;
 
 fn list<'input, X, P>(
@@ -25,11 +25,22 @@ where
         .map_err(move |e: Error| e.replace_expected(close.1));
 
     let close = close.recover_with(via_parser(empty()));
-    let item = expr.then_ignore(whitespace::<()>(0));
-    let separator = comma.then_ignore(whitespace::<()>(0));
 
-    open.ignore_then(whitespace::<()>(0))
-        .ignore_then(item.separated_by(separator).allow_trailing().collect())
+    let item = whitespace(0)
+        .then(expr)
+        .map(|(whitespace, expr)| X::whitespaced(expr, whitespace, Side::Left));
+
+    let separator = whitespace(0).then_ignore(comma);
+
+    let repeat = item
+        .then(separator.or_not())
+        .map(|(item, whitespace)| match whitespace {
+            Some(whitespace) => X::whitespaced(item, whitespace, Side::Right),
+            None => item,
+        });
+
+    open.ignore_then(repeat.repeated().collect())
+        .then_ignore(whitespace::<()>(0))
         .then_ignore(close)
 }
 
@@ -73,43 +84,43 @@ mod tests {
 
     #[test]
     fn test() {
-use chumsky::{
-    error::{Error, LabelError, Rich},
-    extra,
-    text::{whitespace, TextExpected},
-    DefaultExpected,
-};
-fn tuple<'input>(
-) -> impl Parser<'input, &'input str, (), extra::Err<Rich<'input, char, SimpleSpan>>>
-{
-    just("a")
-        .repeated()
-        .then_ignore(whitespace())
-        .separated_by(just(","))
-        .then_ignore(just(")"))
-}
-assert_eq!(
-    tuple().parse("a").into_output_errors(),
-    (
-        None,
-        vec![Error::<&str>::merge(
-            LabelError::<&str, _>::expected_found(
-                vec![TextExpected::<&str>::Whitespace],
+        use chumsky::{
+            error::{Error, LabelError, Rich},
+            extra,
+            text::{whitespace, TextExpected},
+            DefaultExpected,
+        };
+        fn tuple<'input>(
+        ) -> impl Parser<'input, &'input str, (), extra::Err<Rich<'input, char, SimpleSpan>>>
+        {
+            just("a")
+                .repeated()
+                .then_ignore(whitespace())
+                .separated_by(just(","))
+                .then_ignore(just(")"))
+        }
+        assert_eq!(
+            tuple().parse("a").into_output_errors(),
+            (
                 None,
-                SimpleSpan::new((), 1..1)
-            ),
-            LabelError::<&str, _>::expected_found(
-                vec![
-                    DefaultExpected::Token('a'.into()),
-                    DefaultExpected::Token(','.into()),
-                    DefaultExpected::Token(')'.into()),
-                ],
-                None,
-                SimpleSpan::new((), 1..1)
+                vec![Error::<&str>::merge(
+                    LabelError::<&str, _>::expected_found(
+                        vec![TextExpected::<&str>::Whitespace],
+                        None,
+                        SimpleSpan::new((), 1..1)
+                    ),
+                    LabelError::<&str, _>::expected_found(
+                        vec![
+                            DefaultExpected::Token('a'.into()),
+                            DefaultExpected::Token(','.into()),
+                            DefaultExpected::Token(')'.into()),
+                        ],
+                        None,
+                        SimpleSpan::new((), 1..1)
+                    )
+                )]
             )
-        )]
-    )
-);
+        );
     }
 
     #[test]

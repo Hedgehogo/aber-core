@@ -1,8 +1,9 @@
 use super::super::error::{Error, Expected};
 use super::{call::call, spanned, whitespace::whitespace, GraphemeParser};
 use crate::node::{
-    span::Span,
+    span::{IntoSpanned, Span},
     wast::{expr_call::ExprCall, negative_call::NegativeCall, Wast},
+    whitespace::Side,
     Expr, Node, Spanned,
 };
 use chumsky::pratt::*;
@@ -16,20 +17,25 @@ where
     P: GraphemeParser<'input, Spanned<N>, Error<'input>> + Clone + 'input,
 {
     recursive(|expr| {
-        let atom = fact.map(|i| {
-            let span = i.1.clone();
-            Spanned(vec![i], span)
-        });
+        let atom = fact
+            .map(|i| {
+                let span = i.1.clone();
+                Spanned(vec![i], span)
+            })
+            .boxed();
 
         let negative_special = just("@")
-            .then_ignore(whitespace::<()>(0))
-            .map_err(|e: Error| e.replace_expected(Expected::NegativeSpecial));
+            .ignore_then(whitespace(0))
+            .map_err(|e: Error| e.replace_expected(Expected::NegativeSpecial))
+            .boxed();
 
         let expr_call = |s: &'static str, expected| {
-            just(s)
-                .padded_by(whitespace::<()>(0))
-                .ignore_then(spanned(call::<N::Expr, _>(expr.clone())).map(Spanned::from))
+            whitespace(0)
+                .then_ignore(just(s))
+                .then(whitespace::<()>(0))
+                .then(spanned(call::<N::Expr, _>(expr.clone())).map(Spanned::from))
                 .map_err(move |e: Error| e.replace_expected(expected))
+                .boxed()
         };
 
         let method_special = expr_call(".", Expected::MethodSpecial);
@@ -43,32 +49,36 @@ where
             )
         };
 
-        let concat_spanned = |mut i: Spanned<Vec<_>>, mut j: Spanned<Vec<_>>, span: SimpleSpan| {
-            i.0.append(&mut j.0);
-            Spanned(i.0, span.into())
-        };
-
         atom.pratt((
             postfix(1, method_special, move |i, call, extra| {
-                into_atom(
-                    Wast::MethodCall(ExprCall::new(Spanned::map(i, N::Expr::from_seq), call)),
-                    extra.span(),
-                )
+                let ((left_ws, _right_ws), call) = call;
+                let expr = Spanned::map(i, N::Expr::from_seq);
+                let whitespaced = N::Expr::whitespaced(expr, left_ws, Side::Right);
+                let node = Wast::MethodCall(ExprCall::new(whitespaced, call));
+
+                into_atom(node, extra.span())
             }),
             postfix(1, child_special, move |i, call, extra| {
-                into_atom(
-                    Wast::ChildCall(ExprCall::new(Spanned::map(i, N::Expr::from_seq), call)),
-                    extra.span(),
-                )
+                let ((left_ws, _right_ws), call) = call;
+                let expr = Spanned::map(i, N::Expr::from_seq);
+                let whitespaced = N::Expr::whitespaced(expr, left_ws, Side::Right);
+                let node = Wast::ChildCall(ExprCall::new(whitespaced, call));
+
+                into_atom(node, extra.span())
             }),
-            prefix(2, negative_special, move |_, i, extra| {
-                into_atom(
-                    Wast::NegativeCall(NegativeCall::new(Spanned::map(i, N::Expr::from_seq))),
-                    extra.span(),
-                )
+            prefix(2, negative_special, move |ws, i, extra| {
+                let expr = Spanned::map(i, N::Expr::from_seq);
+                let whitespaced = N::Expr::whitespaced(expr, ws, Side::Left);
+                let node = Wast::NegativeCall(NegativeCall::new(whitespaced));
+
+                into_atom(node, extra.span())
             }),
-            infix(left(3), whitespace, move |i, _, j, extra| {
-                concat_spanned(i, j, extra.span())
+            infix(left(3), whitespace, move |left, _ws, right, extra| {
+                let Spanned(mut left, _): Spanned<Vec<_>> = left;
+                let Spanned(mut right, _) = right;
+
+                left.append(&mut right);
+                left.into_spanned(extra.span())
             }),
         ))
         .map(|i| i.map(N::Expr::from_seq))

@@ -1,6 +1,6 @@
 use super::super::error::{Error, Expected};
 use super::{whitespace::whitespace, GraphemeParser};
-use crate::node::{wast::assign::Assign, Expr, Spanned};
+use crate::node::{wast::assign::Assign, whitespace::Side, Expr, Spanned};
 use chumsky::prelude::*;
 
 pub fn assign<'input, X, P>(
@@ -14,9 +14,17 @@ where
         .ignored()
         .map_err(|e: Error| e.replace_expected(Expected::AssignSpecial));
 
-    expr.clone()
-        .then_ignore(whitespace::<()>(0).then(special).then(whitespace::<()>(0)))
+    let left = expr
+        .clone()
+        .then(whitespace(0))
+        .map(|(expr, whitespace)| X::whitespaced(expr, whitespace, Side::Right));
+
+    let right = whitespace(0)
         .then(expr)
+        .map(|(whitespace, expr)| X::whitespaced(expr, whitespace, Side::Left));
+
+    left.then_ignore(special)
+        .then(right)
         .map(|(left, right)| Assign::new(left, right))
 }
 

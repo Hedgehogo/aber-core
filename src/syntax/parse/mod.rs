@@ -12,10 +12,14 @@ pub mod whitespace;
 
 use super::error::{Error, Expected};
 use crate::node::{
-    wast::block::{Block, Stmt},
+    span::IntoSpanned,
+    wast::{
+        assign::Assign,
+        block::{Block, Stmt},
+    },
+    whitespace::Side,
     Expr, Spanned,
 };
-use assign::assign;
 use chumsky::{
     combinator::MapWith, error, extra::ParserExtra, input::MapExtra, prelude::*,
     text::unicode::Graphemes,
@@ -55,31 +59,39 @@ where
     X: Expr<'input>,
     P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
 {
+    let assign = just("=")
+        .ignored()
+        .map_err(|e: Error| e.replace_expected(Expected::AssignSpecial));
+
     let semicolon = just(";")
         .ignored()
         .map_err(|e: Error| e.replace_expected(Expected::Semicolon));
 
-    let expr = expr.or(spanned(empty().map(|_| X::from_seq(vec![]))).map(Spanned::from));
+    let expr = whitespace(0)
+        .then(expr.or(spanned(empty().map(|_| X::from_seq(vec![]))).map(Spanned::from)))
+        .map(|(whitespace, expr)| X::whitespaced(expr, whitespace, Side::Left))
+        .then(whitespace(0))
+        .map(|(expr, whitespace)| X::whitespaced(expr, whitespace, Side::Right));
 
-    let stmt = choice((
-        spanned(assign(expr.clone()))
-            .map(Spanned::from)
-            .map(|i| i.map(Stmt::Assign)),
-        expr.clone().map(|i| i.map(Stmt::Expr)),
-    ))
-    .then_ignore(whitespace::<()>(0))
-    .then_ignore(semicolon);
+    let stmt = expr
+        .clone()
+        .then(assign.ignore_then(expr.clone()).or_not())
+        .then_ignore(semicolon)
+        .map(|(left, right)| match right {
+            Some(right) => {
+                let span = left.1.range.start..right.1.range.end;
+                let assign = Assign::new(left, right);
+                Stmt::Assign(assign).into_spanned(span)
+            }
 
-    let content = stmt
-        .then_ignore(whitespace::<()>(0))
+            None => left.map(Stmt::Expr),
+        });
+
+    stmt
         .repeated()
         .collect()
         .then(expr)
-        .map(|(stmts, expr)| Block::new(stmts, expr));
-
-    whitespace::<()>(0)
-        .ignore_then(content)
-        .then_ignore(whitespace::<()>(0))
+        .map(|(stmts, expr)| Block::new(stmts, expr))
 }
 
 #[cfg(test)]
