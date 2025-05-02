@@ -21,7 +21,11 @@ impl<'input> Expr<'input> for Vec<Spanned<WastNode<'input>>> {
         seq
     }
 
-    fn whitespaced(self, _whitespace: Self::Whitespace, _side: Side) -> Self {
-        self
+    fn whitespaced(
+        expr: Spanned<Self>,
+        _whitespace: Self::Whitespace,
+        _side: Side,
+    ) -> Spanned<Self> {
+        expr
     }
 }

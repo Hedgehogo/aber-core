@@ -24,7 +24,11 @@ impl<'input> Expr<'input> for CompExpr<'input> {
         CompExpr::from_vec(seq)
     }
 
-    fn whitespaced(self, _whitespace: Self::Whitespace, _side: Side) -> Self {
-        self
+    fn whitespaced(
+        expr: Spanned<Self>,
+        _whitespace: Self::Whitespace,
+        _side: Side,
+    ) -> Spanned<Self> {
+        expr
     }
 }

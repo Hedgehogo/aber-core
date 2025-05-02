@@ -16,10 +16,11 @@ pub trait Expr<'input>: Sized {
     /// Creates an expresion with added whitespace information.
     ///
     /// # Arguments
+    /// - `expr` Expression without whitespace information.
     /// - `whitespace` Added information about whitespace.
     /// - `side` Side on which the whitespace is located from the
     ///   expresion.
-    fn whitespaced(self, whitespace: Self::Whitespace, side: Side) -> Self;
+    fn whitespaced(expr: Spanned<Self>, whitespace: Self::Whitespace, side: Side) -> Spanned<Self>;
 }
 
 /// Type that describes a sequence of expressions.
