@@ -44,8 +44,8 @@ pub fn to_hir_expr_recursive<'input, 'expr>(
 
         CompNode::Wast(Wast::Pair(pair)) => {
             let (right, rest) = to_hir_expr_recursive(state, rest)?;
-            let left_node = to_hir(state, (**pair).clone().0)?;
-            let left = left_node.into_spanned(pair.1.clone());
+            let left_node = to_hir(state, (*pair.node).clone().0)?;
+            let left = left_node.into_spanned(pair.node.1.clone());
             let span = left.1.start()..right.1.end();
             let node = CompNode::Hir(Hir::Pair(Pair::new(Box::new(left), Box::new(right))));
 

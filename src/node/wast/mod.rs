@@ -37,7 +37,7 @@ pub enum Wast<'input, N: Node<'input>> {
     Number(Number<'input>),
     Character(Character<'input>),
     String(N::String),
-    Pair(Box<Spanned<N>>),
+    Pair(Pair<'input, N>),
     Tuple(List<'input, N::Expr>),
     Block(Block<'input, N::Expr>),
     Call(Call<'input, N::Expr>),

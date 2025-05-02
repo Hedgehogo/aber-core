@@ -4,7 +4,10 @@ use super::{
     list::tuple, number::number, raw_string::raw_string, spanned, whitespace::whitespace,
     GraphemeParser,
 };
-use crate::node::{wast::Wast, Node, Spanned};
+use crate::node::{
+    wast::{Pair, Wast},
+    Node, Spanned,
+};
 use chumsky::prelude::*;
 
 pub fn fact<'input, N>() -> impl GraphemeParser<'input, Spanned<N>, Error<'input>> + Clone
@@ -28,10 +31,12 @@ where
 
         spanned(choice)
             .map(Spanned::from)
-            .then(whitespace::<()>(0).ignore_then(pair_special).or_not())
-            .map_with(|(i, pair), extra| match pair {
-                Some(_) => Wast::Pair(Box::new(i)).into_spanned_node(extra.span()),
-                None => i,
+            .then(whitespace(0).then_ignore(pair_special).or_not())
+            .map_with(|(node, pair), extra| match pair {
+                Some(whitespace) => Wast::Pair(Pair::new(Box::new(node), whitespace))
+                    .into_spanned_node(extra.span()),
+
+                None => node,
             })
     })
 }
@@ -84,8 +89,9 @@ mod tests {
                 .into_output_errors(),
             (
                 Some(
-                    Wast::Pair(Box::new(
-                        Wast::Character(grapheme("g").into()).into_spanned_node(0..2)
+                    Wast::Pair(Pair::new(
+                        Box::new(Wast::Character(grapheme("g").into()).into_spanned_node(0..2)),
+                        ()
                     ))
                     .into_spanned_node(0..3)
                 ),
