@@ -51,6 +51,10 @@ impl fmt::Debug for Ident<'_> {
 }
 
 /// Type describing the syntactic construct *generic arguments*
+///
+/// # Fields
+/// - `whitespace` Whitespace before the opening bracket.
+/// - `args` List of expressions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Generics<'input, X: Expr<'input>> {
     pub whitespace: X::Whitespace,

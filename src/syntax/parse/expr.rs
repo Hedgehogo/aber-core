@@ -32,7 +32,7 @@ where
         let expr_call = |s: &'static str, expected| {
             whitespace(0)
                 .then_ignore(just(s))
-                .then(whitespace::<()>(0))
+                .then(whitespace(0))
                 .then(spanned(call::<N::Expr, _>(expr.clone())).map(Spanned::from))
                 .map_err(move |e: Error| e.replace_expected(expected))
                 .boxed()
@@ -49,16 +49,16 @@ where
 
         atom.pratt((
             postfix(1, method_special, move |expr, call, extra| {
-                let ((left_ws, _right_ws), call) = call;
+                let ((left_ws, right_ws), call) = call;
                 let whitespaced = N::Expr::whitespaced(expr, left_ws, Side::Right);
-                let node = Wast::MethodCall(ExprCall::new(whitespaced, call));
+                let node = Wast::MethodCall(ExprCall::new(whitespaced, right_ws, call));
 
                 into_atom(node, extra.span())
             }),
             postfix(1, child_special, move |expr, call, extra| {
-                let ((left_ws, _right_ws), call) = call;
+                let ((left_ws, right_ws), call) = call;
                 let whitespaced = N::Expr::whitespaced(expr, left_ws, Side::Right);
-                let node = Wast::ChildCall(ExprCall::new(whitespaced, call));
+                let node = Wast::ChildCall(ExprCall::new(whitespaced, right_ws, call));
 
                 into_atom(node, extra.span())
             }),
@@ -120,6 +120,7 @@ mod tests {
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec),
+                (),
                 Ident::from_repr_unchecked("foo")
                     .into_spanned(4..7)
                     .into_call()
@@ -138,6 +139,7 @@ mod tests {
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec),
+                (),
                 Ident::from_repr_unchecked("foo")
                     .into_spanned(5..8)
                     .into_call()
@@ -157,6 +159,7 @@ mod tests {
                         .into_spanned_node(0..3)
                         .into_spanned_vec()
                         .map(CompExpr::from_vec),
+                    (),
                     Ident::from_repr_unchecked("foo")
                         .into_spanned(4..7)
                         .into_call()
@@ -165,6 +168,7 @@ mod tests {
                 .into_spanned_node(0..7)
                 .into_spanned_vec()
                 .map(CompExpr::from_vec),
+                (),
                 Ident::from_repr_unchecked("bar")
                     .into_spanned(9..12)
                     .into_call()
@@ -184,6 +188,7 @@ mod tests {
                         .into_spanned_node(0..3)
                         .into_spanned_vec()
                         .map(CompExpr::from_vec),
+                    (),
                     Ident::from_repr_unchecked("foo")
                         .into_spanned(5..8)
                         .into_call()
@@ -192,6 +197,7 @@ mod tests {
                 .into_spanned_node(0..8)
                 .into_spanned_vec()
                 .map(CompExpr::from_vec),
+                (),
                 Ident::from_repr_unchecked("bar")
                     .into_spanned(9..12)
                     .into_call()
@@ -216,6 +222,7 @@ mod tests {
                 .into_spanned_node(0..7)
                 .into_spanned_vec()
                 .map(CompExpr::from_vec),
+                (),
                 Ident::from_repr_unchecked("foo")
                     .into_spanned(9..12)
                     .into_call()
