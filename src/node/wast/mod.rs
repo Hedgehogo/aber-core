@@ -12,6 +12,7 @@ pub mod raw_string;
 pub mod string;
 pub mod wast_node;
 pub mod whitespace;
+pub mod list;
 
 use super::{span::Span, Expr, ExprVec, Node, Spanned};
 use std::fmt;
@@ -27,6 +28,7 @@ pub use number::Number;
 pub use raw_string::RawString;
 pub use string::String;
 pub use whitespace::Whitespace;
+pub use list::List;
 
 /// Type that describes a weak abstract syntax tree. In this case "weak" means that not all nestings can be explicitly resolved at this stage.
 pub enum Wast<'input, N: Node<'input>> {
