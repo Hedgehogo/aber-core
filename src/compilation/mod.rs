@@ -75,7 +75,7 @@ pub fn to_hir<'input>(state: &mut State, node: CompNode<'input>) -> Result<CompN
     match node {
         CompNode::Wast(wast) => match wast {
             Wast::Tuple(mut tuple) => {
-                for Spanned(expr, span) in &mut tuple {
+                for Spanned(expr, span) in &mut tuple.items {
                     if let CompExpr::Wast(i) = expr {
                         *expr = to_hir_expr(state, i.as_slice())
                             .map(|i| CompExpr::Hir(Box::new(i.into_spanned(span.clone()))))?;

@@ -1,7 +1,7 @@
 //! Module that provides types to describe the syntactic construct *call*.
 //!
 use super::super::{Expr, Spanned};
-use super::ExprVec;
+use super::List;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,15 +54,12 @@ impl fmt::Debug for Ident<'_> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Generics<'input, X: Expr<'input>> {
     pub whitespace: X::Whitespace,
-    pub args: Spanned<ExprVec<'input, X>>,
+    pub args: Spanned<List<'input, X>>,
 }
 
 impl<'input, X: Expr<'input>> Generics<'input, X> {
     /// Creates a new `Generics`.
-    pub fn new(
-        whitespace: X::Whitespace,
-        args: Spanned<ExprVec<'input, X>>,
-    ) -> Self {
+    pub fn new(whitespace: X::Whitespace, args: Spanned<List<'input, X>>) -> Self {
         Self { whitespace, args }
     }
 }
@@ -75,10 +72,7 @@ pub struct Call<'input, X: Expr<'input>> {
 
 impl<'input, X: Expr<'input>> Call<'input, X> {
     /// Creates a new `Call`.
-    pub fn new(
-        ident: Spanned<Ident<'input>>,
-        generics: Option<Generics<'input, X>>,
-    ) -> Self {
+    pub fn new(ident: Spanned<Ident<'input>>, generics: Option<Generics<'input, X>>) -> Self {
         Self { ident, generics }
     }
 }

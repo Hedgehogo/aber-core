@@ -56,6 +56,7 @@ mod tests {
     use super::super::{expr::expr, fact::fact};
     use crate::node::{
         span::{IntoSpanned, Span},
+        wast::List,
         CompNode,
     };
     use smallvec::smallvec;
@@ -140,7 +141,7 @@ mod tests {
                 .into_result(),
             Ok(Call::new(
                 Ident::from_repr_unchecked("hello").into_spanned(0..5),
-                Some(Generics::new((), vec![].into_spanned(5..7)))
+                Some(Generics::new((), List::new(vec![], ()).into_spanned(5..7)))
             ))
         );
         assert_eq!(
@@ -149,7 +150,10 @@ mod tests {
                 .into_result(),
             Ok(Call::new(
                 Ident::from_repr_unchecked("hello").into_spanned(0..5),
-                Some(Generics::new((), vec![].into_spanned(15..17)))
+                Some(Generics::new(
+                    (),
+                    List::new(vec![], ()).into_spanned(15..17)
+                ))
             ))
         );
         assert_eq!(
