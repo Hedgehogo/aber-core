@@ -13,6 +13,13 @@ pub trait Expr<'input>: Sized {
     /// - `seq` node sequence with spans.
     fn from_seq(seq: Vec<Spanned<Self::Node>>) -> Self;
 
+    /// Creates an expression from two neighboring.
+    ///
+    /// # Arguments
+    /// - `left` Expression on the left.
+    /// - `right` Expression on the right.
+    fn concat(left: Spanned<Self>, right: Spanned<Self>) -> Option<Spanned<Self>>;
+
     /// Creates an expresion with added whitespace information.
     ///
     /// # Arguments

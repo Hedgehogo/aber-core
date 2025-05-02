@@ -20,7 +20,7 @@ where
         let atom = fact
             .map(|i| {
                 let span = i.1.clone();
-                Spanned(vec![i], span)
+                Spanned(N::Expr::from_seq(vec![i]), span)
             })
             .boxed();
 
@@ -40,48 +40,40 @@ where
 
         let method_special = expr_call(".", Expected::MethodSpecial);
         let child_special = expr_call("::", Expected::ChildSpecial);
-        let whitespace = whitespace::<()>(0).then_ignore(choice((just("."), just("::"))).not());
+        let whitespace = whitespace(0).then_ignore(choice((just("."), just("::"))).not());
 
         let into_atom = move |wast: Wast<'input, N>, span: SimpleSpan| {
-            Spanned(
-                vec![Spanned(wast.into_node(), Span::from(span))],
-                Span::from(span),
-            )
+            let seq = vec![Spanned(wast.into_node(), Span::from(span))];
+            N::Expr::from_seq(seq).into_spanned(span)
         };
 
         atom.pratt((
-            postfix(1, method_special, move |i, call, extra| {
+            postfix(1, method_special, move |expr, call, extra| {
                 let ((left_ws, _right_ws), call) = call;
-                let expr = Spanned::map(i, N::Expr::from_seq);
                 let whitespaced = N::Expr::whitespaced(expr, left_ws, Side::Right);
                 let node = Wast::MethodCall(ExprCall::new(whitespaced, call));
 
                 into_atom(node, extra.span())
             }),
-            postfix(1, child_special, move |i, call, extra| {
+            postfix(1, child_special, move |expr, call, extra| {
                 let ((left_ws, _right_ws), call) = call;
-                let expr = Spanned::map(i, N::Expr::from_seq);
                 let whitespaced = N::Expr::whitespaced(expr, left_ws, Side::Right);
                 let node = Wast::ChildCall(ExprCall::new(whitespaced, call));
 
                 into_atom(node, extra.span())
             }),
-            prefix(2, negative_special, move |ws, i, extra| {
-                let expr = Spanned::map(i, N::Expr::from_seq);
+            prefix(2, negative_special, move |ws, expr, extra| {
                 let whitespaced = N::Expr::whitespaced(expr, ws, Side::Left);
                 let node = Wast::NegativeCall(NegativeCall::new(whitespaced));
 
                 into_atom(node, extra.span())
             }),
-            infix(left(3), whitespace, move |left, _ws, right, extra| {
-                let Spanned(mut left, _): Spanned<Vec<_>> = left;
-                let Spanned(mut right, _) = right;
+            infix(left(3), whitespace, move |left, ws, right, _| {
+                let whitespaced = N::Expr::whitespaced(right, ws, Side::Left);
 
-                left.append(&mut right);
-                left.into_spanned(extra.span())
+                N::Expr::concat(left, whitespaced).unwrap()
             }),
         ))
-        .map(|i| i.map(N::Expr::from_seq))
     })
 }
 
