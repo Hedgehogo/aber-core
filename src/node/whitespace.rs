@@ -3,7 +3,7 @@
 /// Trait describing a type that stores information about whitespace
 /// content (amount of indentation, comments, documentation
 /// comments).
-pub trait Whitespace<'input>: Sized {
+pub(crate) trait WhitespaceSealed<'input>: Sized {
     /// Creates a whitespace from a sequence of nodes.
     ///
     /// # Arguments
@@ -17,11 +17,19 @@ pub trait Whitespace<'input>: Sized {
     fn from_repr_unchecked(repr: &'input str) -> Self;
 }
 
-impl<'input> Whitespace<'input> for () {
+impl<'input> WhitespaceSealed<'input> for () {
     fn from_repr_unchecked(_repr: &'input str) -> Self {}
 }
 
+/// Trait describing a type that stores information about whitespace
+/// content (amount of indentation, comments, documentation
+/// comments).
+#[expect(private_bounds)]
+pub trait Whitespace<'input>: WhitespaceSealed<'input> + Sized {}
+
+impl Whitespace<'_> for () {}
+
 pub enum Side {
     Right,
-    Left
+    Left,
 }

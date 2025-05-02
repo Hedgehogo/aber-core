@@ -13,7 +13,7 @@ impl<'input> Whitespace<'input> {
     ///
     /// # Safeguards
     /// The representation must be valid whitespace.
-    /// 
+    ///
     /// That is, contain only comments and whitespace as defined by the Unicode standard.
     pub(crate) fn from_repr_unchecked(repr: &'input str) -> Self {
         Self { repr }
@@ -26,8 +26,10 @@ impl<'input> Whitespace<'input> {
     }
 }
 
-impl<'input> whitespace::Whitespace<'input> for Whitespace<'input> {
+impl<'input> whitespace::WhitespaceSealed<'input> for Whitespace<'input> {
     fn from_repr_unchecked(repr: &'input str) -> Self {
         Self::from_repr_unchecked(repr)
     }
 }
+
+impl<'input> whitespace::Whitespace<'input> for Whitespace<'input> {}

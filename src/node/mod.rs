@@ -11,7 +11,6 @@ pub mod wast;
 pub mod whitespace;
 
 use string::{EscapedString, RawString};
-use whitespace::Side;
 
 pub use comp_expr::CompExpr;
 pub use comp_node::CompNode;
@@ -32,20 +31,9 @@ pub trait Node<'input>: Sized {
     /// Type describing the string.
     type String: EscapedString<'input> + RawString<'input>;
 
-    /// Type describing the whitespace.
-    type Whitespace: Whitespace<'input>;
-
     /// Creates a node from WAST fact.
     ///
     /// # Arguments
     /// - `wast` WAST fact.
     fn from_wast(wast: Wast<'input, Self>) -> Self;
-
-    /// Creates a node with added whitespace information.
-    ///
-    /// # Arguments
-    /// - `whitespace` Added information about whitespace.
-    /// - `side` Side on which the whitespace is located from the
-    ///   node.
-    fn whitespaced(self, whitespace: Self::Whitespace, side: Side) -> Self;
 }
