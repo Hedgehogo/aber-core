@@ -4,28 +4,28 @@ pub mod assign;
 pub mod block;
 pub mod call;
 pub mod character;
+pub mod escaped_string;
 pub mod expr_call;
 pub mod negative_call;
 pub mod number;
+pub mod raw_string;
 pub mod string;
 pub mod wast_node;
-pub mod escaped_string;
-pub mod raw_string;
 pub mod whitespace;
 
-use super::{span::Span, ExprVec, Node, Spanned};
+use super::{span::Span, Expr, ExprVec, Node, Spanned};
+use std::fmt;
 
 pub use assign::Assign;
 pub use block::Block;
 pub use call::Call;
 pub use character::Character;
+pub use escaped_string::EscapedString;
 pub use expr_call::ExprCall;
 pub use negative_call::NegativeCall;
 pub use number::Number;
-pub use std::fmt;
-pub use string::String;
-pub use escaped_string::EscapedString;
 pub use raw_string::RawString;
+pub use string::String;
 pub use whitespace::Whitespace;
 
 /// Type that describes a weak abstract syntax tree. In this case "weak" means that not all nestings can be explicitly resolved at this stage.
@@ -61,6 +61,7 @@ impl<'input, N> fmt::Debug for Wast<'input, N>
 where
     N: Node<'input> + fmt::Debug,
     N::Expr: fmt::Debug,
+    <N::Expr as Expr<'input>>::Whitespace: fmt::Debug,
     N::String: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -83,6 +84,7 @@ impl<'input, N> Clone for Wast<'input, N>
 where
     N: Node<'input> + Clone,
     N::Expr: Clone,
+    <N::Expr as Expr<'input>>::Whitespace: Clone,
     N::String: Clone,
 {
     fn clone(&self) -> Self {
@@ -101,10 +103,11 @@ where
     }
 }
 
-impl<'input, N: Node<'input>> PartialEq for Wast<'input, N>
+impl<'input, N> PartialEq for Wast<'input, N>
 where
     N: Node<'input> + PartialEq,
     N::Expr: PartialEq,
+    <N::Expr as Expr<'input>>::Whitespace: PartialEq,
     N::String: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -124,9 +127,11 @@ where
     }
 }
 
-impl<'input, N: Node<'input> + Eq> Eq for Wast<'input, N>
+impl<'input, N> Eq for Wast<'input, N>
 where
+    N: Node<'input> + Eq,
     N::Expr: Eq,
+    <N::Expr as Expr<'input>>::Whitespace: Eq,
     N::String: Eq,
 {
 }

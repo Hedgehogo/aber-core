@@ -2,7 +2,7 @@ use super::super::error::{Error, Expected};
 use super::{list::generics, number::digit, spanned, whitespace::whitespace, GraphemeParser};
 use crate::node::{
     wast::{
-        call::{Call, Ident},
+        call::{Call, Generics, Ident},
         number::Radix,
     },
     Expr, Spanned,
@@ -12,7 +12,9 @@ use chumsky::prelude::*;
 pub fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Error<'input>> + Copy {
     let number_start = just("-").or_not().then(digit(Radix::DECIMAL));
 
-    let unit = whitespace::<()>(1).not().ignore_then(none_of(".,;:'\"@(){}[]"));
+    let unit = whitespace::<()>(1)
+        .not()
+        .ignore_then(none_of(".,;:'\"@(){}[]"));
 
     number_start
         .not()
@@ -36,13 +38,14 @@ where
     X: Expr<'input>,
     P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
 {
-    let generics = whitespace::<()>(0)
-        .ignore_then(spanned(generics::<X, _>(expr)))
+    let generics = whitespace(0)
+        .then(spanned(generics::<X, _>(expr)).map(Spanned::from))
+        .map(|(whitespace, args)| Generics::new(whitespace, args))
         .or_not();
 
     spanned(ident())
         .map(Spanned::from)
-        .then(generics.map(|i| i.map(Spanned::from)))
+        .then(generics)
         .map(|(ident, generics)| Call::new(ident, generics))
 }
 
@@ -137,7 +140,7 @@ mod tests {
                 .into_result(),
             Ok(Call::new(
                 Ident::from_repr_unchecked("hello").into_spanned(0..5),
-                Some(vec![].into_spanned(5..7))
+                Some(Generics::new((), vec![].into_spanned(5..7)))
             ))
         );
         assert_eq!(
@@ -146,7 +149,7 @@ mod tests {
                 .into_result(),
             Ok(Call::new(
                 Ident::from_repr_unchecked("hello").into_spanned(0..5),
-                Some(vec![].into_spanned(15..17))
+                Some(Generics::new((), vec![].into_spanned(15..17)))
             ))
         );
         assert_eq!(
