@@ -1,5 +1,5 @@
 use super::super::error::{Error, Expected};
-use super::{parser, GraphemeParser};
+use super::{content::content, GraphemeParser};
 use crate::node::{wast::block::Block, Expr, Spanned};
 use chumsky::prelude::*;
 
@@ -19,7 +19,7 @@ where
         .map_err(move |e: Error| e.replace_expected(Expected::BlockClose))
         .recover_with(via_parser(empty()));
 
-    open.ignore_then(parser(expr)).then_ignore(close)
+    open.ignore_then(content(expr)).then_ignore(close)
 }
 
 #[cfg(test)]
