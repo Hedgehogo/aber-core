@@ -1,5 +1,8 @@
-use super::super::error::{Error, Expected};
-use super::{spanned, whitespace::whitespace, GraphemeParser};
+use super::super::{
+    ctx::Ctx,
+    error::{Error, Expected},
+};
+use super::{spanned, whitespace::whitespace, GraphemeParser, GraphemeParserExtra};
 use crate::node::{
     span::IntoSpanned,
     wast::{
@@ -11,12 +14,11 @@ use crate::node::{
 };
 use chumsky::prelude::*;
 
-pub fn content<'input, X, P>(
-    expr: P,
-) -> impl GraphemeParser<'input, Block<'input, X>, Error<'input>> + Clone
+pub fn content<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, Block<'input, X>, E> + Clone
 where
     X: Expr<'input>,
-    P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
+    P: GraphemeParser<'input, Spanned<X>, E> + Clone,
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     let assign = just("=")
         .ignored()
@@ -56,7 +58,7 @@ where
 mod tests {
     use super::*;
 
-    use super::super::{expr::expr, fact::fact};
+    use super::super::{expr::expr, fact::fact, tests::Extra};
     use crate::node::{
         span::{IntoSpanned, Span},
         wast::{assign::Assign, Wast},
@@ -69,7 +71,7 @@ mod tests {
     fn test_content() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            content(expr(fact::<CompNode>()))
+            content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new(""))
                 .into_result(),
             Ok(Block::new(
@@ -78,7 +80,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            content(expr(fact::<CompNode>()))
+            content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("'a'"))
                 .into_result(),
             Ok(Block::new(
@@ -90,7 +92,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            content(expr(fact::<CompNode>()))
+            content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("'a'; "))
                 .into_result(),
             Ok(Block::new(
@@ -105,7 +107,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            content(expr(fact::<CompNode>()))
+            content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("'a'; 'b'"))
                 .into_result(),
             Ok(Block::new(
@@ -123,7 +125,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            content(expr(fact::<CompNode>()))
+            content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("'a' = 'b';"))
                 .into_result(),
             Ok(Block::new(
@@ -143,7 +145,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            content(expr(fact::<CompNode>()))
+            content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("[]"))
                 .into_output_errors(),
             (

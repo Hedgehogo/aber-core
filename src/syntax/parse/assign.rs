@@ -1,14 +1,16 @@
-use super::super::error::{Error, Expected};
-use super::{whitespace::whitespace, GraphemeParser};
+use super::super::{
+    ctx::Ctx,
+    error::{Error, Expected},
+};
+use super::{whitespace::whitespace, GraphemeParser, GraphemeParserExtra};
 use crate::node::{wast::assign::Assign, whitespace::Side, Expr, Spanned};
 use chumsky::prelude::*;
 
-pub fn assign<'input, X, P>(
-    expr: P,
-) -> impl GraphemeParser<'input, Assign<'input, X>, Error<'input>> + Clone
+pub fn assign<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, Assign<'input, X>, E> + Clone
 where
     X: Expr<'input>,
-    P: GraphemeParser<'input, Spanned<X>, Error<'input>> + Clone,
+    P: GraphemeParser<'input, Spanned<X>, E> + Clone,
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     let special = just("=")
         .ignored()
@@ -33,7 +35,7 @@ mod tests {
     use super::*;
 
     use super::super::super::error::Expected;
-    use super::super::{expr::expr, fact::fact};
+    use super::super::{expr::expr, fact::fact, tests::Extra};
     use crate::node::{
         span::{IntoSpanned, Span},
         wast::{call::Ident, Wast},
@@ -46,7 +48,7 @@ mod tests {
     fn test_assign() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            assign(expr(fact::<CompNode>()))
+            assign(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("'a' = 'b'"))
                 .into_result(),
             Ok(Assign::new(
@@ -61,7 +63,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            assign(expr(fact::<CompNode>()))
+            assign(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("'a' = "))
                 .into_output_errors(),
             (
@@ -83,7 +85,7 @@ mod tests {
             )
         );
         assert_eq!(
-            assign(expr(fact::<CompNode>()))
+            assign(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("foo = bar"))
                 .into_result(),
             Ok(Assign::new(
@@ -106,7 +108,7 @@ mod tests {
             )),
         );
         assert_eq!(
-            assign(expr(fact::<CompNode>()))
+            assign(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new(""))
                 .into_output_errors(),
             (

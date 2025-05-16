@@ -1,11 +1,16 @@
-use super::super::error::{Error, Expected};
-use super::GraphemeParser;
+use super::super::{
+    ctx::Ctx,
+    error::{Error, Expected},
+};
+use super::{GraphemeParser, GraphemeParserExtra};
 use crate::node::wast::character::Character;
 use chumsky::prelude::*;
 use chumsky::text::unicode::Grapheme;
 use text::{Char, Graphemes};
 
-fn escape_sequence<'input>() -> impl GraphemeParser<'input, &'input Grapheme, Error<'input>> + Copy
+fn escape_sequence<'input, E>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
+where
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     any()
         .try_map(|i: &Grapheme, span: SimpleSpan| {
@@ -22,7 +27,10 @@ fn escape_sequence<'input>() -> impl GraphemeParser<'input, &'input Grapheme, Er
         .map_err(|e: Error| e.replace_expected(Expected::CharEscaped))
 }
 
-pub fn character<'input>() -> impl GraphemeParser<'input, Character<'input>, Error<'input>> + Copy {
+pub fn character<'input, E>() -> impl GraphemeParser<'input, Character<'input>, E> + Copy
+where
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+{
     let quote = |expected| just("'").map_err(move |e: Error| e.replace_expected(expected));
     let escape = just("\\").map_err(|e: Error| e.replace_expected(Expected::CharEscape));
     let escaped = escape.ignore_then(escape_sequence());
@@ -48,6 +56,7 @@ pub fn character<'input>() -> impl GraphemeParser<'input, Character<'input>, Err
 mod tests {
     use super::*;
 
+    use super::super::tests::Extra;
     use crate::node::span::Span;
     use smallvec::smallvec;
     use text::Graphemes;
@@ -56,11 +65,15 @@ mod tests {
     fn test_character() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            character().parse(Graphemes::new("'m'")).into_result(),
+            character::<Extra>()
+                .parse(Graphemes::new("'m'"))
+                .into_result(),
             Ok(Character::new(grapheme("m")))
         );
         assert_eq!(
-            character().parse(Graphemes::new("'m")).into_output_errors(),
+            character::<Extra>()
+                .parse(Graphemes::new("'m"))
+                .into_output_errors(),
             (
                 Some(Character::new(grapheme("m"))),
                 vec![Error::new_expected(
@@ -71,7 +84,9 @@ mod tests {
             )
         );
         assert_eq!(
-            character().parse(Graphemes::new("'")).into_output_errors(),
+            character::<Extra>()
+                .parse(Graphemes::new("'"))
+                .into_output_errors(),
             (
                 Some(Character::new(grapheme("\u{FFFD}"))),
                 vec![
@@ -85,7 +100,7 @@ mod tests {
             )
         );
         assert_eq!(
-            character()
+            character::<Extra>()
                 .parse(Graphemes::new("'\\"))
                 .into_output_errors(),
             (
@@ -97,7 +112,7 @@ mod tests {
             )
         );
         assert_eq!(
-            character()
+            character::<Extra>()
                 .parse(Graphemes::new("'mm"))
                 .into_output_errors(),
             (
@@ -109,7 +124,9 @@ mod tests {
             )
         );
         assert_eq!(
-            character().parse(Graphemes::new("")).into_output_errors(),
+            character::<Extra>()
+                .parse(Graphemes::new(""))
+                .into_output_errors(),
             (
                 None,
                 vec![Error::new(smallvec![Expected::Char], None, Span::new(0..0))]

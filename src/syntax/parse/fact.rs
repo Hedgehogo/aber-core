@@ -1,8 +1,11 @@
-use super::super::error::{Error, Expected};
+use super::super::{
+    ctx::Ctx,
+    error::{Error, Expected},
+};
 use super::{
     block::block, call::call, character::character, escaped_string::escaped_string, expr::expr,
     list::tuple, number::number, raw_string::raw_string, spanned, whitespace::whitespace,
-    GraphemeParser,
+    GraphemeParser, GraphemeParserExtra,
 };
 use crate::node::{
     wast::{Pair, Wast},
@@ -10,9 +13,10 @@ use crate::node::{
 };
 use chumsky::prelude::*;
 
-pub fn fact<'input, N>() -> impl GraphemeParser<'input, Spanned<N>, Error<'input>> + Clone
+pub fn fact<'input, N, E>() -> impl GraphemeParser<'input, Spanned<N>, E> + Clone
 where
     N: Node<'input> + 'input,
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     recursive(|fact| {
         let choice = choice((
@@ -46,6 +50,7 @@ mod tests {
     use super::*;
 
     use super::super::super::error::Expected;
+    use super::super::tests::Extra;
     use crate::node::{
         span::Span,
         wast::number::{Digits, Number, Radix},
@@ -59,32 +64,34 @@ mod tests {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         let digits = |s| Digits::from_repr_unchecked(s);
         assert_eq!(
-            fact::<CompNode>().parse(Graphemes::new("10")).into_result(),
+            fact::<CompNode, Extra>()
+                .parse(Graphemes::new("10"))
+                .into_result(),
             Ok(
                 Wast::Number(Number::new(true, Radix::DECIMAL, digits("10"), None))
                     .into_spanned_node(0..2)
             )
         );
         assert_eq!(
-            fact::<CompNode>()
+            fact::<CompNode, Extra>()
                 .parse(Graphemes::new("'m'"))
                 .into_result(),
             Ok(Wast::Character(grapheme("m").into()).into_spanned_node(0..3))
         );
         assert_eq!(
-            fact::<CompNode>()
+            fact::<CompNode, Extra>()
                 .parse(Graphemes::new("\"Hello\""))
                 .into_result(),
             Ok(Wast::String("Hello".into()).into_spanned_node(0..7))
         );
         assert_eq!(
-            fact::<CompNode>()
+            fact::<CompNode, Extra>()
                 .parse(Graphemes::new("\"\"\"\nHello\n\"\"\""))
                 .into_result(),
             Ok(Wast::String("Hello".into()).into_spanned_node(0..13))
         );
         assert_eq!(
-            fact::<CompNode>()
+            fact::<CompNode, Extra>()
                 .parse(Graphemes::new("'g:"))
                 .into_output_errors(),
             (
@@ -103,7 +110,7 @@ mod tests {
             )
         );
         assert_eq!(
-            fact::<CompNode>()
+            fact::<CompNode, Extra>()
                 .parse(Graphemes::new(":"))
                 .into_output_errors(),
             (

@@ -1,15 +1,14 @@
-use super::super::error::Error;
-use super::GraphemeParser;
+use super::super::{ctx::Ctx, error::Error};
+use super::{GraphemeParser, GraphemeParserExtra};
 use crate::node::whitespace::Whitespace;
 use chumsky::prelude::*;
 use smallvec::smallvec;
 use text::{newline, Graphemes};
 
-pub fn whitespace<'input, W>(
-    at_least: usize,
-) -> impl GraphemeParser<'input, W, Error<'input>> + Copy
+pub fn whitespace<'input, W, E, C>(at_least: usize) -> impl GraphemeParser<'input, W, E> + Copy
 where
     W: Whitespace<'input>,
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
 {
     let comment = just("//")
         .map_err(|e: Error| Error::new(smallvec![], e.found(), e.span()))
@@ -30,13 +29,14 @@ where
 mod tests {
     use super::*;
 
-    use text::Graphemes;
+    use super::super::tests::Extra;
     use crate::node::wast::Whitespace;
+    use text::Graphemes;
 
     #[test]
     fn test_whitespace() {
         assert_eq!(
-            whitespace(0)
+            whitespace::<_, Extra, ()>(0)
                 .parse(Graphemes::new(" //asdsad\n \t \n"))
                 .into_result(),
             Ok(Whitespace::from_repr_unchecked(" //asdsad\n \t \n"))

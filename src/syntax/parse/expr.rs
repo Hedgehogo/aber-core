@@ -1,5 +1,8 @@
-use super::super::error::{Error, Expected};
-use super::{call::call, spanned, whitespace::whitespace, GraphemeParser};
+use super::super::{
+    ctx::Ctx,
+    error::{Error, Expected},
+};
+use super::{call::call, spanned, whitespace::whitespace, GraphemeParser, GraphemeParserExtra};
 use crate::node::{
     span::{IntoSpanned, Span},
     wast::{expr_call::ExprCall, negative_call::NegativeCall, Wast},
@@ -9,12 +12,11 @@ use crate::node::{
 use chumsky::pratt::*;
 use chumsky::prelude::*;
 
-pub fn expr<'input, N, P>(
-    fact: P,
-) -> impl GraphemeParser<'input, Spanned<N::Expr>, Error<'input>> + Clone
+pub fn expr<'input, N, P, E>(fact: P) -> impl GraphemeParser<'input, Spanned<N::Expr>, E> + Clone
 where
     N: Node<'input> + 'input,
-    P: GraphemeParser<'input, Spanned<N>, Error<'input>> + Clone + 'input,
+    P: GraphemeParser<'input, Spanned<N>, E> + Clone + 'input,
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     recursive(|expr| {
         let atom = fact
@@ -33,7 +35,7 @@ where
             whitespace(0)
                 .then_ignore(just(s))
                 .then(whitespace(0))
-                .then(spanned(call::<N::Expr, _>(expr.clone())).map(Spanned::from))
+                .then(spanned(call::<N::Expr, _, _>(expr.clone())).map(Spanned::from))
                 .map_err(move |e: Error| e.replace_expected(expected))
                 .boxed()
         };
@@ -82,7 +84,7 @@ mod tests {
     use super::*;
 
     use super::super::super::error::Expected;
-    use super::super::fact::fact;
+    use super::super::{fact::fact, tests::Extra};
     use crate::node::{
         span::{IntoSpanned, Span},
         wast::{call::Ident, Wast},
@@ -103,7 +105,7 @@ mod tests {
     fn test_expr() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            expr(fact::<CompNode>())
+            expr(fact::<CompNode, Extra>())
                 .parse(Graphemes::new("'a'"))
                 .into_result(),
             Ok(Wast::Character(grapheme("a").into())
@@ -112,7 +114,7 @@ mod tests {
                 .map(CompExpr::from_vec))
         );
         assert_eq!(
-            expr(fact::<CompNode>())
+            expr(fact::<CompNode, Extra>())
                 .parse(Graphemes::new("'a'.foo"))
                 .into_result(),
             Ok(Wast::MethodCall(ExprCall::new(
@@ -131,7 +133,7 @@ mod tests {
             .map(CompExpr::from_vec)),
         );
         assert_eq!(
-            expr(fact::<CompNode>())
+            expr(fact::<CompNode, Extra>())
                 .parse(Graphemes::new("'a'::foo"))
                 .into_result(),
             Ok(Wast::ChildCall(ExprCall::new(
@@ -150,7 +152,7 @@ mod tests {
             .map(CompExpr::from_vec)),
         );
         assert_eq!(
-            expr(fact::<CompNode>())
+            expr(fact::<CompNode, Extra>())
                 .parse(Graphemes::new("'a'.foo::bar"))
                 .into_result(),
             Ok(Wast::ChildCall(ExprCall::new(
@@ -179,7 +181,7 @@ mod tests {
             .map(CompExpr::from_vec)),
         );
         assert_eq!(
-            expr(fact::<CompNode>())
+            expr(fact::<CompNode, Extra>())
                 .parse(Graphemes::new("'a'::foo.bar"))
                 .into_result(),
             Ok(Wast::MethodCall(ExprCall::new(
@@ -208,7 +210,7 @@ mod tests {
             .map(CompExpr::from_vec)),
         );
         assert_eq!(
-            expr(fact::<CompNode>())
+            expr(fact::<CompNode, Extra>())
                 .parse(Graphemes::new("@'a''b'::foo"))
                 .into_result(),
             Ok(Wast::ChildCall(ExprCall::new(
@@ -233,7 +235,7 @@ mod tests {
             .map(CompExpr::from_vec)),
         );
         assert_eq!(
-            expr(fact::<CompNode>())
+            expr(fact::<CompNode, Extra>())
                 .parse(Graphemes::new("\"hello\" //hello\n 'h"))
                 .into_output_errors(),
             (

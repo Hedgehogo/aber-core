@@ -29,8 +29,8 @@ impl DocCtx {
 /// Context for parsing.
 #[derive(Clone, Copy, Default)]
 pub struct Ctx<C> {
-    doc_ctx: DocCtx,
-    additional: C,
+    pub doc_ctx: DocCtx,
+    pub additional: C,
 }
 
 impl<C> Ctx<C> {

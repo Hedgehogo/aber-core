@@ -1,10 +1,13 @@
 use super::super::error::{Error, Expected};
-use super::{spanned, GraphemeParser};
+use super::{spanned, GraphemeParser, GraphemeParserExtra};
 use crate::node::wast::number::{Digit, Digits, Number, Radix};
 use chumsky::prelude::*;
 use chumsky::text::{unicode::Grapheme, Char};
 
-pub fn digit<'input>(radix: Radix) -> impl GraphemeParser<'input, Digit, Error<'input>> + Copy {
+pub fn digit<'input, E>(radix: Radix) -> impl GraphemeParser<'input, Digit, E> + Copy
+where
+    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+{
     let error = move |found, span| Error::new_expected(Expected::Digit(radix), found, span);
     any()
         .map_err(move |e: Error| error(None, e.span()))
@@ -15,10 +18,13 @@ pub fn digit<'input>(radix: Radix) -> impl GraphemeParser<'input, Digit, Error<'
         })
 }
 
-pub fn digits<'input>(
+pub fn digits<'input, E>(
     radix: Radix,
     expected: Expected,
-) -> impl GraphemeParser<'input, Digits<'input>, Error<'input>> + Copy {
+) -> impl GraphemeParser<'input, Digits<'input>, E> + Copy
+where
+    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+{
     let spacer = just("_").map_err(|e: Error| e.replace_expected(Expected::NumberSpacer));
     digit(radix)
         .map_err(move |e: Error| e.replace_expected(expected))
@@ -27,7 +33,10 @@ pub fn digits<'input>(
         .map(|i| Digits::from_repr_unchecked(i.as_str()))
 }
 
-pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'input>> + Copy {
+pub fn number<'input, E>() -> impl GraphemeParser<'input, Number<'input>, E> + Copy
+where
+    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+{
     let frac =
         move |radix| digits(radix, Expected::Digit(radix)).or(empty().map(|_| Digits::default()));
 
@@ -74,6 +83,7 @@ pub fn number<'input>() -> impl GraphemeParser<'input, Number<'input>, Error<'in
 mod tests {
     use super::*;
 
+    use super::super::tests::Extra;
     use crate::node::span::Span;
     use smallvec::smallvec;
     use text::Graphemes;
@@ -83,11 +93,11 @@ mod tests {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         let digits = |s| Digits::from_repr_unchecked(s);
         assert_eq!(
-            number().parse(Graphemes::new("10")).into_result(),
+            number::<Extra>().parse(Graphemes::new("10")).into_result(),
             Ok(Number::new(true, Radix::DECIMAL, digits("10"), None))
         );
         assert_eq!(
-            number().parse(Graphemes::new("10A")).into_result(),
+            number::<Extra>().parse(Graphemes::new("10A")).into_result(),
             Err(vec![Error::new(
                 smallvec![
                     Expected::Digit(Radix::DECIMAL),
@@ -101,11 +111,13 @@ mod tests {
             )])
         );
         assert_eq!(
-            number().parse(Graphemes::new("36_000")).into_result(),
+            number::<Extra>()
+                .parse(Graphemes::new("36_000"))
+                .into_result(),
             Ok(Number::new(true, Radix::DECIMAL, digits("36_000"), None))
         );
         assert_eq!(
-            number().parse(Graphemes::new("_1")).into_result(),
+            number::<Extra>().parse(Graphemes::new("_1")).into_result(),
             Err(vec![Error::new_expected(
                 Expected::Number,
                 Some(grapheme("_")),
@@ -113,7 +125,9 @@ mod tests {
             )])
         );
         assert_eq!(
-            number().parse(Graphemes::new("10.05")).into_result(),
+            number::<Extra>()
+                .parse(Graphemes::new("10.05"))
+                .into_result(),
             Ok(Number::new(
                 true,
                 Radix::DECIMAL,
@@ -122,7 +136,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            number().parse(Graphemes::new("10.")).into_result(),
+            number::<Extra>().parse(Graphemes::new("10.")).into_result(),
             Ok(Number::new(
                 true,
                 Radix::DECIMAL,
@@ -131,7 +145,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            number().parse(Graphemes::new(".1")).into_result(),
+            number::<Extra>().parse(Graphemes::new(".1")).into_result(),
             Err(vec![Error::new_expected(
                 Expected::Number,
                 Some(grapheme(".")),
@@ -139,7 +153,9 @@ mod tests {
             )])
         );
         assert_eq!(
-            number().parse(Graphemes::new("4'13.02")).into_result(),
+            number::<Extra>()
+                .parse(Graphemes::new("4'13.02"))
+                .into_result(),
             Ok(Number::new(
                 true,
                 Radix::new(4).unwrap(),
@@ -148,7 +164,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            number().parse(Graphemes::new("2'2")).into_result(),
+            number::<Extra>().parse(Graphemes::new("2'2")).into_result(),
             Err(vec![Error::new_expected(
                 Expected::Digit(Radix::BINARY),
                 Some(grapheme("2")),
@@ -156,7 +172,9 @@ mod tests {
             )])
         );
         assert_eq!(
-            number().parse(Graphemes::new("36'ABER.")).into_result(),
+            number::<Extra>()
+                .parse(Graphemes::new("36'ABER."))
+                .into_result(),
             Ok(Number::new(
                 true,
                 Radix::MAX,
@@ -165,7 +183,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            number().parse(Graphemes::new("1'0")).into_result(),
+            number::<Extra>().parse(Graphemes::new("1'0")).into_result(),
             Err(vec![Error::new_expected(
                 Expected::Radix,
                 None,
@@ -173,7 +191,9 @@ mod tests {
             )])
         );
         assert_eq!(
-            number().parse(Graphemes::new("60'15")).into_result(),
+            number::<Extra>()
+                .parse(Graphemes::new("60'15"))
+                .into_result(),
             Err(vec![Error::new_expected(
                 Expected::Radix,
                 None,

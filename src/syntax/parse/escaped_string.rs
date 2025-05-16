@@ -1,20 +1,25 @@
-use super::super::error::{Error, Expected};
-use super::GraphemeParser;
+use super::super::{
+    ctx::Ctx,
+    error::{Error, Expected},
+};
+use super::{GraphemeParser, GraphemeParserExtra};
 use crate::node::string::{EscapedString, StringData};
 use chumsky::prelude::*;
-use extra::ParserExtra;
 use text::{newline, Char, Grapheme, Graphemes};
 
-fn quote<'input, E>(expected: Expected) -> impl Parser<'input, &'input Graphemes, (), E> + Copy
+fn quote<'input, E>(expected: Expected) -> impl GraphemeParser<'input, (), E> + Copy
 where
-    E: ParserExtra<'input, &'input Graphemes, Error = Error<'input>>,
+    E: GraphemeParserExtra<'input, Error = Error<'input>>,
 {
     just("\"")
         .map_err(move |e: Error| e.replace_expected(expected))
         .ignored()
 }
 
-fn escape_sequence<'input>() -> impl GraphemeParser<'input, &'input str, Error<'input>> + Copy {
+fn escape_sequence<'input, E>() -> impl GraphemeParser<'input, &'input str, E> + Copy
+where
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+{
     any()
         .try_map(|i: &Grapheme, span: SimpleSpan| {
             i.to_ascii()
@@ -32,10 +37,11 @@ fn escape_sequence<'input>() -> impl GraphemeParser<'input, &'input str, Error<'
         .recover_with(via_parser(any().or_not().map(|_| "\u{FFFD}")))
 }
 
-fn content<'input, O, P>(section: P) -> impl GraphemeParser<'input, O, Error<'input>> + Copy
+fn content<'input, O, P, E>(section: P) -> impl GraphemeParser<'input, O, E> + Copy
 where
     O: EscapedString<'input>,
-    P: GraphemeParser<'input, &'input str, Error<'input>> + Copy,
+    P: GraphemeParser<'input, &'input str, E> + Copy,
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     empty()
         .map(|_| O::Data::with_capacity(0))
@@ -48,9 +54,9 @@ where
         })
 }
 
-pub fn separator<'input, E>() -> impl Parser<'input, &'input Graphemes, (), E> + Copy
+pub fn separator<'input, E>() -> impl GraphemeParser<'input, (), E> + Copy
 where
-    E: ParserExtra<'input, &'input Graphemes, Error = Error<'input>>,
+    E: GraphemeParserExtra<'input, Error = Error<'input>>,
 {
     quote(Expected::String)
         .not()
@@ -58,9 +64,10 @@ where
         .recover_with(via_parser(empty()))
 }
 
-pub fn escaped_string<'input, O>() -> impl GraphemeParser<'input, O, Error<'input>> + Copy
+pub fn escaped_string<'input, O, E>() -> impl GraphemeParser<'input, O, E> + Copy
 where
     O: EscapedString<'input>,
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     let escape_section = just("\\")
         .map_err(|e: Error| e.replace_expected(Expected::StringEscape))
@@ -95,6 +102,7 @@ where
 mod tests {
     use super::*;
 
+    use super::super::tests::Extra;
     use crate::node::{
         span::Span,
         string::{self, StringData},
@@ -121,7 +129,7 @@ mod tests {
         {
             let input = r#""Hello Aber!""#;
             assert_eq!(
-                escaped_string::<wast::String>()
+                escaped_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(11, vec!["Hello Aber!"], "Hello Aber!"))
@@ -130,7 +138,7 @@ mod tests {
         {
             let input = r#""Hello Aber!"#;
             assert_eq!(
-                escaped_string::<wast::String>()
+                escaped_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_output_errors(),
                 (
@@ -150,7 +158,7 @@ mod tests {
         {
             let input = r#"Hello Aber!""#;
             assert_eq!(
-                escaped_string::<wast::String>()
+                escaped_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_output_errors(),
                 (
@@ -166,7 +174,7 @@ mod tests {
         {
             let input = r#""Hello Aber!\"""#;
             assert_eq!(
-                escaped_string::<wast::String>()
+                escaped_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(
@@ -179,7 +187,7 @@ mod tests {
         {
             let input = r#""Hello Aber!\\""#;
             assert_eq!(
-                escaped_string::<wast::String>()
+                escaped_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(
@@ -192,7 +200,7 @@ mod tests {
         {
             let input = r#""Hello Aber!\n""#;
             assert_eq!(
-                escaped_string::<wast::String>()
+                escaped_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(
@@ -205,7 +213,7 @@ mod tests {
         {
             let input = r#""Hello Aber!\t""#;
             assert_eq!(
-                escaped_string::<wast::String>()
+                escaped_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(
@@ -220,7 +228,7 @@ mod tests {
             "Hello Aber!\
             ""#};
             assert_eq!(
-                escaped_string::<wast::String>()
+                escaped_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(12, vec!["Hello Aber!", ""], "Hello Aber!\\\n"))
@@ -229,7 +237,7 @@ mod tests {
         {
             let input = r#""Hello Aber!\m""#;
             assert_eq!(
-                escaped_string::<wast::String>()
+                escaped_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_output_errors(),
                 (
@@ -249,7 +257,7 @@ mod tests {
         {
             let input = r#""Hello Aber!""""#;
             assert_eq!(
-                escaped_string::<wast::String>()
+                escaped_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_output_errors(),
                 (
