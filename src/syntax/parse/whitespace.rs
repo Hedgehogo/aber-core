@@ -5,16 +5,23 @@ use chumsky::prelude::*;
 use smallvec::smallvec;
 use text::{inline_whitespace, newline, Grapheme, Graphemes};
 
-pub fn line_break<'input, E, C>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
+fn line_break<'input, E>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
+    E: GraphemeParserExtra<'input, Error = Error<'input>>,
 {
     newline()
         .to_slice()
         .map(|i: &Graphemes| i.iter().next().unwrap())
 }
 
-pub fn line_start<'input, E, C>() -> impl GraphemeParser<'input, (), E> + Copy
+fn not_line_break<'input, E>() -> impl GraphemeParser<'input, (), E> + Copy
+where
+    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+{
+    newline().not()
+}
+
+fn line_start<'input, E, C>() -> impl GraphemeParser<'input, (), E> + Copy
 where
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
 {
@@ -28,6 +35,13 @@ where
     line_break().then_ignore(line_start())
 }
 
+pub fn not_line_separator<'input, E>() -> impl GraphemeParser<'input, (), E> + Copy
+where
+    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+{
+    not_line_break()
+}
+
 pub fn whitespace<'input, W, E, C>(at_least: usize) -> impl GraphemeParser<'input, W, E> + Copy
 where
     W: Whitespace<'input>,
@@ -35,7 +49,7 @@ where
 {
     let comment = just("//")
         .map_err(|e: Error| Error::new(smallvec![], e.found(), e.span()))
-        .then(newline().not().then(any()).repeated())
+        .then(not_line_break().then(any()).repeated())
         .ignored();
 
     let line = inline_whitespace().then(comment.or_not());
