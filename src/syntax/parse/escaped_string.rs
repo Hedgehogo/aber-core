@@ -1,11 +1,14 @@
-use super::super::{
-    ctx::Ctx,
-    error::{Error, Expected},
+use super::{
+    super::{
+        ctx::Ctx,
+        error::{Error, Expected},
+    },
+    whitespace::{line_separator, not_line_separator},
 };
 use super::{GraphemeParser, GraphemeParserExtra};
 use crate::node::string::{EscapedString, StringData};
 use chumsky::prelude::*;
-use text::{newline, Char, Grapheme, Graphemes};
+use text::{Char, Grapheme, Graphemes};
 
 fn quote<'input, E>(expected: Expected) -> impl GraphemeParser<'input, (), E> + Copy
 where
@@ -20,19 +23,19 @@ fn escape_sequence<'input, E>() -> impl GraphemeParser<'input, &'input str, E> +
 where
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
-    any()
-        .try_map(|i: &Grapheme, span: SimpleSpan| {
+    line_separator()
+        .map(|_| "")
+        .or(any().try_map(|i: &Grapheme, span: SimpleSpan| {
             i.to_ascii()
                 .and_then(|i| match i {
                     b'\"' => Some("\""),
                     b'\\' => Some("\\"),
                     b'n' => Some("\n"),
                     b't' => Some("\t"),
-                    b'\n' => Some(""),
                     _ => None,
                 })
                 .ok_or_else(|| Error::new_expected(Expected::StringEscaped, Some(i), span.into()))
-        })
+        }))
         .map_err(|e: Error| e.replace_expected(Expected::StringEscaped))
         .recover_with(via_parser(any().or_not().map(|_| "\u{FFFD}")))
 }
@@ -82,7 +85,7 @@ where
 
     let section = unescaped_section.or(escape_section);
 
-    let recover_section = newline().not().ignore_then(section);
+    let recover_section = not_line_separator().ignore_then(section);
 
     quote(Expected::String)
         .ignore_then(

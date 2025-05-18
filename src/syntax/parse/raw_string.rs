@@ -2,12 +2,16 @@ use super::super::{
     ctx::Ctx,
     error::{Error, Expected},
 };
-use super::{escaped_string::separator, GraphemeParser, GraphemeParserExtra};
+use super::{
+    escaped_string::separator,
+    whitespace::{line_separator, not_line_separator},
+    GraphemeParser, GraphemeParserExtra,
+};
 use crate::node::string::{RawString, StringData};
 use chumsky::{
     combinator::Repeated,
     prelude::*,
-    text::{inline_whitespace, newline, Graphemes},
+    text::{inline_whitespace, Graphemes},
 };
 
 /// Context required for parsing the raw string after the opening
@@ -53,14 +57,14 @@ where
 ///
 /// The parser returns the number of quotes in the opening sequence
 /// (minimum 3).
-fn open<'input, E>() -> impl GraphemeParser<'input, usize, E> + Copy
+fn open<'input, E, C>() -> impl GraphemeParser<'input, usize, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
 {
     quotes()
         .at_least(3)
         .count()
-        .then_ignore(newline())
+        .then_ignore(line_separator())
         .map_err(|e: Error| e.replace_expected(Expected::RawString))
 }
 
@@ -87,9 +91,12 @@ fn line<'input, E, C>() -> impl GraphemeParser<'input, &'input Graphemes, E> + C
 where
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<RawCtx<C>>>,
 {
-    close()
-        .not()
-        .ignore_then(newline().not().ignore_then(any()).repeated().to_slice())
+    close().not().ignore_then(
+        not_line_separator()
+            .ignore_then(any())
+            .repeated()
+            .to_slice(),
+    )
 }
 
 /// Creates a parser that parses the inner meaningful part of a
@@ -103,7 +110,7 @@ fn precontent<'input, E>() -> impl GraphemeParser<'input, RawContentInfo, E> + C
 where
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<RawCtx<()>>>,
 {
-    let repeated = newline().to_slice().then(line()).repeated();
+    let repeated = line_separator().then(line()).repeated();
 
     line()
         .map(|i| RawContentInfo {
@@ -152,7 +159,7 @@ where
 {
     let line = indent().ignore_then(line());
 
-    let repeated = newline().to_slice().then(line).repeated();
+    let repeated = line_separator().then(line).repeated();
 
     line.map_with(|first: &Graphemes, e| {
         let ctx: &Ctx<RawCtx<RawContentCtx<'input>>> = e.ctx();
@@ -176,13 +183,13 @@ where
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     let prerest = precontent()
-        .then_ignore(newline())
+        .then_ignore(line_separator())
         .then(close())
         .then_ignore(separator());
 
     let rest = content()
         .map_with(|data, e| (data, e.slice()))
-        .then_ignore(newline())
+        .then_ignore(line_separator())
         .then_ignore(close());
 
     open()
