@@ -3,7 +3,21 @@ use super::{GraphemeParser, GraphemeParserExtra};
 use crate::node::whitespace::Whitespace;
 use chumsky::prelude::*;
 use smallvec::smallvec;
-use text::{newline, Graphemes};
+use text::{inline_whitespace, newline, Graphemes};
+
+pub fn line_start<'input, E, C>() -> impl GraphemeParser<'input, (), E> + Copy
+where
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
+{
+    empty()
+}
+
+pub fn line_separator<'input, E, C>() -> impl GraphemeParser<'input, (), E> + Copy
+where
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
+{
+    newline().then(line_start()).ignored()
+}
 
 pub fn whitespace<'input, W, E, C>(at_least: usize) -> impl GraphemeParser<'input, W, E> + Copy
 where
@@ -15,14 +29,19 @@ where
         .then(newline().not().then(any()).repeated())
         .ignored();
 
-    text::whitespace()
-        .at_least(1)
-        .or(comment)
-        .repeated()
-        .at_least(at_least)
+    let line = inline_whitespace().then(comment.or_not());
+
+    line
+        .then(line_separator().ignore_then(line).repeated())
         .to_slice()
         .map(Graphemes::as_str)
-        .map(W::from_repr_unchecked)
+        .try_map(move |i, span| {
+            if i.len() >= at_least {
+                Ok(W::from_repr_unchecked(i))
+            } else {
+                Err(Error::new(smallvec![], None, span.into()))
+            }
+        })
 }
 
 #[cfg(test)]

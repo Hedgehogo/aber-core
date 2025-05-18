@@ -93,6 +93,7 @@ mod tests {
             text::{whitespace, TextExpected},
             DefaultExpected,
         };
+        
         fn tuple<'input>(
         ) -> impl Parser<'input, &'input str, (), extra::Err<Rich<'input, char, SimpleSpan>>>
         {
@@ -102,6 +103,7 @@ mod tests {
                 .separated_by(just(","))
                 .then_ignore(just(")"))
         }
+
         assert_eq!(
             tuple().parse("a").into_output_errors(),
             (
