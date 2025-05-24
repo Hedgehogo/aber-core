@@ -21,9 +21,15 @@ where
 {
     let number_start = just("-").or_not().then(digit(Radix::DECIMAL));
 
-    let unit = whitespace::<(), _, _>(1)
-        .not()
-        .ignore_then(none_of(".,;:'\"@(){}[]"));
+    let not_unit = choice((
+        one_of(".,;:'\"@(){}[]").ignored(),
+        just("//").ignored(),
+        just("///").ignored(),
+        just("```").ignored(),
+        text::whitespace().exactly(1),
+    ));
+
+    let unit = not_unit.not().ignore_then(any());
 
     number_start
         .not()
@@ -133,7 +139,7 @@ mod tests {
                 vec![Error::new_expected(
                     Expected::Ident,
                     Some(grapheme("/")),
-                    Span::new(0..7)
+                    Span::new(0..2)
                 )]
             )
         );
