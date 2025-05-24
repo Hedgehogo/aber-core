@@ -14,18 +14,17 @@ where
         .map(|i: &Graphemes| i.iter().next().unwrap())
 }
 
-fn not_line_break<'input, E>() -> impl GraphemeParser<'input, (), E> + Copy
-where
-    E: GraphemeParserExtra<'input, Error = Error<'input>>,
-{
-    newline().not()
-}
-
 fn line_start<'input, E, C>() -> impl GraphemeParser<'input, (), E> + Copy
 where
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
 {
-    empty()
+    let outer_doc = just("///");
+    let doc = outer_doc;
+
+    inline_whitespace()
+        .ignore_then(doc)
+        .repeated()
+        .configure(|cfg, ctx: &Ctx<C>| cfg.exactly(ctx.doc_ctx.depth()))
 }
 
 pub fn line_separator<'input, E, C>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
@@ -39,7 +38,7 @@ pub fn not_line_separator<'input, E>() -> impl GraphemeParser<'input, (), E> + C
 where
     E: GraphemeParserExtra<'input, Error = Error<'input>>,
 {
-    not_line_break()
+    newline().not()
 }
 
 pub fn whitespace<'input, W, E, C>(at_least: usize) -> impl GraphemeParser<'input, W, E> + Copy
@@ -49,7 +48,7 @@ where
 {
     let comment = just("//")
         .map_err(|e: Error| Error::new(smallvec![], e.found(), e.span()))
-        .then(not_line_break().then(any()).repeated())
+        .then(not_line_separator().then(any()).repeated())
         .ignored();
 
     let line = inline_whitespace().then(comment.or_not());

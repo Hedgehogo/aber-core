@@ -24,6 +24,11 @@ impl DocCtx {
             depth: self.depth + 1,
         }
     }
+
+    /// Gets the number of doc comments within which parsing is performed.
+    pub fn depth(&self) -> usize {
+        self.depth
+    }
 }
 
 /// Context for parsing.
