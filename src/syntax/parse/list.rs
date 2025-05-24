@@ -30,11 +30,11 @@ where
 
     let close = close.recover_with(via_parser(empty()));
 
-    let item = whitespace(0)
+    let item = whitespace()
         .then(expr)
         .map(|(whitespace, expr)| X::whitespaced(expr, whitespace, Side::Left));
 
-    let separator = whitespace(0).then_ignore(comma);
+    let separator = whitespace().then_ignore(comma);
 
     let repeat = item
         .then(separator.or_not())
@@ -44,7 +44,7 @@ where
         });
 
     open.ignore_then(repeat.repeated().collect())
-        .then(whitespace(0))
+        .then(whitespace())
         .map(|(items, whitespace)| List::new(items, whitespace))
         .then_ignore(close)
 }

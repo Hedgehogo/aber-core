@@ -52,7 +52,7 @@ where
     P: GraphemeParser<'input, Spanned<X>, E> + Clone,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
-    let generics = whitespace(0)
+    let generics = whitespace()
         .then(spanned(generics::<X, _, _>(expr)).map(Spanned::from))
         .map(|(whitespace, args)| Generics::new(whitespace, args))
         .or_not();

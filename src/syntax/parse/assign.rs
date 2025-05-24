@@ -18,10 +18,10 @@ where
 
     let left = expr
         .clone()
-        .then(whitespace(0))
+        .then(whitespace())
         .map(|(expr, whitespace)| X::whitespaced(expr, whitespace, Side::Right));
 
-    let right = whitespace(0)
+    let right = whitespace()
         .then(expr)
         .map(|(whitespace, expr)| X::whitespaced(expr, whitespace, Side::Left));
 

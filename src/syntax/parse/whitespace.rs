@@ -41,7 +41,7 @@ where
     newline().not()
 }
 
-pub fn whitespace<'input, W, E, C>(at_least: usize) -> impl GraphemeParser<'input, W, E> + Copy
+pub fn whitespace<'input, W, E, C>() -> impl GraphemeParser<'input, W, E> + Copy
 where
     W: Whitespace<'input>,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
@@ -56,13 +56,7 @@ where
     line.then(line_separator().ignore_then(line).repeated())
         .to_slice()
         .map(Graphemes::as_str)
-        .try_map(move |i, span| {
-            if i.len() >= at_least {
-                Ok(W::from_repr_unchecked(i))
-            } else {
-                Err(Error::new(smallvec![], None, span.into()))
-            }
-        })
+        .map(W::from_repr_unchecked)
 }
 
 #[cfg(test)]
@@ -75,7 +69,7 @@ mod tests {
     #[test]
     fn test_whitespace() {
         assert_eq!(
-            whitespace::<_, Extra, ()>(0)
+            whitespace::<_, Extra, ()>()
                 .parse(Graphemes::new(" //asdsad\n \t \n"))
                 .into_result(),
             Ok(Whitespace::from_repr_unchecked(" //asdsad\n \t \n"))

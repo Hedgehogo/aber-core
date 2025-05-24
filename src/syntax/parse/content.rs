@@ -28,10 +28,10 @@ where
         .ignored()
         .map_err(|e: Error| e.replace_expected(Expected::Semicolon));
 
-    let expr = whitespace(0)
+    let expr = whitespace()
         .then(expr.or(spanned(empty().map(|_| X::from_seq(vec![]))).map(Spanned::from)))
         .map(|(whitespace, expr)| X::whitespaced(expr, whitespace, Side::Left))
-        .then(whitespace(0))
+        .then(whitespace())
         .map(|(expr, whitespace)| X::whitespaced(expr, whitespace, Side::Right));
 
     let stmt = expr

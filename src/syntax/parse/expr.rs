@@ -27,14 +27,14 @@ where
             .boxed();
 
         let negative_special = just("@")
-            .ignore_then(whitespace(0))
+            .ignore_then(whitespace())
             .map_err(|e: Error| e.replace_expected(Expected::NegativeSpecial))
             .boxed();
 
         let expr_call = |s: &'static str, expected| {
-            whitespace(0)
+            whitespace()
                 .then_ignore(just(s))
-                .then(whitespace(0))
+                .then(whitespace())
                 .then(spanned(call::<N::Expr, _, _>(expr.clone())).map(Spanned::from))
                 .map_err(move |e: Error| e.replace_expected(expected))
                 .boxed()
@@ -42,7 +42,7 @@ where
 
         let method_special = expr_call(".", Expected::MethodSpecial);
         let child_special = expr_call("::", Expected::ChildSpecial);
-        let whitespace = whitespace(0).then_ignore(choice((just("."), just("::"))).not());
+        let whitespace = whitespace().then_ignore(choice((just("."), just("::"))).not());
 
         let into_atom = move |wast: Wast<'input, N>, span: SimpleSpan| {
             let seq = vec![Spanned(wast.into_node(), Span::from(span))];
