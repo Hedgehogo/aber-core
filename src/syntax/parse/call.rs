@@ -57,7 +57,7 @@ where
         .map(|(whitespace, args)| Generics::new(whitespace, args))
         .or_not();
 
-    spanned(ident())
+    spanned(ident().boxed())
         .map(Spanned::from)
         .then(generics)
         .map(|(ident, generics)| Call::new(ident, generics))

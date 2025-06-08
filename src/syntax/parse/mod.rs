@@ -1,4 +1,3 @@
-pub mod assign;
 pub mod block;
 pub mod call;
 pub mod character;
@@ -54,7 +53,7 @@ pub fn parser<'input, X>(
 where
     X: Expr<'input> + 'input,
 {
-    content(expr(fact::<X::Node, _>())).with_ctx(Ctx::default())
+    content(expr(fact::<X::Node, _>())).with_ctx(Ctx::default()).boxed()
 }
 
 #[cfg(test)]

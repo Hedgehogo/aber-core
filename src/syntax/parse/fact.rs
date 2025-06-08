@@ -27,7 +27,7 @@ where
             call(expr(fact.clone())).map(Wast::Call).map(N::from_wast),
             tuple(expr(fact.clone())).map(Wast::Tuple).map(N::from_wast),
             block(expr(fact)).map(Wast::Block).map(N::from_wast),
-        ));
+        )).boxed();
 
         let pair_special = just(":")
             .then(just(":").not())
