@@ -40,7 +40,7 @@ pub enum Wast<'input, N: Node<'input>> {
     Character(Character<'input>),
     String(N::String),
     Pair(Pair<'input, N>),
-    Tuple(List<'input, N::Expr>),
+    Tuple(List<'input, N::Expr, N::Expr>),
     Block(Block<'input, N::Expr>),
     Call(Call<'input, N::Expr>),
     MethodCall(ExprCall<'input, N::Expr>),

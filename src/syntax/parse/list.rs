@@ -10,7 +10,7 @@ fn list<'input, X, P, E>(
     expr: P,
     open: (&'static str, Expected),
     close: (&'static str, Expected),
-) -> impl GraphemeParser<'input, List<'input, X>, E> + Clone
+) -> impl GraphemeParser<'input, List<'input, X, X>, E> + Clone
 where
     X: Expr<'input>,
     P: GraphemeParser<'input, Spanned<X>, E> + Clone,
@@ -49,7 +49,7 @@ where
         .then_ignore(close)
 }
 
-pub fn tuple<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, List<'input, X>, E> + Clone
+pub fn tuple<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, List<'input, X, X>, E> + Clone
 where
     X: Expr<'input>,
     P: GraphemeParser<'input, Spanned<X>, E> + Clone,
@@ -58,7 +58,7 @@ where
     list::<X, _, _>(expr, ("(", Expected::Tuple), (")", Expected::TupleClose))
 }
 
-pub fn generics<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, List<'input, X>, E> + Clone
+pub fn generics<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, List<'input, X, X>, E> + Clone
 where
     X: Expr<'input>,
     P: GraphemeParser<'input, Spanned<X>, E> + Clone,

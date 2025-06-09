@@ -58,12 +58,12 @@ impl fmt::Debug for Ident<'_> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Generics<'input, X: Expr<'input>> {
     pub whitespace: X::Whitespace,
-    pub args: Spanned<List<'input, X>>,
+    pub args: Spanned<List<'input, X, X>>,
 }
 
 impl<'input, X: Expr<'input>> Generics<'input, X> {
     /// Creates a new `Generics`.
-    pub fn new(whitespace: X::Whitespace, args: Spanned<List<'input, X>>) -> Self {
+    pub fn new(whitespace: X::Whitespace, args: Spanned<List<'input, X, X>>) -> Self {
         Self { whitespace, args }
     }
 }

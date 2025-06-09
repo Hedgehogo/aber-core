@@ -9,14 +9,14 @@ use super::SpannedVec;
 /// - `args` Items listed comma-separately.
 /// - `whitespace` Whitespace after the trailing comma.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct List<'input, X: Expr<'input>> {
-    pub items: SpannedVec<X>,
+pub struct List<'input, I, X: Expr<'input>> {
+    pub items: SpannedVec<I>,
     pub whitespace: X::Whitespace,
 }
 
-impl<'input, X: Expr<'input>> List<'input, X> {
+impl<'input, I, X: Expr<'input>> List<'input, I, X> {
     /// Creates a new `List`.
-    pub fn new(items: SpannedVec<X>, whitespace: X::Whitespace) -> Self {
+    pub fn new(items: SpannedVec<I>, whitespace: X::Whitespace) -> Self {
         Self { items, whitespace }
     }
 }
