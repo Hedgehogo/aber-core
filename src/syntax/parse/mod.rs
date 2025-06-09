@@ -5,7 +5,7 @@ pub mod content;
 pub mod escaped_string;
 pub mod expr;
 pub mod fact;
-// pub mod initialization;
+pub mod initialization;
 pub mod list;
 pub mod number;
 pub mod raw_string;

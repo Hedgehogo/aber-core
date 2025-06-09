@@ -6,7 +6,7 @@ pub mod call;
 pub mod character;
 pub mod escaped_string;
 pub mod expr_call;
-// pub mod initialization;
+pub mod initialization;
 pub mod list;
 pub mod negative_call;
 pub mod number;
@@ -16,7 +16,7 @@ pub mod string;
 pub mod wast_node;
 pub mod whitespace;
 
-use super::{span::Span, Expr, SpannedVec, Node, Spanned};
+use super::{span::Span, Expr, Node, Spanned, SpannedVec};
 use std::fmt;
 
 pub use assign::Assign;
@@ -25,6 +25,7 @@ pub use call::Call;
 pub use character::Character;
 pub use escaped_string::EscapedString;
 pub use expr_call::ExprCall;
+pub use initialization::Initialization;
 pub use list::List;
 pub use negative_call::NegativeCall;
 pub use number::Number;
@@ -32,7 +33,6 @@ pub use pair::Pair;
 pub use raw_string::RawString;
 pub use string::String;
 pub use whitespace::Whitespace;
-// pub use initialization::Initialization;
 
 /// Type that describes a weak abstract syntax tree. In this case "weak" means that not all nestings can be explicitly resolved at this stage.
 pub enum Wast<'input, N: Node<'input>> {
