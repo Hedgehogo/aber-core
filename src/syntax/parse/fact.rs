@@ -27,7 +27,12 @@ where
             call(expr(fact.clone())).map(Wast::Call).map(N::from_wast),
             tuple(expr(fact.clone())).map(Wast::Tuple).map(N::from_wast),
             block(expr(fact)).map(Wast::Block).map(N::from_wast),
-        )).boxed();
+        ))
+        .boxed();
+
+        let choice = custom(move |input| {
+            stacker::maybe_grow(32 * 1024, 1024 * 1024, || input.parse(choice.clone()))
+        });
 
         let pair_special = just(":")
             .then(just(":").not())
