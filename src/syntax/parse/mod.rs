@@ -5,6 +5,7 @@ pub mod content;
 pub mod escaped_string;
 pub mod expr;
 pub mod fact;
+// pub mod initialization;
 pub mod list;
 pub mod number;
 pub mod raw_string;
@@ -53,7 +54,9 @@ pub fn parser<'input, X>(
 where
     X: Expr<'input> + 'input,
 {
-    content(expr(fact::<X::Node, _>())).with_ctx(Ctx::default()).boxed()
+    content(expr(fact::<X::Node, _>()))
+        .with_ctx(Ctx::default())
+        .boxed()
 }
 
 #[cfg(test)]

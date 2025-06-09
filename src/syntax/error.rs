@@ -52,6 +52,8 @@ pub enum Expected {
     NegativeSpecial,
     AssignSpecial,
     NonZeroWhitespace,
+    // Initialization,
+    // InitializationClose,
     #[default]
     Eof,
 }

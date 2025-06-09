@@ -30,5 +30,5 @@ pub trait Expr<'input>: Sized {
     fn whitespaced(expr: Spanned<Self>, whitespace: Self::Whitespace, side: Side) -> Spanned<Self>;
 }
 
-/// Type that describes a sequence of expressions.
-pub type ExprVec<'input, X> = Vec<Spanned<X>>;
+/// Vector consisting of [`Spanned`].
+pub type SpannedVec<T> = Vec<Spanned<T>>;

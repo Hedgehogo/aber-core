@@ -14,7 +14,7 @@ use string::{EscapedString, RawString};
 
 pub use comp_expr::CompExpr;
 pub use comp_node::CompNode;
-pub use expr::{Expr, ExprVec};
+pub use expr::{Expr, SpannedVec};
 pub use hir::Hir;
 pub use span::Spanned;
 pub use wast::Wast;
