@@ -5,12 +5,11 @@ edition = "2021"
 
 [dependencies]
 chumsky = { git = "https://github.com/zesterer/chumsky", branch = "main", features = [
-    "pratt",
+    "pratt", "stacker"
 ] }
 smallvec = "1"
 num-traits = "0.2"
 num = "0.4"
-stacker = "0.1"
 
 [dev-dependencies]
 indoc = "2"

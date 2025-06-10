@@ -30,10 +30,6 @@ where
         ))
         .boxed();
 
-        let choice = custom(move |input| {
-            stacker::maybe_grow(32 * 1024, 1024 * 1024, || input.parse(choice.clone()))
-        });
-
         let pair_special = just(":")
             .then(just(":").not())
             .map_err(|e: Error| e.replace_expected(Expected::PairSpecial));
