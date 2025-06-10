@@ -237,22 +237,27 @@ mod tests {
     };
     use indoc::indoc;
 
+    fn new_string<'input>(
+        capacity: usize,
+        sections: Vec<&'input str>,
+        indent: &'input str,
+        inner_repr: &'input str,
+    ) -> wast::String<'input> {
+        wast::String::Raw(string::RawStringSealed::from_data_unchecked(
+            {
+                let mut data = RawStringData::with_capacity(capacity);
+                for section in sections {
+                    data = data.with_next_section(section);
+                }
+                data
+            },
+            indent,
+            inner_repr,
+        ))
+    }
+
     #[test]
     fn test_raw_string() {
-        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
-        let new_string = |capacity, sections: Vec<_>, indent, inner_repr| {
-            wast::String::Raw(string::RawStringSealed::from_data_unchecked(
-                {
-                    let mut data = RawStringData::with_capacity(capacity);
-                    for section in sections {
-                        data = data.with_next_section(section);
-                    }
-                    data
-                },
-                indent,
-                inner_repr,
-            ))
-        };
         {
             let input = indoc! {r#"
                 """
@@ -291,6 +296,23 @@ mod tests {
         }
         {
             let input = indoc! {r#"
+                """"
+                  Hello Aber!
+                 """""#};
+            assert_eq!(
+                raw_string::<wast::String, Extra>()
+                    .parse(Graphemes::new(input))
+                    .into_result(),
+                Ok(new_string(12, vec![" Hello Aber!"], " ", "  Hello Aber!"))
+            );
+        }
+    }
+
+    #[test]
+    fn test_raw_string_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
+        {
+            let input = indoc! {r#"
                 """
                  Hello Aber!
                   """"#};
@@ -306,18 +328,6 @@ mod tests {
                         Span::new(5..6)
                     )]
                 )
-            );
-        }
-        {
-            let input = indoc! {r#"
-                """"
-                  Hello Aber!
-                 """""#};
-            assert_eq!(
-                raw_string::<wast::String, Extra>()
-                    .parse(Graphemes::new(input))
-                    .into_result(),
-                Ok(new_string(12, vec![" Hello Aber!"], " ", "  Hello Aber!"))
             );
         }
         {

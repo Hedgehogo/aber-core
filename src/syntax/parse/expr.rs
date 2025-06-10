@@ -234,6 +234,11 @@ mod tests {
             .into_spanned_vec()
             .map(CompExpr::from_vec)),
         );
+    }
+
+    #[test]
+    fn test_expr_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             expr(fact::<CompNode, Extra>())
                 .parse(Graphemes::new("\"hello\" //hello\n 'h"))

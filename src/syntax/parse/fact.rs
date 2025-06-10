@@ -91,6 +91,11 @@ mod tests {
                 .into_result(),
             Ok(Wast::String("Hello".into()).into_spanned_node(0..13))
         );
+    }
+
+    #[test]
+    fn test_fact_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             fact::<CompNode, Extra>()
                 .parse(Graphemes::new("'g:"))

@@ -70,6 +70,11 @@ mod tests {
                 .into_result(),
             Ok(Character::new(grapheme("m")))
         );
+    }
+
+    #[test]
+    fn test_character_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             character::<Extra>()
                 .parse(Graphemes::new("'m"))

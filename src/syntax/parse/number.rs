@@ -90,39 +90,16 @@ mod tests {
 
     #[test]
     fn test_number() {
-        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         let digits = |s| Digits::from_repr_unchecked(s);
         assert_eq!(
             number::<Extra>().parse(Graphemes::new("10")).into_result(),
             Ok(Number::new(true, Radix::DECIMAL, digits("10"), None))
         );
         assert_eq!(
-            number::<Extra>().parse(Graphemes::new("10A")).into_result(),
-            Err(vec![Error::new(
-                smallvec![
-                    Expected::Digit(Radix::DECIMAL),
-                    Expected::NumberSpacer,
-                    Expected::RadixSpecial,
-                    Expected::NumberDot,
-                    Expected::Eof
-                ],
-                Some(grapheme("A")),
-                Span::new(2..3)
-            )])
-        );
-        assert_eq!(
             number::<Extra>()
                 .parse(Graphemes::new("36_000"))
                 .into_result(),
             Ok(Number::new(true, Radix::DECIMAL, digits("36_000"), None))
-        );
-        assert_eq!(
-            number::<Extra>().parse(Graphemes::new("_1")).into_result(),
-            Err(vec![Error::new_expected(
-                Expected::Number,
-                Some(grapheme("_")),
-                Span::new(0..1)
-            )])
         );
         assert_eq!(
             number::<Extra>()
@@ -145,14 +122,6 @@ mod tests {
             ))
         );
         assert_eq!(
-            number::<Extra>().parse(Graphemes::new(".1")).into_result(),
-            Err(vec![Error::new_expected(
-                Expected::Number,
-                Some(grapheme(".")),
-                Span::new(0..1)
-            )])
-        );
-        assert_eq!(
             number::<Extra>()
                 .parse(Graphemes::new("4'13.02"))
                 .into_result(),
@@ -162,14 +131,6 @@ mod tests {
                 digits("13"),
                 Some(digits("02"))
             ))
-        );
-        assert_eq!(
-            number::<Extra>().parse(Graphemes::new("2'2")).into_result(),
-            Err(vec![Error::new_expected(
-                Expected::Digit(Radix::BINARY),
-                Some(grapheme("2")),
-                Span::new(2..3)
-            )])
         );
         assert_eq!(
             number::<Extra>()
@@ -182,23 +143,86 @@ mod tests {
                 Some(digits(""))
             ))
         );
+    }
+
+    #[test]
+    fn test_number_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            number::<Extra>().parse(Graphemes::new("1'0")).into_result(),
-            Err(vec![Error::new_expected(
-                Expected::Radix,
+            number::<Extra>()
+                .parse(Graphemes::new("10A"))
+                .into_output_errors(),
+            (
                 None,
-                Span::new(0..1)
-            )])
+                vec![Error::new(
+                    smallvec![
+                        Expected::Digit(Radix::DECIMAL),
+                        Expected::NumberSpacer,
+                        Expected::RadixSpecial,
+                        Expected::NumberDot,
+                        Expected::Eof
+                    ],
+                    Some(grapheme("A")),
+                    Span::new(2..3)
+                )]
+            )
+        );
+        assert_eq!(
+            number::<Extra>()
+                .parse(Graphemes::new("_1"))
+                .into_output_errors(),
+            (
+                None,
+                vec![Error::new_expected(
+                    Expected::Number,
+                    Some(grapheme("_")),
+                    Span::new(0..1)
+                )]
+            )
+        );
+        assert_eq!(
+            number::<Extra>()
+                .parse(Graphemes::new(".1"))
+                .into_output_errors(),
+            (
+                None,
+                vec![Error::new_expected(
+                    Expected::Number,
+                    Some(grapheme(".")),
+                    Span::new(0..1)
+                )]
+            )
+        );
+        assert_eq!(
+            number::<Extra>()
+                .parse(Graphemes::new("2'2"))
+                .into_output_errors(),
+            (
+                None,
+                vec![Error::new_expected(
+                    Expected::Digit(Radix::BINARY),
+                    Some(grapheme("2")),
+                    Span::new(2..3)
+                )]
+            )
+        );
+        assert_eq!(
+            number::<Extra>()
+                .parse(Graphemes::new("1'0"))
+                .into_output_errors(),
+            (
+                None,
+                vec![Error::new_expected(Expected::Radix, None, Span::new(0..1))]
+            )
         );
         assert_eq!(
             number::<Extra>()
                 .parse(Graphemes::new("60'15"))
-                .into_result(),
-            Err(vec![Error::new_expected(
-                Expected::Radix,
+                .into_output_errors(),
+            (
                 None,
-                Span::new(0..2)
-            )])
+                vec![Error::new_expected(Expected::Radix, None, Span::new(0..2))]
+            )
         );
     }
 }

@@ -26,24 +26,21 @@ where
 
     let close = close.ignored().recover_with(via_parser(empty()));
 
-    let argument = spanned(
-        whitespace()
-            .then(
-                ident()
-                    .then(whitespace())
-                    .then_ignore(assign)
-                    .then(whitespace())
-                    .or_not(),
-            )
+    let argument = whitespace().then(spanned(
+        ident()
+            .then(whitespace())
+            .then_ignore(assign)
+            .then(whitespace())
+            .or_not()
             .then(expr),
-    );
+    ));
 
     let separator = whitespace().then_ignore(comma);
 
     let repeat = argument
         .then(separator.or_not())
-        .map(|((argument, span), after_ws)| {
-            let ((before_ws, name), expr) = argument;
+        .map(|(argument, after_ws)| {
+            let (before_ws, ((name, expr), span)) = argument;
 
             let (name, expr_ws) = match name {
                 Some(((ident, after_name_ws), after_assign_ws)) => {
@@ -93,28 +90,6 @@ mod tests {
         );
         assert_eq!(
             initialization(expr(fact::<CompNode, Extra>()))
-                .parse(Graphemes::new("::("))
-                .into_output_errors(),
-            (
-                Some(List::new(vec![], ())),
-                vec![Error::new(
-                    smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::InitializationClose,
-                        Expected::Block,
-                        Expected::Ident,
-                        Expected::NegativeSpecial,
-                    ],
-                    None,
-                    Span::new(3..3)
-                )]
-            )
-        );
-        assert_eq!(
-            initialization(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("::('a')"))
                 .into_result(),
             Ok(List::new(
@@ -128,42 +103,6 @@ mod tests {
                 .into_spanned(3..6)],
                 ()
             )),
-        );
-        assert_eq!(
-            initialization(expr(fact::<CompNode, Extra>()))
-                .parse(Graphemes::new("::('a'"))
-                .into_output_errors(),
-            (
-                Some(List::new(
-                    vec![Argument::new(
-                        None,
-                        Wast::Character(grapheme("a").into())
-                            .into_spanned_node(3..6)
-                            .into_spanned_vec()
-                            .map(CompExpr::from_vec)
-                    )
-                    .into_spanned(3..6)],
-                    ()
-                )),
-                vec![Error::new(
-                    smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::PairSpecial,
-                        Expected::InitializationClose,
-                        Expected::Block,
-                        Expected::Comma,
-                        Expected::Ident,
-                        Expected::MethodSpecial,
-                        Expected::ChildSpecial,
-                        Expected::NegativeSpecial,
-                    ],
-                    None,
-                    Span::new(6..6)
-                )]
-            )
         );
         assert_eq!(
             initialization(expr(fact::<CompNode, Extra>()))
@@ -224,6 +163,69 @@ mod tests {
                 ],
                 ()
             )),
+        );
+    }
+
+    #[test]
+    fn test_initialization_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
+        assert_eq!(
+            initialization(expr(fact::<CompNode, Extra>()))
+                .parse(Graphemes::new("::("))
+                .into_output_errors(),
+            (
+                Some(List::new(vec![], ())),
+                vec![Error::new(
+                    smallvec![
+                        Expected::Number,
+                        Expected::Char,
+                        Expected::String,
+                        Expected::RawString,
+                        Expected::InitializationClose,
+                        Expected::Block,
+                        Expected::Ident,
+                        Expected::NegativeSpecial,
+                    ],
+                    None,
+                    Span::new(3..3)
+                )]
+            )
+        );
+        assert_eq!(
+            initialization(expr(fact::<CompNode, Extra>()))
+                .parse(Graphemes::new("::('a'"))
+                .into_output_errors(),
+            (
+                Some(List::new(
+                    vec![Argument::new(
+                        None,
+                        Wast::Character(grapheme("a").into())
+                            .into_spanned_node(3..6)
+                            .into_spanned_vec()
+                            .map(CompExpr::from_vec)
+                    )
+                    .into_spanned(3..6)],
+                    ()
+                )),
+                vec![Error::new(
+                    smallvec![
+                        Expected::Number,
+                        Expected::Char,
+                        Expected::String,
+                        Expected::RawString,
+                        Expected::PairSpecial,
+                        Expected::InitializationClose,
+                        Expected::Block,
+                        Expected::Comma,
+                        Expected::Ident,
+                        Expected::MethodSpecial,
+                        Expected::ChildSpecial,
+                        Expected::NegativeSpecial,
+                    ],
+                    None,
+                    Span::new(6..6)
+                )]
+            )
         );
         assert_eq!(
             initialization(expr(fact::<CompNode, Extra>()))

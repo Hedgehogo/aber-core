@@ -139,29 +139,6 @@ mod tests {
         );
         assert_eq!(
             tuple(expr(fact::<CompNode, Extra>()))
-                .parse(Graphemes::new("("))
-                .into_output_errors(),
-            (
-                Some(List::new(vec![], ())),
-                vec![Error::new(
-                    smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::Tuple,
-                        Expected::TupleClose,
-                        Expected::Block,
-                        Expected::Ident,
-                        Expected::NegativeSpecial,
-                    ],
-                    None,
-                    Span::new(1..1)
-                )]
-            )
-        );
-        assert_eq!(
-            tuple(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("('a')"))
                 .into_result(),
             Ok(List::new(
@@ -171,39 +148,6 @@ mod tests {
                     .map(CompExpr::from_vec)],
                 ()
             )),
-        );
-        assert_eq!(
-            tuple(expr(fact::<CompNode, Extra>()))
-                .parse(Graphemes::new("('a'"))
-                .into_output_errors(),
-            (
-                Some(List::new(
-                    vec![Wast::Character(grapheme("a").into())
-                        .into_spanned_node(1..4)
-                        .into_spanned_vec()
-                        .map(CompExpr::from_vec)],
-                    ()
-                )),
-                vec![Error::new(
-                    smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::PairSpecial,
-                        Expected::Tuple,
-                        Expected::TupleClose,
-                        Expected::Block,
-                        Expected::Comma,
-                        Expected::Ident,
-                        Expected::MethodSpecial,
-                        Expected::ChildSpecial,
-                        Expected::NegativeSpecial
-                    ],
-                    None,
-                    Span::new(4..4)
-                )]
-            )
         );
         assert_eq!(
             tuple(expr(fact::<CompNode, Extra>()))
@@ -259,6 +203,67 @@ mod tests {
                     smallvec![Expected::Tuple],
                     None,
                     Span::new(0..0)
+                )]
+            )
+        );
+    }
+
+    #[test]
+    fn test_tuple_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
+        assert_eq!(
+            tuple(expr(fact::<CompNode, Extra>()))
+                .parse(Graphemes::new("("))
+                .into_output_errors(),
+            (
+                Some(List::new(vec![], ())),
+                vec![Error::new(
+                    smallvec![
+                        Expected::Number,
+                        Expected::Char,
+                        Expected::String,
+                        Expected::RawString,
+                        Expected::Tuple,
+                        Expected::TupleClose,
+                        Expected::Block,
+                        Expected::Ident,
+                        Expected::NegativeSpecial,
+                    ],
+                    None,
+                    Span::new(1..1)
+                )]
+            )
+        );
+        assert_eq!(
+            tuple(expr(fact::<CompNode, Extra>()))
+                .parse(Graphemes::new("('a'"))
+                .into_output_errors(),
+            (
+                Some(List::new(
+                    vec![Wast::Character(grapheme("a").into())
+                        .into_spanned_node(1..4)
+                        .into_spanned_vec()
+                        .map(CompExpr::from_vec)],
+                    ()
+                )),
+                vec![Error::new(
+                    smallvec![
+                        Expected::Number,
+                        Expected::Char,
+                        Expected::String,
+                        Expected::RawString,
+                        Expected::PairSpecial,
+                        Expected::Tuple,
+                        Expected::TupleClose,
+                        Expected::Block,
+                        Expected::Comma,
+                        Expected::Ident,
+                        Expected::MethodSpecial,
+                        Expected::ChildSpecial,
+                        Expected::NegativeSpecial
+                    ],
+                    None,
+                    Span::new(4..4)
                 )]
             )
         );

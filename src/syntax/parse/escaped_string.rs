@@ -114,21 +114,25 @@ mod tests {
     use indoc::indoc;
     use smallvec::smallvec;
 
+    fn new_string<'input>(
+        capacity: usize,
+        sections: Vec<&'input str>,
+        inner_repr: &'input str,
+    ) -> wast::String<'input> {
+        wast::String::Escaped(string::EscapedStringSealed::from_data_unchecked(
+            {
+                let mut data = EscapedStringData::with_capacity(capacity);
+                for section in sections {
+                    data = data.with_next_section(section);
+                }
+                data
+            },
+            inner_repr,
+        ))
+    }
+
     #[test]
     fn test_escaped_string() {
-        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
-        let new_string = |capacity, sections: Vec<_>, inner_repr| {
-            wast::String::Escaped(string::EscapedStringSealed::from_data_unchecked(
-                {
-                    let mut data = EscapedStringData::with_capacity(capacity);
-                    for section in sections {
-                        data = data.with_next_section(section);
-                    }
-                    data
-                },
-                inner_repr,
-            ))
-        };
         {
             let input = r#""Hello Aber!""#;
             assert_eq!(
@@ -136,42 +140,6 @@ mod tests {
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(11, vec!["Hello Aber!"], "Hello Aber!"))
-            );
-        }
-        {
-            let input = r#""Hello Aber!"#;
-            assert_eq!(
-                escaped_string::<wast::String, Extra>()
-                    .parse(Graphemes::new(input))
-                    .into_output_errors(),
-                (
-                    Some(new_string(11, vec!["Hello Aber!"], "Hello Aber!")),
-                    vec![Error::new(
-                        smallvec![
-                            Expected::StringUnescaped,
-                            Expected::StringEscape,
-                            Expected::StringClose
-                        ],
-                        None,
-                        Span::new(12..12)
-                    )]
-                )
-            );
-        }
-        {
-            let input = r#"Hello Aber!""#;
-            assert_eq!(
-                escaped_string::<wast::String, Extra>()
-                    .parse(Graphemes::new(input))
-                    .into_output_errors(),
-                (
-                    None,
-                    vec![Error::new_expected(
-                        Expected::String,
-                        Some(grapheme("H")),
-                        Span::new(0..1)
-                    )]
-                )
             );
         }
         {
@@ -235,6 +203,47 @@ mod tests {
                     .parse(Graphemes::new(input))
                     .into_result(),
                 Ok(new_string(12, vec!["Hello Aber!", ""], "Hello Aber!\\\n"))
+            );
+        }
+    }
+
+    #[test]
+    fn test_escaped_string_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
+        {
+            let input = r#""Hello Aber!"#;
+            assert_eq!(
+                escaped_string::<wast::String, Extra>()
+                    .parse(Graphemes::new(input))
+                    .into_output_errors(),
+                (
+                    Some(new_string(11, vec!["Hello Aber!"], "Hello Aber!")),
+                    vec![Error::new(
+                        smallvec![
+                            Expected::StringUnescaped,
+                            Expected::StringEscape,
+                            Expected::StringClose
+                        ],
+                        None,
+                        Span::new(12..12)
+                    )]
+                )
+            );
+        }
+        {
+            let input = r#"Hello Aber!""#;
+            assert_eq!(
+                escaped_string::<wast::String, Extra>()
+                    .parse(Graphemes::new(input))
+                    .into_output_errors(),
+                (
+                    None,
+                    vec![Error::new_expected(
+                        Expected::String,
+                        Some(grapheme("H")),
+                        Span::new(0..1)
+                    )]
+                )
             );
         }
         {

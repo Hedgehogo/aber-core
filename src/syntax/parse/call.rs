@@ -78,7 +78,6 @@ mod tests {
 
     #[test]
     fn test_ident() {
-        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             ident::<Extra>()
                 .parse(Graphemes::new("hello"))
@@ -91,6 +90,11 @@ mod tests {
                 .into_result(),
             Ok(Ident::from_repr_unchecked("-hello"))
         );
+    }
+
+    #[test]
+    fn test_ident_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             ident::<Extra>()
                 .parse(Graphemes::new("9hello"))
@@ -147,7 +151,6 @@ mod tests {
 
     #[test]
     fn test_call() {
-        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             call(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("hello"))
@@ -178,6 +181,11 @@ mod tests {
                 ))
             ))
         );
+    }
+
+    #[test]
+    fn test_call_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             call(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("hello,[]"))

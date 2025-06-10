@@ -144,6 +144,11 @@ mod tests {
                 CompExpr::new().into_spanned(10..10),
             )),
         );
+    }
+
+    #[test]
+    fn test_content_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("[]"))
