@@ -7,16 +7,16 @@ use crate::node::{
     span::IntoSpanned,
     wast::{initialization::Argument, List},
     whitespace::Side,
-    Expr, Spanned,
+    ExprOp, Node, Spanned, SpannedVec,
 };
 use chumsky::prelude::*;
 
-pub fn initialization<'input, X, P, E>(
+pub fn initialization<'input, N, P, E>(
     expr: P,
-) -> impl GraphemeParser<'input, List<'input, Argument<'input, X>, X>, E> + Clone
+) -> impl GraphemeParser<'input, List<'input, Argument<'input, N::Expr>, N::Expr>, E> + Clone
 where
-    X: Expr<'input>,
-    P: GraphemeParser<'input, Spanned<X>, E> + Clone,
+    N: Node<'input>,
+    P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     let open = just("::(").map_err(|e: Error| e.replace_expected(Expected::Initialization));
@@ -50,14 +50,13 @@ where
                 None => (None, before_ws),
             };
 
-            let whitespaced_left = X::whitespaced(expr, expr_ws, Side::Left);
-
+            let whitespaced_left = expr.whitespaced(expr_ws, Side::Left);
             let whitespaced = match after_ws {
-                Some(i) => X::whitespaced(whitespaced_left, i, Side::Right),
+                Some(i) => whitespaced_left.whitespaced(i, Side::Right),
                 None => whitespaced_left,
             };
 
-            Argument::new(name, whitespaced).into_spanned(span)
+            Argument::new(name, whitespaced.into_spanned_expr()).into_spanned(span)
         });
 
     open.ignore_then(repeat.repeated().collect())

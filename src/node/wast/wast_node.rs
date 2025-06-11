@@ -1,4 +1,4 @@
-use super::super::{span::IntoSpanned, whitespace::Side, Expr, Node, Spanned};
+use super::super::{span::IntoSpanned, whitespace::Side, Expr, Node, Spanned, SpannedVec};
 use super::{String, Wast, Whitespace};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,18 +20,11 @@ impl<'input> Expr<'input> for Vec<Spanned<WastNode<'input>>> {
     type Node = WastNode<'input>;
     type Whitespace = Whitespace<'input>;
 
-    fn from_seq(seq: Vec<Spanned<Self::Node>>) -> Self {
-        seq
-    }
-
-    fn concat(left: Spanned<Self>, right: Spanned<Self>) -> Option<Spanned<Self>> {
-        let Spanned(mut left, left_span) = left;
-        let Spanned(mut right, right_span) = right;
-        left.append(&mut right);
-        Some(left.into_spanned(left_span.range.start..right_span.range.end))
-    }
-
-    fn whitespaced(expr: Spanned<Self>, whitespace: Self::Whitespace, side: Side) -> Spanned<Self> {
+    fn whitespaced_seq(
+        expr: Spanned<SpannedVec<Self::Node>>,
+        whitespace: Self::Whitespace,
+        side: Side,
+    ) -> Spanned<SpannedVec<Self::Node>> {
         let Spanned(mut expr, mut span) = expr;
         match side {
             Side::Left => {

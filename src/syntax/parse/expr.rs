@@ -4,15 +4,17 @@ use super::super::{
 };
 use super::{call::call, spanned, whitespace::whitespace, GraphemeParser, GraphemeParserExtra};
 use crate::node::{
-    span::{IntoSpanned, Span},
+    span::IntoSpanned,
     wast::{expr_call::ExprCall, negative_call::NegativeCall, Wast},
     whitespace::Side,
-    Expr, Node, Spanned,
+    ExprOp, Node, Spanned, SpannedVec,
 };
 use chumsky::pratt::*;
 use chumsky::prelude::*;
 
-pub fn expr<'input, N, P, E>(fact: P) -> impl GraphemeParser<'input, Spanned<N::Expr>, E> + Clone
+pub fn expr<'input, N, P, E>(
+    fact: P,
+) -> impl GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone
 where
     N: Node<'input> + 'input,
     P: GraphemeParser<'input, Spanned<N>, E> + Clone + 'input,
@@ -22,7 +24,7 @@ where
         let atom = fact
             .map(|i| {
                 let span = i.1.clone();
-                Spanned(N::Expr::from_seq(vec![i]), span)
+                vec![i].into_spanned(span)
             })
             .boxed();
 
@@ -35,7 +37,7 @@ where
             whitespace()
                 .then_ignore(just(s))
                 .then(whitespace())
-                .then(spanned(call::<N::Expr, _, _>(expr.clone())).map(Spanned::from))
+                .then(spanned(call(expr.clone())).map(Spanned::from))
                 .map_err(move |e: Error| e.replace_expected(expected))
                 .boxed()
         };
@@ -45,35 +47,38 @@ where
         let whitespace = whitespace().then_ignore(choice((just("."), just("::"))).not());
 
         let into_atom = move |wast: Wast<'input, N>, span: SimpleSpan| {
-            let seq = vec![Spanned(wast.into_node(), Span::from(span))];
-            N::Expr::from_seq(seq).into_spanned(span)
+            wast.into_spanned_node(span).into_spanned_vec()
         };
 
         atom.pratt((
-            postfix(1, method_special, move |expr, call, extra| {
+            postfix(1, method_special, move |seq, call, extra| {
+                let seq: Spanned<SpannedVec<N>> = seq;
                 let ((left_ws, right_ws), call) = call;
-                let whitespaced = N::Expr::whitespaced(expr, left_ws, Side::Right);
+                let whitespaced = seq.whitespaced(left_ws, Side::Right).into_spanned_expr();
                 let node = Wast::MethodCall(ExprCall::new(whitespaced, right_ws, call));
 
                 into_atom(node, extra.span())
             }),
-            postfix(1, child_special, move |expr, call, extra| {
+            postfix(1, child_special, move |seq, call, extra| {
+                let seq: Spanned<SpannedVec<N>> = seq;
                 let ((left_ws, right_ws), call) = call;
-                let whitespaced = N::Expr::whitespaced(expr, left_ws, Side::Right);
+                let whitespaced = seq.whitespaced(left_ws, Side::Right).into_spanned_expr();
                 let node = Wast::ChildCall(ExprCall::new(whitespaced, right_ws, call));
 
                 into_atom(node, extra.span())
             }),
-            prefix(2, negative_special, move |ws, expr, extra| {
-                let whitespaced = N::Expr::whitespaced(expr, ws, Side::Left);
+            prefix(2, negative_special, move |ws, seq, extra| {
+                let seq: Spanned<SpannedVec<N>> = seq;
+                let whitespaced = seq.whitespaced(ws, Side::Left).into_spanned_expr();
                 let node = Wast::NegativeCall(NegativeCall::new(whitespaced));
 
                 into_atom(node, extra.span())
             }),
             infix(left(3), whitespace, move |left, ws, right, _| {
-                let whitespaced = N::Expr::whitespaced(right, ws, Side::Left);
+                let left: Spanned<SpannedVec<N>> = left;
+                let whitespaced = right.whitespaced(ws, Side::Left);
 
-                N::Expr::concat(left, whitespaced).unwrap()
+                left.concat(whitespaced)
             }),
         ))
     })
@@ -110,8 +115,7 @@ mod tests {
                 .into_result(),
             Ok(Wast::Character(grapheme("a").into())
                 .into_spanned_node(0..3)
-                .into_spanned_vec()
-                .map(CompExpr::from_vec))
+                .into_spanned_vec())
         );
         assert_eq!(
             expr(fact::<CompNode, Extra>())
@@ -129,8 +133,7 @@ mod tests {
                     .into_spanned(4..7)
             ))
             .into_spanned_node(0..7)
-            .into_spanned_vec()
-            .map(CompExpr::from_vec)),
+            .into_spanned_vec()),
         );
         assert_eq!(
             expr(fact::<CompNode, Extra>())
@@ -148,8 +151,7 @@ mod tests {
                     .into_spanned(5..8)
             ))
             .into_spanned_node(0..8)
-            .into_spanned_vec()
-            .map(CompExpr::from_vec)),
+            .into_spanned_vec()),
         );
         assert_eq!(
             expr(fact::<CompNode, Extra>())
@@ -177,8 +179,7 @@ mod tests {
                     .into_spanned(9..12)
             ))
             .into_spanned_node(0..12)
-            .into_spanned_vec()
-            .map(CompExpr::from_vec)),
+            .into_spanned_vec()),
         );
         assert_eq!(
             expr(fact::<CompNode, Extra>())
@@ -206,8 +207,7 @@ mod tests {
                     .into_spanned(9..12)
             ))
             .into_spanned_node(0..12)
-            .into_spanned_vec()
-            .map(CompExpr::from_vec)),
+            .into_spanned_vec()),
         );
         assert_eq!(
             expr(fact::<CompNode, Extra>())
@@ -231,8 +231,7 @@ mod tests {
                     .into_spanned(9..12)
             ))
             .into_spanned_node(0..12)
-            .into_spanned_vec()
-            .map(CompExpr::from_vec)),
+            .into_spanned_vec()),
         );
     }
 
@@ -250,7 +249,6 @@ mod tests {
                         Wast::Character(grapheme("h").into()).into_spanned_node(17..19),
                     ]
                     .into_spanned(0..19)
-                    .map(CompExpr::from_vec)
                 ),
                 vec![Error::new_expected(
                     Expected::CharClose,

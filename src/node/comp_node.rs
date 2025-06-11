@@ -1,5 +1,6 @@
 use super::{
-    hir::String, span::IntoSpanned, whitespace::Side, CompExpr, Expr, Hir, Node, Spanned, Wast,
+    hir::String, whitespace::Side, CompExpr, Expr, Hir, Node, Spanned,
+    SpannedVec, Wast,
 };
 
 /// Type describing compilation units of any level.
@@ -22,28 +23,11 @@ impl<'input> Expr<'input> for CompExpr<'input> {
     type Node = CompNode<'input>;
     type Whitespace = ();
 
-    fn from_seq(seq: Vec<Spanned<Self::Node>>) -> Self {
-        Self::from_vec(seq)
-    }
-
-    fn concat(left: Spanned<Self>, right: Spanned<Self>) -> Option<Spanned<Self>> {
-        if let (
-            Spanned(Self::Wast(mut left), left_span),
-            Spanned(Self::Wast(mut right), right_span),
-        ) = (left, right)
-        {
-            left.append(&mut right);
-            let expr = Self::from_vec(left);
-            return Some(expr.into_spanned(left_span.range.start..right_span.range.end));
-        }
-        None
-    }
-
-    fn whitespaced(
-        expr: Spanned<Self>,
+    fn whitespaced_seq(
+        expr: Spanned<SpannedVec<Self::Node>>,
         _whitespace: Self::Whitespace,
         _side: Side,
-    ) -> Spanned<Self> {
+    ) -> Spanned<SpannedVec<Self::Node>> {
         expr
     }
 }

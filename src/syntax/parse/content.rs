@@ -10,14 +10,14 @@ use crate::node::{
         block::{Block, Stmt},
     },
     whitespace::Side,
-    Expr, Spanned,
+    Node, ExprOp, Spanned, SpannedVec,
 };
 use chumsky::prelude::*;
 
-pub fn content<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, Block<'input, X>, E> + Clone
+pub fn content<'input, N, P, E>(expr: P) -> impl GraphemeParser<'input, Block<'input, N::Expr>, E> + Clone
 where
-    X: Expr<'input>,
-    P: GraphemeParser<'input, Spanned<X>, E> + Clone,
+    N: Node<'input>,
+    P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     let assign = just("=")
@@ -29,10 +29,11 @@ where
         .map_err(|e: Error| e.replace_expected(Expected::Semicolon));
 
     let expr = whitespace()
-        .then(expr.or(spanned(empty().map(|_| X::from_seq(vec![]))).map(Spanned::from)))
-        .map(|(whitespace, expr)| X::whitespaced(expr, whitespace, Side::Left))
+        .then(expr.or(spanned(empty().map(|_| vec![])).map(Spanned::from)))
+        .map(|(whitespace, expr)| expr.whitespaced(whitespace, Side::Left))
         .then(whitespace())
-        .map(|(expr, whitespace)| X::whitespaced(expr, whitespace, Side::Right));
+        .map(|(expr, whitespace)| expr.whitespaced(whitespace, Side::Right))
+        .map(|i| i.into_spanned_expr());
 
     let stmt = expr
         .clone()

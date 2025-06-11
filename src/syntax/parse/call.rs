@@ -11,7 +11,7 @@ use crate::node::{
         call::{Call, Generics, Ident},
         number::Radix,
     },
-    Expr, Spanned,
+    Node, Spanned, SpannedVec,
 };
 use chumsky::prelude::*;
 
@@ -46,14 +46,16 @@ where
         .map(|i| Ident::from_repr_unchecked(i.as_str()))
 }
 
-pub fn call<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, Call<'input, X>, E> + Clone
+pub fn call<'input, N, P, E>(
+    expr: P,
+) -> impl GraphemeParser<'input, Call<'input, N::Expr>, E> + Clone
 where
-    X: Expr<'input>,
-    P: GraphemeParser<'input, Spanned<X>, E> + Clone,
+    N: Node<'input>,
+    P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     let generics = whitespace()
-        .then(spanned(generics::<X, _, _>(expr)).map(Spanned::from))
+        .then(spanned(generics(expr)).map(Spanned::from))
         .map(|(whitespace, args)| Generics::new(whitespace, args))
         .or_not();
 

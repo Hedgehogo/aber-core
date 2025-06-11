@@ -3,13 +3,13 @@ use super::super::{
     error::{Error, Expected},
 };
 use super::{content::content, GraphemeParser, GraphemeParserExtra};
-use crate::node::{wast::block::Block, Expr, Spanned};
+use crate::node::{wast::block::Block, Node, Spanned, SpannedVec};
 use chumsky::prelude::*;
 
-pub fn block<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, Block<'input, X>, E> + Clone
+pub fn block<'input, N, P, E>(expr: P) -> impl GraphemeParser<'input, Block<'input, N::Expr>, E> + Clone
 where
-    X: Expr<'input>,
-    P: GraphemeParser<'input, Spanned<X>, E> + Clone,
+    N: Node<'input>,
+    P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     let open = just("{")

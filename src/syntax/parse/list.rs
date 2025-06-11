@@ -3,17 +3,17 @@ use super::super::{
     error::{Error, Expected},
 };
 use super::{whitespace::whitespace, GraphemeParser, GraphemeParserExtra};
-use crate::node::{wast::List, whitespace::Side, Expr, Spanned};
+use crate::node::{wast::List, whitespace::Side, ExprOp, Node, Spanned, SpannedVec};
 use chumsky::prelude::*;
 
-fn list<'input, X, P, E>(
+fn list<'input, N, P, E>(
     expr: P,
     open: (&'static str, Expected),
     close: (&'static str, Expected),
-) -> impl GraphemeParser<'input, List<'input, X, X>, E> + Clone
+) -> impl GraphemeParser<'input, List<'input, N::Expr, N::Expr>, E> + Clone
 where
-    X: Expr<'input>,
-    P: GraphemeParser<'input, Spanned<X>, E> + Clone,
+    N: Node<'input>,
+    P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
     let open = just(open.0)
@@ -32,16 +32,17 @@ where
 
     let item = whitespace()
         .then(expr)
-        .map(|(whitespace, expr)| X::whitespaced(expr, whitespace, Side::Left));
+        .map(|(whitespace, expr)| expr.whitespaced(whitespace, Side::Left));
 
     let separator = whitespace().then_ignore(comma);
 
-    let repeat = item
-        .then(separator.or_not())
-        .map(|(item, whitespace)| match whitespace {
-            Some(whitespace) => X::whitespaced(item, whitespace, Side::Right),
+    let repeat = item.then(separator.or_not()).map(|(item, whitespace)| {
+        match whitespace {
+            Some(whitespace) => item.whitespaced(whitespace, Side::Right),
             None => item,
-        });
+        }
+        .into_spanned_expr()
+    });
 
     open.ignore_then(repeat.repeated().collect())
         .then(whitespace())
@@ -49,22 +50,26 @@ where
         .then_ignore(close)
 }
 
-pub fn tuple<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, List<'input, X, X>, E> + Clone
+pub fn tuple<'input, N, P, E>(
+    expr: P,
+) -> impl GraphemeParser<'input, List<'input, N::Expr, N::Expr>, E> + Clone
 where
-    X: Expr<'input>,
-    P: GraphemeParser<'input, Spanned<X>, E> + Clone,
+    N: Node<'input>,
+    P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
-    list::<X, _, _>(expr, ("(", Expected::Tuple), (")", Expected::TupleClose))
+    list(expr, ("(", Expected::Tuple), (")", Expected::TupleClose))
 }
 
-pub fn generics<'input, X, P, E>(expr: P) -> impl GraphemeParser<'input, List<'input, X, X>, E> + Clone
+pub fn generics<'input, N, P, E>(
+    expr: P,
+) -> impl GraphemeParser<'input, List<'input, N::Expr, N::Expr>, E> + Clone
 where
-    X: Expr<'input>,
-    P: GraphemeParser<'input, Spanned<X>, E> + Clone,
+    N: Node<'input>,
+    P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
-    list::<X, _, _>(
+    list(
         expr,
         ("[", Expected::Generics),
         ("]", Expected::GenericsClose),
@@ -93,7 +98,7 @@ mod tests {
             text::{whitespace, TextExpected},
             DefaultExpected,
         };
-        
+
         fn tuple<'input>(
         ) -> impl Parser<'input, &'input str, (), extra::Err<Rich<'input, char, SimpleSpan>>>
         {
