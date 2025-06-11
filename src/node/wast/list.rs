@@ -1,4 +1,4 @@
-//! Module that provides `List`.
+//! Module that provides [`List`].
 
 use super::SpannedVec;
 use crate::syntax::Expr;

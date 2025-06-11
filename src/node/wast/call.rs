@@ -1,5 +1,5 @@
 //! Module that provides types to describe the syntactic construct *call*.
-//!
+
 use super::super::Spanned;
 use super::List;
 use crate::syntax::Expr;

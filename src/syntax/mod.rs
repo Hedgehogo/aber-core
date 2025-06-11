@@ -1,3 +1,5 @@
+//! Module that provides abstractions needed only for parsing (conversion from source code to WAST).
+
 pub mod ctx;
 pub mod error;
 pub mod expr;

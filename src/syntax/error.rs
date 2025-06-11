@@ -1,3 +1,5 @@
+//! Module that provides types describing parsing error.
+
 use std::fmt::Debug;
 
 use crate::node::{

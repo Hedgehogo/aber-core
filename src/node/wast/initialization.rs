@@ -1,4 +1,4 @@
-//! Module that provides `Initialization`.
+//! Module that provides [`Initialization`].
 
 use super::{call::Ident, Spanned, SpannedVec};
 use crate::syntax::Expr;

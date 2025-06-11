@@ -1,3 +1,5 @@
+//! Module that provides [`CompNode`].
+
 use super::{hir::String, CompExpr, Hir, Spanned, SpannedVec, Wast};
 use crate::syntax::{whitespace::Side, Expr, Node};
 

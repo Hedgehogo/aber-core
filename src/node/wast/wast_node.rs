@@ -1,3 +1,5 @@
+//! Module that provides [`WastNode`].
+
 use super::super::{span::IntoSpanned, Spanned, SpannedVec};
 use super::{String, Wast, Whitespace};
 use crate::syntax::{whitespace::Side, Expr, Node};

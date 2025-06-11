@@ -1,3 +1,5 @@
+//! Module that provides abstractions over expressions.
+
 use super::{whitespace::Side, Node, Whitespace};
 use crate::node::span::{Spanned, IntoSpanned, SpannedVec};
 

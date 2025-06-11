@@ -1,3 +1,5 @@
+//! Module that provides types describing the compile-time parsing context.
+
 /// Kind of comment
 pub enum CommentKind {
     SingleLine,
