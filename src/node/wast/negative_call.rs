@@ -1,7 +1,7 @@
 //! Module that provides [`NegativeCall`].
 
-use super::super::Expr;
 use super::Spanned;
+use crate::syntax::Expr;
 use std::marker::PhantomData;
 
 /// Type describing the syntactic construct *negative call*

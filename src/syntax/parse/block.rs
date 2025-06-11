@@ -1,12 +1,15 @@
 use super::super::{
     ctx::Ctx,
     error::{Error, Expected},
+    Node,
 };
 use super::{content::content, GraphemeParser, GraphemeParserExtra};
-use crate::node::{wast::block::Block, Node, Spanned, SpannedVec};
+use crate::node::{wast::block::Block, Spanned, SpannedVec};
 use chumsky::prelude::*;
 
-pub fn block<'input, N, P, E>(expr: P) -> impl GraphemeParser<'input, Block<'input, N::Expr>, E> + Clone
+pub fn block<'input, N, P, E>(
+    expr: P,
+) -> impl GraphemeParser<'input, Block<'input, N::Expr>, E> + Clone
 where
     N: Node<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,

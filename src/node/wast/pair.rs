@@ -1,7 +1,7 @@
 //! Module that provides [`Pair`].
 
-use super::super::{Expr, Node};
 use super::Spanned;
+use crate::syntax::{Expr, Node};
 use std::{fmt, marker::PhantomData};
 
 /// Type describing the syntactic construct *pair*
@@ -17,10 +17,7 @@ pub struct Pair<'input, N: Node<'input>> {
 
 impl<'input, N: Node<'input>> Pair<'input, N> {
     /// Creates a new `Pair`.
-    pub fn new(
-        node: Box<Spanned<N>>,
-        whitespace: <N::Expr as Expr<'input>>::Whitespace,
-    ) -> Self {
+    pub fn new(node: Box<Spanned<N>>, whitespace: <N::Expr as Expr<'input>>::Whitespace) -> Self {
         Self {
             node,
             whitespace,

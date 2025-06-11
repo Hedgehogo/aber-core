@@ -1,7 +1,7 @@
 //! Module that provides types to describe the syntactic construct *block*.
 
-use super::super::Expr;
 use super::{Assign, Spanned};
+use crate::syntax::Expr;
 
 /// Type describing the syntactic construct *statement*.
 #[derive(Debug, Clone, PartialEq, Eq)]

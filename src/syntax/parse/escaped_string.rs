@@ -1,12 +1,12 @@
-use super::{
-    super::{
-        ctx::Ctx,
-        error::{Error, Expected},
-    },
-    whitespace::{line_separator, not_line_separator},
+use super::super::{
+    ctx::Ctx,
+    error::{Error, Expected},
+    string::{EscapedString, StringData},
 };
-use super::{GraphemeParser, GraphemeParserExtra};
-use crate::node::string::{EscapedString, StringData};
+use super::{
+    whitespace::{line_separator, not_line_separator},
+    GraphemeParser, GraphemeParserExtra,
+};
 use chumsky::prelude::*;
 use text::{Char, Grapheme, Graphemes};
 
@@ -105,10 +105,10 @@ where
 mod tests {
     use super::*;
 
+    use super::super::super::string::{self, StringData};
     use super::super::tests::Extra;
     use crate::node::{
         span::Span,
-        string::{self, StringData},
         wast::{self, escaped_string::EscapedStringData},
     };
     use indoc::indoc;

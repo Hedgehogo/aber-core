@@ -1,7 +1,7 @@
 //! Module that provides [`Assign`].
 
-use super::super::Expr;
 use super::Spanned;
+use crate::syntax::Expr;
 use std::marker::PhantomData;
 
 /// Type describing the syntactic construct *assign*
@@ -18,7 +18,7 @@ impl<'input, X: Expr<'input>> Assign<'input, X> {
         Self {
             left,
             right,
-            phanthom: PhantomData
+            phanthom: PhantomData,
         }
     }
 }

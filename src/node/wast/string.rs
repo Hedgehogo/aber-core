@@ -1,10 +1,10 @@
 //! Module that provides [`String`].
 
-use super::super::string;
 use super::{
     escaped_string::{EscapedString, EscapedStringData},
     raw_string::{RawString, RawStringData},
 };
+use crate::syntax::string;
 
 /// Type describing a string literal.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,11 +46,7 @@ impl<'input> string::EscapedString<'input> for String<'input> {}
 impl<'input> string::RawStringSealed<'input> for String<'input> {
     type Data = RawStringData;
 
-    fn from_data_unchecked(
-        data: Self::Data,
-        indent: &'input str,
-        inner_repr: &'input str,
-    ) -> Self {
+    fn from_data_unchecked(data: Self::Data, indent: &'input str, inner_repr: &'input str) -> Self {
         Self::Raw(RawString::from_data_unchecked(data, indent, inner_repr))
     }
 }

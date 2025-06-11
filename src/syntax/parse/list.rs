@@ -1,9 +1,11 @@
 use super::super::{
     ctx::Ctx,
     error::{Error, Expected},
+    whitespace::Side,
+    ExprOp, Node,
 };
 use super::{whitespace::whitespace, GraphemeParser, GraphemeParserExtra};
-use crate::node::{wast::List, whitespace::Side, ExprOp, Node, Spanned, SpannedVec};
+use crate::node::{wast::List, Spanned, SpannedVec};
 use chumsky::prelude::*;
 
 fn list<'input, N, P, E>(

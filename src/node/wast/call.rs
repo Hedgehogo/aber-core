@@ -1,7 +1,8 @@
 //! Module that provides types to describe the syntactic construct *call*.
 //!
-use super::super::{Expr, Spanned};
+use super::super::Spanned;
 use super::List;
+use crate::syntax::Expr;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

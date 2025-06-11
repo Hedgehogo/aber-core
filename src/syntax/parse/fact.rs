@@ -1,6 +1,7 @@
 use super::super::{
     ctx::Ctx,
     error::{Error, Expected},
+    Node,
 };
 use super::{
     block::block, call::call, character::character, escaped_string::escaped_string, expr::expr,
@@ -9,7 +10,7 @@ use super::{
 };
 use crate::node::{
     wast::{Pair, Wast},
-    Node, Spanned,
+    Spanned,
 };
 use chumsky::prelude::*;
 

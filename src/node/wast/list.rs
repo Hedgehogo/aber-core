@@ -1,7 +1,7 @@
 //! Module that provides `List`.
 
-use super::super::Expr;
 use super::SpannedVec;
+use crate::syntax::Expr;
 
 /// Type describing syntactic constructions containing comma-separated enumerated items.
 ///

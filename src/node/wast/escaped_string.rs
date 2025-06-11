@@ -1,6 +1,6 @@
 //! Module that provides [`EscapedString`].
 
-use super::super::string;
+use crate::syntax::string;
 use chumsky::text::{Char, Graphemes};
 use std::fmt;
 

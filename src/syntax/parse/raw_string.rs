@@ -1,13 +1,12 @@
 use super::super::{
     ctx::Ctx,
-    error::{Error, Expected},
+    error::{Error, Expected},string::{RawString, StringData}
 };
 use super::{
     escaped_string::separator,
     whitespace::{line_separator, not_line_separator},
     GraphemeParser, GraphemeParserExtra,
 };
-use crate::node::string::{RawString, StringData};
 use chumsky::{
     combinator::Repeated,
     prelude::*,
@@ -229,10 +228,10 @@ where
 mod tests {
     use super::*;
 
+    use super::super::super::string::{self, StringData};
     use super::super::tests::Extra;
     use crate::node::{
         span::Span,
-        string::{self, StringData},
         wast::{self, raw_string::RawStringData},
     };
     use indoc::indoc;

@@ -16,7 +16,8 @@ pub mod string;
 pub mod wast_node;
 pub mod whitespace;
 
-use super::{span::Span, Expr, Node, Spanned, SpannedVec};
+use super::span::{Span, Spanned, SpannedVec};
+use crate::syntax::{Expr, Node};
 use std::fmt;
 
 pub use assign::Assign;

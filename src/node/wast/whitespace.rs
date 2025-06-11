@@ -1,6 +1,6 @@
 //! Module that provides [`Whitespace`].
 
-use super::super::whitespace;
+use crate::syntax::whitespace;
 
 /// Type describing a whitespace.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]

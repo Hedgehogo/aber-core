@@ -1,7 +1,5 @@
-use super::{
-    hir::String, whitespace::Side, CompExpr, Expr, Hir, Node, Spanned,
-    SpannedVec, Wast,
-};
+use super::{hir::String, CompExpr, Hir, Spanned, SpannedVec, Wast};
+use crate::syntax::{whitespace::Side, Expr, Node};
 
 /// Type describing compilation units of any level.
 #[derive(Debug, Clone, PartialEq, Eq)]

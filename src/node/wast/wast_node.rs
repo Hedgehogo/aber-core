@@ -1,5 +1,6 @@
-use super::super::{span::IntoSpanned, whitespace::Side, Expr, Node, Spanned, SpannedVec};
+use super::super::{span::IntoSpanned, Spanned, SpannedVec};
 use super::{String, Wast, Whitespace};
+use crate::syntax::{whitespace::Side, Expr, Node};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WastNode<'input> {

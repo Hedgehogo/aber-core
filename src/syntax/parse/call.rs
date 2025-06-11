@@ -1,6 +1,7 @@
 use super::super::{
     ctx::Ctx,
     error::{Error, Expected},
+    Node,
 };
 use super::{
     list::generics, number::digit, spanned, whitespace::whitespace, GraphemeParser,
@@ -11,7 +12,7 @@ use crate::node::{
         call::{Call, Generics, Ident},
         number::Radix,
     },
-    Node, Spanned, SpannedVec,
+    Spanned, SpannedVec,
 };
 use chumsky::prelude::*;
 

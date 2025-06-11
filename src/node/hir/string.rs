@@ -1,6 +1,6 @@
 //! Module that provides [`String`].
 
-use super::super::string::{EscapedStringSealed, EscapedString, RawStringSealed, RawString};
+use crate::syntax::string::{EscapedString, EscapedStringSealed, RawString, RawStringSealed};
 
 /// Type describing the contents of a string literal.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]

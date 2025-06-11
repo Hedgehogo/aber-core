@@ -110,3 +110,6 @@ impl<T, S: Into<Span>> IntoSpanned<S> for T {
         Spanned(self, span.into())
     }
 }
+
+/// Vector consisting of [`Spanned`].
+pub type SpannedVec<T> = Vec<Spanned<T>>;

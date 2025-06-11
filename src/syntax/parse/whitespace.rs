@@ -1,6 +1,5 @@
-use super::super::{ctx::Ctx, error::Error};
+use super::super::{ctx::Ctx, error::Error, Whitespace};
 use super::{GraphemeParser, GraphemeParserExtra};
-use crate::node::whitespace::Whitespace;
 use chumsky::prelude::*;
 use smallvec::smallvec;
 use text::{inline_whitespace, newline, Grapheme, Graphemes};

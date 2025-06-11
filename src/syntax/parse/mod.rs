@@ -11,8 +11,8 @@ pub mod number;
 pub mod raw_string;
 pub mod whitespace;
 
-use super::{ctx::Ctx, error::Error};
-use crate::node::{expr::Expr, wast::block::Block};
+use super::{ctx::Ctx, error::Error, Expr};
+use crate::node::wast::block::Block;
 use chumsky::{
     combinator::MapWith, extra::ParserExtra, input::MapExtra, prelude::*, text::unicode::Graphemes,
 };

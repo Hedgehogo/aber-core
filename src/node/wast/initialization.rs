@@ -1,7 +1,7 @@
 //! Module that provides `Initialization`.
 
-use super::super::Expr;
 use super::{call::Ident, Spanned, SpannedVec};
+use crate::syntax::Expr;
 use std::fmt;
 
 /// Type describing sequence I from the initialization syntax specification.

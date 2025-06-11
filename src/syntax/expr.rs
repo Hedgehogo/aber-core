@@ -1,4 +1,5 @@
-use super::{whitespace::Side, Node, Spanned, span::IntoSpanned, Whitespace};
+use super::{whitespace::Side, Node, Whitespace};
+use crate::node::span::{Spanned, IntoSpanned, SpannedVec};
 
 pub trait Expr<'input>: Sized + From<SpannedVec<Self::Node>> {
     /// Type describing the node.
@@ -77,6 +78,3 @@ where
         N::Expr::whitespaced_seq(self, whitespace, side)
     }
 }
-
-/// Vector consisting of [`Spanned`].
-pub type SpannedVec<T> = Vec<Spanned<T>>;
