@@ -48,6 +48,7 @@ pub enum Wast<'input, N: Node<'input>> {
     MethodCall(ExprCall<'input, N::Expr>),
     ChildCall(ExprCall<'input, N::Expr>),
     NegativeCall(NegativeCall<'input, N::Expr>),
+    Initialization(Initialization<'input, N::Expr>),
 }
 
 impl<'input, N: Node<'input>> Wast<'input, N> {
