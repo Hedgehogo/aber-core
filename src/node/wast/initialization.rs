@@ -1,39 +1,43 @@
 //! Module that provides [`Initialization`].
 
-use super::{call::Ident, Spanned, SpannedVec};
+use super::{call::Ident, whitespaced::Whitespaced, List, Spanned};
 use crate::syntax::Expr;
 use std::fmt;
 
 /// Type describing sequence I from the initialization syntax specification.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Argument<'input, X: Expr<'input>> {
-    pub name: Option<(X::Whitespace, Ident<'input>, X::Whitespace)>,
+    pub name: Option<(Whitespaced<'input, X, Ident<'input>>, X::Whitespace)>,
     pub expr: Spanned<X>,
 }
 
 impl<'input, X: Expr<'input>> Argument<'input, X> {
     /// Creates a new `Argument`.
     pub fn new(
-        name: Option<(X::Whitespace, Ident<'input>, X::Whitespace)>,
+        name: Option<(Whitespaced<'input, X, Ident<'input>>, X::Whitespace)>,
         expr: Spanned<X>,
     ) -> Self {
         Self { name, expr }
     }
 }
 
-/// Type describing syntactic constructions containing comma-separated enumerated items.
+/// Type describing elements of initialization syntax except expression.
+pub type Arguments<'input, X> = Whitespaced<'input, X, List<'input, Argument<'input, X>, X>>;
+
+/// Type describing syntactic construct *initialization*.
 ///
 /// # Fields
+/// - `expr` Expression before the operator.
 /// - `args` Items listed comma-separately.
-/// - `whitespace` Whitespace after the trailing comma.
 pub struct Initialization<'input, X: Expr<'input>> {
-    pub args: SpannedVec<Argument<'input, X>>,
+    pub expr: Spanned<X>,
+    pub args: Arguments<'input, X>,
 }
 
 impl<'input, X: Expr<'input>> Initialization<'input, X> {
     /// Creates a new `Initialization`.
-    pub fn new(args: SpannedVec<Argument<'input, X>>) -> Self {
-        Self { args }
+    pub fn new(expr: Spanned<X>, args: Arguments<'input, X>) -> Self {
+        Self { expr, args }
     }
 }
 
@@ -44,7 +48,8 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Initialization")
-            .field("items", &self.args)
+            .field("expr", &self.expr)
+            .field("args", &self.args)
             .finish()
     }
 }
@@ -56,6 +61,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
+            expr: self.expr.clone(),
             args: self.args.clone(),
         }
     }
@@ -67,7 +73,7 @@ where
     X::Whitespace: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.args == other.args
+        self.expr == other.expr && self.args == other.args
     }
 }
 
