@@ -85,6 +85,7 @@ where
             Self::MethodCall(arg0) => f.debug_tuple("MethodCall").field(arg0).finish(),
             Self::ChildCall(arg0) => f.debug_tuple("ChildCall").field(arg0).finish(),
             Self::NegativeCall(arg0) => f.debug_tuple("NegativeCall").field(arg0).finish(),
+            Self::Initialization(arg0) => f.debug_tuple("Initialization").field(arg0).finish(),
         }
     }
 }
@@ -108,6 +109,7 @@ where
             Self::MethodCall(arg0) => Self::MethodCall(arg0.clone()),
             Self::ChildCall(arg0) => Self::ChildCall(arg0.clone()),
             Self::NegativeCall(arg0) => Self::NegativeCall(arg0.clone()),
+            Self::Initialization(arg0) => Self::Initialization(arg0.clone()),
         }
     }
 }
