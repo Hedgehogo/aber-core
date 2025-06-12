@@ -1,5 +1,7 @@
 //! Module that provides types for working with the arrangement of units within a document.
 
+use super::wast::whitespaced::Whitespaced;
+use crate::syntax::Expr;
 use chumsky::span::SimpleSpan;
 use std::{fmt, ops::Range};
 
@@ -80,6 +82,14 @@ impl<T> Spanned<T> {
     pub fn into_spanned_vec(self) -> Spanned<Vec<Self>> {
         let span = self.1.clone();
         Spanned(vec![self], span)
+    }
+
+    /// Creates [`Whitespaced`], passes `self` as an argument to `right`.
+    pub fn into_whitespaced<'input, X: Expr<'input>>(
+        self,
+        whitespace: X::Whitespace,
+    ) -> Whitespaced<'input, X, T> {
+        Whitespaced::new(whitespace, self)
     }
 }
 

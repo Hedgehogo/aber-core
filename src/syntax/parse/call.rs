@@ -4,12 +4,12 @@ use super::super::{
     Node,
 };
 use super::{
-    list::generics, number::digit, spanned, whitespace::whitespace, GraphemeParser,
+    list::generics, number::digit, spanned, whitespace::whitespaced, GraphemeParser,
     GraphemeParserExtra,
 };
 use crate::node::{
     wast::{
-        call::{Call, Generics, Ident},
+        call::{Call, Ident},
         number::Radix,
     },
     Spanned, SpannedVec,
@@ -55,10 +55,7 @@ where
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
-    let generics = whitespace()
-        .then(spanned(generics(expr)).map(Spanned::from))
-        .map(|(whitespace, args)| Generics::new(whitespace, args))
-        .or_not();
+    let generics = whitespaced(generics(expr)).or_not();
 
     spanned(ident().boxed())
         .map(Spanned::from)
@@ -73,7 +70,7 @@ mod tests {
     use super::super::{expr::expr, fact::fact, tests::Extra};
     use crate::node::{
         span::{IntoSpanned, Span},
-        wast::List,
+        wast::{call::Generics, List},
         CompNode,
     };
     use smallvec::smallvec;

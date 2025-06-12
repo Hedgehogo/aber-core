@@ -1,7 +1,7 @@
 //! Module that provides types to describe the syntactic construct *call*.
 
 use super::super::Spanned;
-use super::List;
+use super::{List, whitespaced::Whitespaced};
 use crate::syntax::Expr;
 use std::fmt;
 
@@ -52,22 +52,7 @@ impl fmt::Debug for Ident<'_> {
 }
 
 /// Type describing the syntactic construct *generic arguments*
-///
-/// # Fields
-/// - `whitespace` Whitespace before the opening bracket.
-/// - `args` List of expressions.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Generics<'input, X: Expr<'input>> {
-    pub whitespace: X::Whitespace,
-    pub args: Spanned<List<'input, X, X>>,
-}
-
-impl<'input, X: Expr<'input>> Generics<'input, X> {
-    /// Creates a new `Generics`.
-    pub fn new(whitespace: X::Whitespace, args: Spanned<List<'input, X, X>>) -> Self {
-        Self { whitespace, args }
-    }
-}
+pub type Generics<'input, X> = Whitespaced<'input, X, List<'input, X, X>>;
 
 /// Type describing the syntactic construct *call*
 pub struct Call<'input, X: Expr<'input>> {

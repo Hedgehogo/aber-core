@@ -1,6 +1,6 @@
 //! Module that provides [`ExprCall`].
 
-use super::{call::Call, Spanned};
+use super::{call::Call, Spanned, whitespaced::Whitespaced};
 use crate::syntax::Expr;
 use std::fmt;
 
@@ -12,20 +12,17 @@ use std::fmt;
 /// - `call` Call after the operator.
 pub struct ExprCall<'input, X: Expr<'input>> {
     pub expr: Spanned<X>,
-    pub whitespace: X::Whitespace,
-    pub call: Spanned<Call<'input, X>>,
+    pub call: Whitespaced<'input, X, Call<'input, X>>,
 }
 
 impl<'input, X: Expr<'input>> ExprCall<'input, X> {
     /// Creates a new `ExprCall`.
     pub fn new(
         expr: Spanned<X>,
-        whitespace: X::Whitespace,
-        call: Spanned<Call<'input, X>>,
+        call: Whitespaced<'input, X, Call<'input, X>>,
     ) -> Self {
         Self {
             expr,
-            whitespace,
             call,
         }
     }
@@ -39,7 +36,6 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ExprCall")
             .field("expr", &self.expr)
-            .field("whitespace", &self.whitespace)
             .field("call", &self.call)
             .finish()
     }
@@ -53,7 +49,6 @@ where
     fn clone(&self) -> Self {
         Self::new(
             self.expr.clone(),
-            self.whitespace.clone(),
             self.call.clone(),
         )
     }

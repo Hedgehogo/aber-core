@@ -1,5 +1,6 @@
-use super::super::{ctx::Ctx, error::Error, Whitespace};
-use super::{GraphemeParser, GraphemeParserExtra};
+use super::super::{ctx::Ctx, error::Error, Expr, Whitespace};
+use super::{spanned, GraphemeParser, GraphemeParserExtra};
+use crate::node::wast::whitespaced::Whitespaced;
 use chumsky::prelude::*;
 use smallvec::smallvec;
 use text::{inline_whitespace, newline, Grapheme, Graphemes};
@@ -56,6 +57,19 @@ where
         .to_slice()
         .map(Graphemes::as_str)
         .map(W::from_repr_unchecked)
+}
+
+pub fn whitespaced<'input, R, X, P, E, C>(
+    right: P,
+) -> impl GraphemeParser<'input, Whitespaced<'input, X, R>, E> + Clone
+where
+    X: Expr<'input>,
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
+    P: GraphemeParser<'input, R, E> + Clone,
+{
+    whitespace()
+        .then(spanned(right))
+        .map(|(whitespace, right)| Whitespaced::new(whitespace, right.into()))
 }
 
 #[cfg(test)]
