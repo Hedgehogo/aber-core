@@ -133,6 +133,7 @@ where
             (Self::MethodCall(l0), Self::MethodCall(r0)) => l0 == r0,
             (Self::ChildCall(l0), Self::ChildCall(r0)) => l0 == r0,
             (Self::NegativeCall(l0), Self::NegativeCall(r0)) => l0 == r0,
+            (Self::Initialization(l0), Self::Initialization(r0)) => l0 == r0,
             _ => false,
         }
     }
