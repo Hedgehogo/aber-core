@@ -6,9 +6,10 @@ use super::super::{
 use super::{end_cursor, spanned, Cursor, GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
 use crate::node::wast::whitespaced::Whitespaced;
 use chumsky::{
+    combinator::Repeated,
     label::LabelError,
     prelude::*,
-    text::{inline_whitespace, Char, Grapheme, Graphemes},
+    text::{Char, Grapheme, Graphemes},
     util::MaybeRef,
 };
 use smallvec::smallvec;
@@ -73,6 +74,23 @@ where
     E::Error: GraphemeLabelError<'input, Expected>,
 {
     line_break().not()
+}
+
+pub fn inline_whitespace<'input, E>(
+) -> Repeated<impl GraphemeParser<'input, (), E> + Copy, (), &'input Graphemes, E>
+where
+    E: GraphemeParserExtra<'input>,
+    E::Error: GraphemeLabelError<'input, Expected>,
+{
+    any()
+        .try_map(|c: &Grapheme, span| {
+            if c.is_whitespace() {
+                Ok(())
+            } else {
+                Err(LabelError::expected_found([], Some(MaybeRef::Val(c)), span))
+            }
+        })
+        .repeated()
 }
 
 pub fn whitespace<'input, W, E, C>() -> impl GraphemeParser<'input, W, E> + Copy

@@ -209,7 +209,11 @@ impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for
                 return;
             }
         }
-        if self.expected.iter().all(|i| matches!(i, Expected::Ascii(_))) {
+        if self
+            .expected
+            .iter()
+            .all(|i| matches!(i, Expected::Ascii(_)))
+        {
             self.expected = smallvec![label];
             self.span = span.into();
         }

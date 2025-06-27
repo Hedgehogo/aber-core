@@ -2,20 +2,16 @@ use crate::syntax::ctx::DocCtx;
 
 use super::super::{
     ctx::Ctx,
-    error::{Error, Expected},
+    error::Expected,
     string::{RawString, RawStringCtx, StringData},
 };
 use super::{
     end_cursor_slice,
     escaped_string::separator,
-    whitespace::{line_separator, line_separator_cursor, not_line_separator},
+    whitespace::{inline_whitespace, line_separator, line_separator_cursor, not_line_separator},
     GraphemeLabelError, GraphemeParser, GraphemeParserExtra,
 };
-use chumsky::{
-    combinator::Repeated,
-    prelude::*,
-    text::{inline_whitespace, Graphemes},
-};
+use chumsky::{combinator::Repeated, prelude::*, text::Graphemes};
 
 /// Context required for parsing the raw string after the opening
 /// sequence.
@@ -79,7 +75,7 @@ struct RawContentInfo {
 fn quotes<'input, E>(
 ) -> Repeated<impl GraphemeParser<'input, (), E> + Copy, (), &'input Graphemes, E>
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+    E: GraphemeParserExtra<'input>,
 {
     just("\"").ignored().repeated()
 }
@@ -93,13 +89,10 @@ where
 /// (minimum 3).
 fn open<'input, E, C>() -> impl GraphemeParser<'input, usize, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<C>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
-    quotes()
-        .at_least(3)
-        .count()
-        .then_ignore(line_separator())
-        .map_err(|e: Error| e.replace_expected(Expected::RawString))
+    quotes().at_least(3).count().then_ignore(line_separator())
 }
 
 /// Creates a parser that parses the indentation and then the closing
@@ -108,12 +101,13 @@ where
 /// The parser returns indentation (sequence W in the specification).
 fn close<'input, E, C>() -> impl GraphemeParser<'input, &'input Graphemes, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<RawCtx<C>>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<RawCtx<C>>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     inline_whitespace().to_slice().then_ignore(
         quotes()
             .configure(|cfg, ctx: &Ctx<RawCtx<C>>| cfg.exactly(ctx.additional.quotes_count))
-            .map_err(|e: Error| e.replace_expected(Expected::RawStringClose)),
+            .labelled(Expected::RawStringClose),
     )
 }
 
@@ -123,7 +117,8 @@ where
 /// The parser returns this line (sequence C in the specification).
 fn preline<'input, E, C>() -> impl GraphemeParser<'input, &'input Graphemes, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<RawCtx<C>>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<RawCtx<C>>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     close().not().ignore_then(
         not_line_separator()
@@ -142,7 +137,8 @@ where
 /// The parser returns content information.
 fn precontent<'input, E>() -> impl GraphemeParser<'input, RawContentInfo, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<RawCtx<()>>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<RawCtx<()>>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     let repeated = line_separator().then(preline()).repeated();
 
@@ -204,7 +200,8 @@ where
 fn content<'input, O, E>() -> impl GraphemeParser<'input, O, E> + Clone
 where
     O: StringData<'input>,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = RawStringCtx<'input>>,
+    E: GraphemeParserExtra<'input, Context = RawStringCtx<'input>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     empty()
         .map_with(|_, extra| {
@@ -227,7 +224,8 @@ where
 pub fn raw_string<'input, O, E>() -> impl GraphemeParser<'input, O, E> + Clone
 where
     O: RawString<'input>,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     let prerest = precontent()
         .then_ignore(line_separator())
@@ -268,13 +266,14 @@ where
         })
         .then_with_ctx(rest)
         .map(|(ctx, (data, inner_repr))| O::from_data_unchecked(data, inner_repr.as_str(), &ctx))
+        .labelled(Expected::RawString)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use super::super::super::string;
+    use super::super::super::{error::Error, string};
     use super::super::tests::Extra;
     use crate::node::{
         span::Span,
