@@ -201,7 +201,15 @@ impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for
     }
 
     fn in_context(&mut self, label: Expected, span: SimpleSpan) {
-        if !self.expected().contains(&Expected::StringEscaped) {
+        match label {
+            Expected::StringEscape | Expected::Number => {}
+            _ => {
+                self.expected = smallvec![label];
+                self.span = span.into();
+                return;
+            }
+        }
+        if self.expected.iter().all(|i| matches!(i, Expected::Ascii(_))) {
             self.expected = smallvec![label];
             self.span = span.into();
         }

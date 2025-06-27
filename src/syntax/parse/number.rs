@@ -1,63 +1,65 @@
-use super::super::error::{Error, Expected};
-use super::{spanned, GraphemeParser, GraphemeParserExtra};
+use super::super::error::Expected;
+use super::{spanned, GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
 use crate::node::wast::number::{Digit, Digits, Number, Radix};
-use chumsky::prelude::*;
-use chumsky::text::{unicode::Grapheme, Char};
+use chumsky::{
+    label::LabelError,
+    prelude::*,
+    text::{Char, Grapheme},
+};
 
-pub fn digit<'input, E>(radix: Radix) -> impl GraphemeParser<'input, Digit, E> + Copy
+pub fn digit<'input, E>() -> impl GraphemeParser<'input, Digit, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+    E: GraphemeParserExtra<'input, Context = Radix>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let error = move |found, span| Error::new_expected(Expected::Digit(radix), found, span);
-    any()
-        .map_err(move |e: Error| error(None, e.span()))
-        .try_map(move |i: &Grapheme, span: SimpleSpan| {
-            i.to_ascii()
-                .and_then(|i| Digit::from_ascii(i, radix))
-                .ok_or_else(|| error(Some(i), span.into()))
-        })
+    custom(|input| {
+        let before = input.cursor();
+        let found = input.parse(any()).ok();
+        let span: SimpleSpan = input.span_since(&before);
+        found
+            .and_then(|grapheme: &Grapheme| {
+                grapheme
+                    .to_ascii()
+                    .and_then(|ascii| Digit::from_ascii(ascii, *input.ctx()))
+            })
+            .ok_or(LabelError::expected_found(
+                [Expected::Digit(*input.ctx())],
+                found.map(Into::into),
+                span,
+            ))
+    })
 }
 
-pub fn digits<'input, E>(
-    radix: Radix,
-    expected: Expected,
-) -> impl GraphemeParser<'input, Digits<'input>, E> + Copy
+pub fn digits<'input, E>() -> impl GraphemeParser<'input, Digits<'input>, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+    E: GraphemeParserExtra<'input, Context = Radix>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     let spacer = just("_").labelled(Expected::NumberSpacer);
-    digit(radix)
-        .map_err(move |e: Error| e.replace_expected(expected))
-        .then(digit(radix).ignored().or(spacer.ignored()).repeated())
+    digit()
+        .then(digit().ignored().or(spacer.ignored()).repeated())
         .to_slice()
         .map(|i| Digits::from_repr_unchecked(i.as_str()))
 }
 
 pub fn number<'input, E>() -> impl GraphemeParser<'input, Number<'input>, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+    E: GraphemeParserExtra<'input>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let frac =
-        move |radix| digits(radix, Expected::Digit(radix)).or(empty().map(|_| Digits::default()));
+    let frac = digits().or(empty().map(|_| Digits::default()));
 
     let unsigned = custom(move |input| {
-        let (radix_or_int, span) =
-            input.parse(spanned(digits(Radix::DECIMAL, Expected::Number)))?;
+        let (radix_or_int, span) = input.parse(spanned(digits().with_ctx(Radix::DECIMAL)))?;
 
-        let (radix, int) = match input.parse(
-            just("'")
-                .labelled(Expected::RadixSpecial)
-                .or_not(),
-        )? {
+        let (radix, int) = match input.parse(just("'").labelled(Expected::RadixSpecial).or_not())? {
             Some(_) => radix_or_int
                 .as_str()
                 .parse::<u8>()
                 .ok()
                 .and_then(Radix::new)
-                .ok_or_else(|| Error::new_expected(Expected::Radix, None, span.into()))
-                .and_then(|radix| {
-                    Ok((radix, input.parse(digits(radix, Expected::Digit(radix)))?))
-                })?,
+                .ok_or_else(|| LabelError::expected_found([Expected::Radix], None, span))
+                .and_then(|radix| Ok((radix, input.parse(digits().with_ctx(radix))?)))?,
 
             None => (Radix::DECIMAL, radix_or_int),
         };
@@ -66,27 +68,56 @@ where
             .parse(
                 just(".")
                     .labelled(Expected::NumberDot)
-                    .ignore_then(frac(radix))
+                    .ignore_then(frac.with_ctx(radix))
                     .or_not(),
             )
             .map(|frac| (radix, int, frac))
     });
 
     just("-")
-        .labelled(Expected::Number)
         .or_not()
         .then(unsigned)
         .map(|(sign, (radix, int, frac))| Number::new(sign.is_none(), radix, int, frac))
+        .labelled(Expected::Number)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use super::super::super::error::Error;
     use super::super::tests::Extra;
     use crate::node::span::Span;
     use smallvec::smallvec;
     use text::Graphemes;
+
+    #[test]
+    fn test() {
+        use chumsky::extra::Err;
+
+        pub fn parser<'src>() -> impl Parser<'src, &'src str, (), Err<Rich<'src, char, SimpleSpan>>>
+        {
+            let b = just("_").then(just("a").labelled("al")).ignored();
+            let custom = custom(move |input| input.parse(b));
+            custom.labelled("bl")
+        }
+
+        assert_eq!(
+            parser().parse("_c").into_output_errors(),
+            (
+                None,
+                vec![{
+                    let mut err = LabelError::<&str, _>::expected_found(
+                        ["al"],
+                        Some('c'.into()),
+                        SimpleSpan::new((), 1..2),
+                    );
+                    LabelError::<&str, _>::in_context(&mut err, "bl", SimpleSpan::new((), 0..2));
+                    err
+                }]
+            )
+        );
+    }
 
     #[test]
     fn test_number() {

@@ -20,7 +20,7 @@ pub fn ident<'input, E>() -> impl GraphemeParser<'input, Ident<'input>, E> + Cop
 where
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
 {
-    let number_start = just("-").or_not().then(digit(Radix::DECIMAL));
+    let number_start = just("-").or_not().then(digit().with_ctx(Radix::DECIMAL));
 
     let not_unit = choice((
         one_of(".,;:'\"@(){}[]").ignored(),
