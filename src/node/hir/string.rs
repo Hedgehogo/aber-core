@@ -1,6 +1,8 @@
 //! Module that provides [`String`].
 
-use crate::syntax::string::{EscapedString, EscapedStringSealed, RawString, RawStringSealed};
+use crate::syntax::string::{
+    EscapedString, EscapedStringCtx, EscapedStringSealed, RawString, RawStringCtx, RawStringSealed,
+};
 
 /// Type describing the contents of a string literal.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -27,7 +29,11 @@ impl<T: Into<std::string::String>> From<T> for String {
 impl<'input> EscapedStringSealed<'input> for String {
     type Data = std::string::String;
 
-    fn from_data_unchecked(data: Self::Data, _inner_repr: &'input str) -> Self {
+    fn from_data_unchecked(
+        data: Self::Data,
+        _inner_repr: &'input str,
+        _ctx: &EscapedStringCtx,
+    ) -> Self {
         Self::new(data)
     }
 }
@@ -39,8 +45,8 @@ impl<'input> RawStringSealed<'input> for String {
 
     fn from_data_unchecked(
         data: Self::Data,
-        _indent: &'input str,
         _inner_repr: &'input str,
+        _ctx: &RawStringCtx<'input>,
     ) -> Self {
         Self::new(data)
     }

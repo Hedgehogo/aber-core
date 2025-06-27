@@ -1,6 +1,7 @@
 use super::super::state::{State, unit_ref::{UnitRef, FunctionRef}};
 use super::super::super::node::{CompNode, Spanned};
 
+/// Type that describes the *call* construct from MIR.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Call<'input> {
     id: usize,

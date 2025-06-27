@@ -36,6 +36,7 @@ where
         .not()
         .ignore_then(unit.repeated().at_least(1))
         .to_slice()
+        .labelled(Expected::Ident)
         .try_map(|i, span| {
             if i.as_str() != "=" {
                 Ok(i)
@@ -43,7 +44,6 @@ where
                 Err(Error::new_expected(Expected::ValidIdent, None, span.into()))
             }
         })
-        .map_err(|e: Error| e.replace_expected(Expected::Ident))
         .map(|i| Ident::from_repr_unchecked(i.as_str()))
 }
 

@@ -25,7 +25,7 @@ pub fn digits<'input, E>(
 where
     E: GraphemeParserExtra<'input, Error = Error<'input>>,
 {
-    let spacer = just("_").map_err(|e: Error| e.replace_expected(Expected::NumberSpacer));
+    let spacer = just("_").labelled(Expected::NumberSpacer);
     digit(radix)
         .map_err(move |e: Error| e.replace_expected(expected))
         .then(digit(radix).ignored().or(spacer.ignored()).repeated())
@@ -46,7 +46,7 @@ where
 
         let (radix, int) = match input.parse(
             just("'")
-                .map_err(|e: Error| e.replace_expected(Expected::RadixSpecial))
+                .labelled(Expected::RadixSpecial)
                 .or_not(),
         )? {
             Some(_) => radix_or_int
@@ -65,7 +65,7 @@ where
         input
             .parse(
                 just(".")
-                    .map_err(|e: Error| e.replace_expected(Expected::NumberDot))
+                    .labelled(Expected::NumberDot)
                     .ignore_then(frac(radix))
                     .or_not(),
             )
@@ -73,7 +73,7 @@ where
     });
 
     just("-")
-        .map_err(move |e: Error| e.replace_expected(Expected::Number))
+        .labelled(Expected::Number)
         .or_not()
         .then(unsigned)
         .map(|(sign, (radix, int, frac))| Number::new(sign.is_none(), radix, int, frac))

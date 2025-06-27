@@ -1,27 +1,51 @@
-use super::super::{ctx::Ctx, error::Error, Expr, Whitespace};
-use super::{spanned, GraphemeParser, GraphemeParserExtra};
+use super::super::{
+    ctx::Ctx,
+    error::{Error, Expected},
+    Expr, Whitespace,
+};
+use super::{end_cursor, spanned, Cursor, GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
 use crate::node::wast::whitespaced::Whitespaced;
-use chumsky::prelude::*;
+use chumsky::{
+    label::LabelError,
+    prelude::*,
+    text::{inline_whitespace, Char, Grapheme, Graphemes},
+    util::MaybeRef,
+};
 use smallvec::smallvec;
-use text::{inline_whitespace, newline, Grapheme, Graphemes};
 
-fn line_break<'input, E>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
+pub(crate) fn line_break<'input, E>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+    E: GraphemeParserExtra<'input>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
-    newline()
-        .to_slice()
-        .map(|i: &Graphemes| i.iter().next().unwrap())
+    any().try_map(|c: &Grapheme, span| {
+        if c.is_newline() {
+            Ok(c)
+        } else {
+            Err(E::Error::expected_found([], Some(MaybeRef::Val(c)), span))
+        }
+    })
 }
 
-fn line_start<'input, E, C>() -> impl GraphemeParser<'input, (), E> + Copy
+pub(crate) fn line_start<'input, E, C>() -> impl GraphemeParser<'input, (), E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<C>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let outer_doc = just("///");
+    let inline_whitespace = any()
+        .try_map(|c: &Grapheme, span| {
+            if c.is_inline_whitespace() {
+                Ok(())
+            } else {
+                Err(E::Error::expected_found([], Some(MaybeRef::Val(c)), span))
+            }
+        })
+        .repeated();
+
+    let outer_doc = just("///").labelled(Expected::DocOuter);
     let doc = outer_doc;
 
-    inline_whitespace()
+    inline_whitespace
         .ignore_then(doc)
         .repeated()
         .configure(|cfg, ctx: &Ctx<C>| cfg.exactly(ctx.doc_ctx.depth()))
@@ -29,16 +53,26 @@ where
 
 pub fn line_separator<'input, E, C>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<C>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     line_break().then_ignore(line_start())
 }
 
+pub fn line_separator_cursor<'input, E, C>() -> impl GraphemeParser<'input, Cursor, E> + Clone
+where
+    E: GraphemeParserExtra<'input, Context = Ctx<C>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
+{
+    end_cursor(line_break()).then_ignore(line_start())
+}
+
 pub fn not_line_separator<'input, E>() -> impl GraphemeParser<'input, (), E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>>,
+    E: GraphemeParserExtra<'input>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
-    newline().not()
+    line_break().not()
 }
 
 pub fn whitespace<'input, W, E, C>() -> impl GraphemeParser<'input, W, E> + Copy

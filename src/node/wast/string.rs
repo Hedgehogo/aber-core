@@ -2,9 +2,9 @@
 
 use super::{
     escaped_string::{EscapedString, EscapedStringData},
-    raw_string::{RawString, RawStringData},
+    raw_string::RawString,
 };
-use crate::syntax::string;
+use crate::syntax::string::{self, EscapedStringCtx, RawStringCtx};
 
 /// Type describing a string literal.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,18 +36,26 @@ impl<'input> From<String<'input>> for std::string::String {
 impl<'input> string::EscapedStringSealed<'input> for String<'input> {
     type Data = EscapedStringData;
 
-    fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self {
-        Self::Escaped(EscapedString::from_data_unchecked(data, inner_repr))
+    fn from_data_unchecked(
+        data: Self::Data,
+        inner_repr: &'input str,
+        ctx: &EscapedStringCtx,
+    ) -> Self {
+        Self::Escaped(EscapedString::from_data_unchecked(data, inner_repr, ctx))
     }
 }
 
 impl<'input> string::EscapedString<'input> for String<'input> {}
 
 impl<'input> string::RawStringSealed<'input> for String<'input> {
-    type Data = RawStringData;
+    type Data = ();
 
-    fn from_data_unchecked(data: Self::Data, indent: &'input str, inner_repr: &'input str) -> Self {
-        Self::Raw(RawString::from_data_unchecked(data, indent, inner_repr))
+    fn from_data_unchecked(
+        data: Self::Data,
+        inner_repr: &'input str,
+        ctx: &RawStringCtx<'input>,
+    ) -> Self {
+        Self::Raw(RawString::from_data_unchecked(data, inner_repr, ctx))
     }
 }
 

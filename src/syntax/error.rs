@@ -10,6 +10,7 @@ use crate::node::{
     },
 };
 use chumsky::{
+    span::SimpleSpan,
     text::{Char, Grapheme, Graphemes, TextExpected},
     util::MaybeRef,
     DefaultExpected,
@@ -56,6 +57,7 @@ pub enum Expected {
     NonZeroWhitespace,
     Initialization,
     InitializationClose,
+    DocOuter,
     #[default]
     Eof,
 }
@@ -176,6 +178,33 @@ impl<'input>
             .collect();
 
         Self::new(expected, found, span.into())
+    }
+}
+
+impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for Error<'input> {
+    fn expected_found<E>(
+        expected: E,
+        found: Option<
+            MaybeRef<'input, <&'input Graphemes as chumsky::prelude::Input<'input>>::Token>,
+        >,
+        span: <&'input Graphemes as chumsky::prelude::Input<'input>>::Span,
+    ) -> Self
+    where
+        E: IntoIterator<Item = Expected>,
+    {
+        let found = found.map(MaybeRef::into_inner);
+        Self::new(expected.into_iter().collect(), found, span.into())
+    }
+
+    fn label_with(&mut self, label: Expected) {
+        self.expected = smallvec![label];
+    }
+
+    fn in_context(&mut self, label: Expected, span: SimpleSpan) {
+        if !self.expected().contains(&Expected::StringEscaped) {
+            self.expected = smallvec![label];
+            self.span = span.into();
+        }
     }
 }
 

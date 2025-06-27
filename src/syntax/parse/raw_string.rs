@@ -1,11 +1,15 @@
+use crate::syntax::ctx::DocCtx;
+
 use super::super::{
     ctx::Ctx,
-    error::{Error, Expected},string::{RawString, StringData}
+    error::{Error, Expected},
+    string::{RawString, RawStringCtx, StringData},
 };
 use super::{
+    end_cursor_slice,
     escaped_string::separator,
-    whitespace::{line_separator, not_line_separator},
-    GraphemeParser, GraphemeParserExtra,
+    whitespace::{line_separator, line_separator_cursor, not_line_separator},
+    GraphemeLabelError, GraphemeParser, GraphemeParserExtra,
 };
 use chumsky::{
     combinator::Repeated,
@@ -15,19 +19,50 @@ use chumsky::{
 
 /// Context required for parsing the raw string after the opening
 /// sequence.
-#[derive(Clone, Copy)]
-struct RawCtx<C> {
-    quotes_count: usize,
-    additional: C,
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct RawCtx<C> {
+    pub quotes_count: usize,
+    pub additional: C,
+}
+
+impl<C: Default> Default for RawCtx<C> {
+    fn default() -> Self {
+        Self {
+            quotes_count: 3,
+            additional: C::default(),
+        }
+    }
 }
 
 /// Context required when parsing the inner meaningful part of the
 /// string.
-#[derive(Clone, Copy)]
-struct RawContentCtx<'input> {
-    capacity: usize,
-    line_break_count: usize,
-    indent: &'input str,
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub struct RawContentCtx<'input> {
+    pub capacity: usize,
+    pub line_break_count: usize,
+    pub indent: &'input str,
+}
+
+impl<'input> RawStringCtx<'input> {
+    pub fn new_raw(
+        doc_ctx: DocCtx,
+        quotes_count: usize,
+        capacity: usize,
+        line_break_count: usize,
+        indent: &'input str,
+    ) -> Self {
+        Self {
+            doc_ctx,
+            additional: RawCtx {
+                quotes_count,
+                additional: RawContentCtx {
+                    capacity,
+                    line_break_count,
+                    indent,
+                },
+            },
+        }
+    }
 }
 
 /// Content information that can be retrieved during the first pass.
@@ -86,7 +121,7 @@ where
 /// string, not including line breaks.
 ///
 /// The parser returns this line (sequence C in the specification).
-fn line<'input, E, C>() -> impl GraphemeParser<'input, &'input Graphemes, E> + Copy
+fn preline<'input, E, C>() -> impl GraphemeParser<'input, &'input Graphemes, E> + Copy
 where
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<RawCtx<C>>>,
 {
@@ -109,9 +144,9 @@ fn precontent<'input, E>() -> impl GraphemeParser<'input, RawContentInfo, E> + C
 where
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<RawCtx<()>>>,
 {
-    let repeated = line_separator().then(line()).repeated();
+    let repeated = line_separator().then(preline()).repeated();
 
-    line()
+    preline()
         .map(|i| RawContentInfo {
             precapacity: i.as_bytes().len(),
             line_break_count: 0,
@@ -127,18 +162,37 @@ where
 /// specification).
 fn indent<'input, E>() -> impl GraphemeParser<'input, (), E> + Copy
 where
-    E: GraphemeParserExtra<
-        'input,
-        Error = Error<'input>,
-        Context = Ctx<RawCtx<RawContentCtx<'input>>>,
-    >,
+    E: GraphemeParserExtra<'input, Context = RawStringCtx<'input>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     just("")
-        .configure(|cfg, ctx: &Ctx<RawCtx<RawContentCtx<'input>>>| {
-            cfg.seq(ctx.additional.additional.indent)
-        })
+        .configure(|cfg, ctx: &RawStringCtx<'input>| cfg.seq(ctx.additional.additional.indent))
         .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::RawStringIndent))
+        .labelled(Expected::RawStringIndent)
+}
+
+/// Creates a parser that parses a line with a line break ending it
+/// and an indentation.
+pub fn line<'input, E>() -> impl GraphemeParser<'input, &'input Graphemes, E> + Clone
+where
+    E: GraphemeParserExtra<'input, Context = RawStringCtx<'input>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
+{
+    let repeated = not_line_separator().ignore_then(any());
+    let line_content = repeated.repeated().ignore_then(line_separator_cursor());
+    indent().ignore_then(end_cursor_slice(line_content))
+}
+
+/// Creates a parser that parses a line without a line break ending
+/// it and with an indentation.
+pub fn last_line<'input, E>() -> impl GraphemeParser<'input, &'input Graphemes, E> + Clone
+where
+    E: GraphemeParserExtra<'input, Context = RawStringCtx<'input>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
+{
+    let repeated = not_line_separator().ignore_then(any());
+    let line_content = repeated.repeated();
+    indent().ignore_then(line_content.to_slice())
 }
 
 /// Creates a parser that parses the inner meaningful part of a string.
@@ -147,36 +201,30 @@ where
 /// and the last line break of the raw string.
 ///
 /// The parser returns the contents of the string.
-fn content<'input, O, E>() -> impl GraphemeParser<'input, O, E> + Copy
+fn content<'input, O, E>() -> impl GraphemeParser<'input, O, E> + Clone
 where
     O: StringData<'input>,
-    E: GraphemeParserExtra<
-        'input,
-        Error = Error<'input>,
-        Context = Ctx<RawCtx<RawContentCtx<'input>>>,
-    >,
+    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = RawStringCtx<'input>>,
 {
-    let line = indent().ignore_then(line());
-
-    let repeated = line_separator().then(line).repeated();
-
-    line.map_with(|first: &Graphemes, e| {
-        let ctx: &Ctx<RawCtx<RawContentCtx<'input>>> = e.ctx();
-        O::with_capacity(ctx.additional.additional.capacity).with_next_section(first.as_str())
-    })
-    .foldl(
-        repeated.configure(|cfg, ctx: &Ctx<RawCtx<RawContentCtx<'input>>>| {
-            cfg.exactly(ctx.additional.additional.line_break_count)
-        }),
-        |data, (newline, line)| {
-            data.with_next_section(newline.as_str())
-                .with_next_section(line.as_str())
-        },
-    )
+    empty()
+        .map_with(|_, extra| {
+            let ctx: &RawStringCtx<'input> = extra.ctx();
+            O::with_capacity(ctx.additional.additional.capacity)
+        })
+        .foldl(
+            line()
+                .repeated()
+                .configure(|cfg, ctx: &RawStringCtx<'input>| {
+                    cfg.exactly(ctx.additional.additional.line_break_count)
+                }),
+            |data, line| data.with_next_section(line.as_str()),
+        )
+        .then(last_line())
+        .map(|(data, line)| data.with_next_section(line.as_str()))
 }
 
 /// Creates a parser that parses the raw string.
-pub fn raw_string<'input, O, E>() -> impl GraphemeParser<'input, O, E> + Copy
+pub fn raw_string<'input, O, E>() -> impl GraphemeParser<'input, O, E> + Clone
 where
     O: RawString<'input>,
     E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
@@ -195,7 +243,7 @@ where
         .map_with(|quotes_count, extra| {
             let ctx: &Ctx<()> = extra.ctx();
             Ctx {
-                doc_ctx: ctx.doc_ctx,
+                doc_ctx: ctx.doc_ctx.clone(),
                 additional: RawCtx {
                     quotes_count,
                     additional: (),
@@ -219,40 +267,70 @@ where
             },
         })
         .then_with_ctx(rest)
-        .map(|(ctx, (data, inner_repr))| {
-            O::from_data_unchecked(data, ctx.additional.additional.indent, inner_repr.as_str())
-        })
+        .map(|(ctx, (data, inner_repr))| O::from_data_unchecked(data, inner_repr.as_str(), &ctx))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use super::super::super::string::{self, StringData};
+    use super::super::super::string;
     use super::super::tests::Extra;
     use crate::node::{
         span::Span,
-        wast::{self, raw_string::RawStringData},
+        wast::{self},
     };
     use indoc::indoc;
 
     fn new_string<'input>(
-        capacity: usize,
-        sections: Vec<&'input str>,
-        indent: &'input str,
         inner_repr: &'input str,
+        quotes_count: usize,
+        capacity: usize,
+        line_break_count: usize,
+        indent: &'input str,
     ) -> wast::String<'input> {
         wast::String::Raw(string::RawStringSealed::from_data_unchecked(
-            {
-                let mut data = RawStringData::with_capacity(capacity);
-                for section in sections {
-                    data = data.with_next_section(section);
-                }
-                data
-            },
-            indent,
+            (),
             inner_repr,
+            &Ctx::new_raw(
+                Default::default(),
+                quotes_count,
+                capacity,
+                line_break_count,
+                indent,
+            ),
         ))
+    }
+
+    #[test]
+    fn test() {
+        use chumsky::extra::Err;
+        use chumsky::{label::LabelError, DefaultExpected};
+
+        fn parser<'input>(
+        ) -> impl Parser<'input, &'input str, (), Err<Rich<'input, char, SimpleSpan>>> {
+            just("")
+                .configure(|cfg, ctx: &&'static str| cfg.seq(ctx))
+                .labelled(DefaultExpected::Any)
+                .ignored()
+                .with_ctx("  ")
+        }
+
+        assert_eq!(
+            parser().parse(" ").into_output_errors(),
+            (
+                None,
+                vec![{
+                    let mut err = LabelError::<&str, _>::expected_found(
+                        [DefaultExpected::Token(' '.into())],
+                        None,
+                        SimpleSpan::new((), 1..1),
+                    );
+                    LabelError::<&str, _>::label_with(&mut err, DefaultExpected::Any);
+                    err
+                }]
+            )
+        );
     }
 
     #[test]
@@ -266,7 +344,7 @@ mod tests {
                 raw_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_result(),
-                Ok(new_string(11, vec!["Hello Aber!"], "", "Hello Aber!"))
+                Ok(new_string("Hello Aber!", 3, 11, 0, ""))
             );
         }
         {
@@ -278,7 +356,7 @@ mod tests {
                 raw_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_result(),
-                Ok(new_string(11, vec!["Hello Aber!"], "  ", "  Hello Aber!"))
+                Ok(new_string("  Hello Aber!", 3, 11, 0, "  "))
             );
         }
         {
@@ -290,7 +368,7 @@ mod tests {
                 raw_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_result(),
-                Ok(new_string(12, vec![" Hello Aber!"], " ", "  Hello Aber!"))
+                Ok(new_string("  Hello Aber!", 3, 12, 0, " ",))
             );
         }
         {
@@ -302,7 +380,7 @@ mod tests {
                 raw_string::<wast::String, Extra>()
                     .parse(Graphemes::new(input))
                     .into_result(),
-                Ok(new_string(12, vec![" Hello Aber!"], " ", "  Hello Aber!"))
+                Ok(new_string("  Hello Aber!", 4, 12, 0, " ",))
             );
         }
     }

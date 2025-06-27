@@ -1,5 +1,13 @@
 //! Module providing abstractions related to string literals.
 
+use super::{
+    ctx::Ctx,
+    parse::raw_string::{RawContentCtx, RawCtx},
+};
+
+pub type RawStringCtx<'input> = Ctx<RawCtx<RawContentCtx<'input>>>;
+pub type EscapedStringCtx = Ctx<()>;
+
 /// Trait describing some data from which a string can be created.
 pub trait StringData<'input>: Sized {
     /// Creates data based on string capacity information.
@@ -47,12 +55,17 @@ pub(crate) trait EscapedStringSealed<'input>: Sized {
     /// - `data` Collected string data.
     /// - `inner_repr` Representation of a string between opening and
     ///   closing sequences.
+    /// - `ctx` .
     ///
     /// # Safeguards
     /// `inner_repr` must be a valid string representation, that is,
     /// it must not contain `\` or `"` characters outside of escape
     /// sequences and must contain only existing escape sequences.
-    fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self;
+    fn from_data_unchecked(
+        data: Self::Data,
+        inner_repr: &'input str,
+        ctx: &EscapedStringCtx,
+    ) -> Self;
 }
 
 /// Trait describing a type storing information about a string
@@ -70,11 +83,10 @@ pub(crate) trait RawStringSealed<'input>: Sized {
     ///
     /// # Arguments
     /// - `data` Collected string data.
-    /// - `indent` Non-informative indentation at the beginning of
-    ///   each line (In specification sequence W).
     /// - `inner_repr` Representation of the string between the
     ///   opening sequence and the last line break as part of the raw
     ///   string.
+    /// - `ctx` .
     ///
     /// # Safeguards
     /// `indent` must be a valid indent, that is, it must contain
@@ -83,7 +95,11 @@ pub(crate) trait RawStringSealed<'input>: Sized {
     /// `inner_repr` must be a valid representation of the raw
     /// string, that is, each line break must be followed by
     /// `indent`.
-    fn from_data_unchecked(data: Self::Data, indent: &'input str, inner_repr: &'input str) -> Self;
+    fn from_data_unchecked(
+        data: Self::Data,
+        inner_repr: &'input str,
+        ctx: &RawStringCtx<'input>,
+    ) -> Self;
 }
 
 /// Trait describing a type storing information about a raw string

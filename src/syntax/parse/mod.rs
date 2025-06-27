@@ -14,7 +14,8 @@ pub mod whitespace;
 use super::{ctx::Ctx, error::Error, Expr};
 use crate::node::wast::block::Block;
 use chumsky::{
-    combinator::MapWith, extra::ParserExtra, input::MapExtra, prelude::*, text::unicode::Graphemes,
+    combinator::MapWith, extra::ParserExtra, input::MapExtra, label::LabelError, prelude::*,
+    text::unicode::Graphemes,
 };
 use content::content;
 use expr::expr;
@@ -37,6 +38,13 @@ pub trait GraphemeParserExtra<'input>: ParserExtra<'input, &'input Graphemes> {}
 
 impl<'input, T> GraphemeParserExtra<'input> for T where T: ParserExtra<'input, &'input Graphemes> {}
 
+pub trait GraphemeLabelError<'input, L>: LabelError<'input, &'input Graphemes, L> {}
+
+impl<'input, T, L> GraphemeLabelError<'input, L> for T where
+    T: LabelError<'input, &'input Graphemes, L>
+{
+}
+
 #[expect(clippy::type_complexity)]
 pub fn spanned<'src, P, I, O, E>(
     parser: P,
@@ -47,6 +55,49 @@ where
     E: ParserExtra<'src, I>,
 {
     parser.map_with(|i, e| (i, e.span()))
+}
+
+pub struct Cursor(usize);
+
+pub fn end_cursor<'src, P, O, E>(parser: P) -> impl GraphemeParser<'src, Cursor, E> + Clone
+where
+    P: GraphemeParser<'src, O, E> + Clone,
+    E: GraphemeParserExtra<'src>,
+{
+    custom(move |i| {
+        let result = i.parse(&parser);
+        let cursor = i.cursor();
+        let cursor: &usize = cursor.inner();
+        result.map(|_| Cursor(*cursor))
+    })
+}
+
+pub fn end_cursor_slice<'src, P, E>(
+    parser: P,
+) -> impl GraphemeParser<'src, &'src Graphemes, E> + Clone
+where
+    P: GraphemeParser<'src, Cursor, E> + Clone,
+    E: GraphemeParserExtra<'src>,
+{
+    custom(move |i| {
+        let start_cursor = i.cursor();
+        let start: &usize = start_cursor.inner();
+        let start: usize = *start;
+        i.parse(&parser).map(|end| {
+            let Cursor(end) = end;
+
+            let result = if end > start {
+                let length = end - start;
+                let slice = i.slice_from(&start_cursor..).as_str();
+                let (slice, _) = slice.split_at(length);
+                slice
+            } else {
+                ""
+            };
+
+            Graphemes::new(result)
+        })
+    })
 }
 
 pub fn parser<'input, X>(

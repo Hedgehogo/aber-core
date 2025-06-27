@@ -6,7 +6,7 @@ pub enum CommentKind {
 }
 
 /// Context for parsing doc comments.
-#[derive(Clone, Copy, Default)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct DocCtx {
     depth: usize,
 }
@@ -34,7 +34,7 @@ impl DocCtx {
 }
 
 /// Context for parsing.
-#[derive(Clone, Copy, Default)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct Ctx<C> {
     pub doc_ctx: DocCtx,
     pub additional: C,

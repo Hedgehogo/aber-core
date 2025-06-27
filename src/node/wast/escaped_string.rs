@@ -1,7 +1,6 @@
 //! Module that provides [`EscapedString`].
 
-use crate::syntax::string;
-use chumsky::text::{Char, Graphemes};
+use crate::syntax::string::{self, EscapedStringCtx};
 use std::fmt;
 
 /// Type describing a escaped string literal.
@@ -10,6 +9,7 @@ pub struct EscapedString<'input> {
     inner_repr: &'input str,
     section_count: usize,
     capacity: usize,
+    ctx: EscapedStringCtx,
 }
 
 impl<'input> EscapedString<'input> {
@@ -25,11 +25,17 @@ impl<'input> EscapedString<'input> {
         self.capacity
     }
 
+    /// Gets the context that the string had during parsing.
+    pub fn ctx(&self) -> &EscapedStringCtx {
+        &self.ctx
+    }
+
     /// Gets an iterator over sections.
-    pub fn sections(&self) -> SectionIter<'input> {
+    pub fn sections<'str>(&'str self) -> SectionIter<'str, 'input> {
         SectionIter {
             rest: self.inner_repr,
-            length: self.section_count,
+            rest_length: self.section_count,
+            string: self,
         }
     }
 }
@@ -124,55 +130,59 @@ pub enum Section<'input> {
     Characters(&'input str),
 }
 
-/// Type describing an iterator over sections of an escaped string
-/// literal.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SectionIter<'input> {
-    rest: &'input str,
-    length: usize,
-}
-
-impl<'input> Iterator for SectionIter<'input> {
-    type Item = Section<'input>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut iter = Graphemes::new(self.rest).iter();
-        let mut rest = self.rest;
-
-        let is_escape = if iter.next()?.to_ascii() == Some(b'\\') {
-            iter.next();
-            rest = iter.clone().as_str();
-            true
-        } else {
-            while iter
-                .next()
-                .filter(|i| i.to_ascii().filter(|i| *i == b'\\').is_none())
-                .is_some()
-            {
-                rest = iter.clone().as_str();
-            }
-            false
-        };
-
-        let len = self.rest.len() - rest.len();
-        let (section, _) = self.rest.split_at(len);
-
-        self.rest = rest;
-        self.length -= 1;
-
-        let section = if is_escape {
-            Section::Escape(section)
-        } else {
-            Section::Characters(section)
-        };
-
-        Some(section)
+impl<'input> Section<'input> {
+    pub fn as_str(&self) -> &'input str {
+        match self {
+            Section::Escape(i) => i,
+            Section::Characters(i) => i,
+        }
     }
 }
 
-impl ExactSizeIterator for SectionIter<'_> {
+impl<'input> AsRef<str> for Section<'input> {
+    fn as_ref(&self) -> &'input str {
+        self.as_str()
+    }
+}
+
+/// Type describing an iterator over sections of an escaped string
+/// literal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SectionIter<'str, 'input> {
+    rest: &'input str,
+    rest_length: usize,
+    string: &'str EscapedString<'input>,
+}
+
+impl<'str, 'input> Iterator for SectionIter<'str, 'input> {
+    type Item = Section<'input>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use crate::syntax::parse::escaped_string::section;
+        use chumsky::{extra::Err, prelude::*, text::Graphemes};
+
+        match self.rest_length {
+            0 => None,
+
+            _ => {
+                let (result, rest) = section()
+                    .with_ctx(self.string.ctx().clone())
+                    .then(any::<_, Err<EmptyErr>>().repeated().to_slice())
+                    .parse(Graphemes::new(self.rest))
+                    .into_output()?;
+
+                self.rest = rest.as_str();
+                self.rest_length -= 1;
+
+                Some(result)
+            }
+        }
+    }
+}
+
+impl ExactSizeIterator for SectionIter<'_, '_> {
     fn len(&self) -> usize {
-        self.length
+        self.rest_length
     }
 }
 
@@ -201,11 +211,16 @@ impl<'input> string::StringData<'input> for EscapedStringData {
 impl<'input> string::EscapedStringSealed<'input> for EscapedString<'input> {
     type Data = EscapedStringData;
 
-    fn from_data_unchecked(data: Self::Data, inner_repr: &'input str) -> Self {
+    fn from_data_unchecked(
+        data: Self::Data,
+        inner_repr: &'input str,
+        ctx: &EscapedStringCtx,
+    ) -> Self {
         Self {
             inner_repr,
             section_count: data.section_count,
             capacity: data.capacity,
+            ctx: ctx.clone(),
         }
     }
 }
@@ -225,6 +240,7 @@ mod tests {
                     capacity: 13,
                 },
                 r#"Hello\n\mAber!\"#,
+                &Default::default(),
             );
 
             assert_eq!(escaped_string.capacity(), 13);
@@ -246,6 +262,7 @@ mod tests {
                     capacity: 12,
                 },
                 r#"Hello World!"#,
+                &Default::default(),
             );
 
             assert_eq!(escaped_string.capacity(), 12);
@@ -260,7 +277,4 @@ mod tests {
             assert_eq!(String::from(escaped_string), "Hello World!");
         }
     }
-
-    #[test]
-    fn test_debug() {}
 }
