@@ -1,16 +1,16 @@
-use super::super::{
-    ctx::Ctx,
-    error::{Error, Expected},
-};
-use super::{GraphemeParser, GraphemeParserExtra};
+use super::super::{ctx::Ctx, error::Expected};
+use super::{GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
 use crate::node::wast::character::Character;
-use chumsky::prelude::*;
-use chumsky::text::unicode::Grapheme;
-use text::{Char, Graphemes};
+use chumsky::{
+    error::LabelError,
+    prelude::*,
+    text::{Char, Grapheme, Graphemes},
+};
 
 fn escape_sequence<'input, E>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     any()
         .try_map(|i: &Grapheme, span: SimpleSpan| {
@@ -22,19 +22,23 @@ where
                     _ => None,
                 })
                 .map(|i| Graphemes::new(i).iter().next().unwrap())
-                .ok_or_else(|| Error::new_expected(Expected::CharEscaped, Some(i), span.into()))
+                .ok_or_else(|| {
+                    E::Error::expected_found([Expected::CharEscaped], Some(i.into()), span)
+                })
         })
-        .map_err(|e: Error| e.replace_expected(Expected::CharEscaped))
+        .labelled(Expected::CharEscaped)
 }
 
 pub fn character<'input, E>() -> impl GraphemeParser<'input, Character<'input>, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let quote = |expected| just("'").map_err(move |e: Error| e.replace_expected(expected));
-    let escape = just("\\").map_err(|e: Error| e.replace_expected(Expected::CharEscape));
-    let escaped = escape.ignore_then(escape_sequence());
-    let unescaped = none_of("\\").map_err(|e: Error| e.replace_expected(Expected::CharUnescaped));
+    let quote = just("'");
+    let unescaped = none_of("\\").labelled(Expected::CharUnescaped);
+    let escaped = just("\\")
+        .ignore_then(escape_sequence())
+        .labelled(Expected::CharEscape);
 
     let character = escaped.or(unescaped).recover_with(via_parser(
         any()
@@ -42,20 +46,23 @@ where
             .map(|_| Graphemes::new("\u{FFFD}").iter().next().unwrap()),
     ));
 
-    quote(Expected::Char)
+    quote
         .ignore_then(character)
         .then_ignore(
-            quote(Expected::CharClose)
+            quote
+                .labelled(Expected::CharClose)
                 .ignored()
                 .recover_with(via_parser(empty())),
         )
         .map(Character::new)
+        .labelled(Expected::Char)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use super::super::super::error::Error;
     use super::super::tests::Extra;
     use crate::node::span::Span;
     use smallvec::smallvec;
