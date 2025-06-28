@@ -1,10 +1,8 @@
-use super::super::{
-    ctx::Ctx,
-    error::{Error, Expected},
-    whitespace::Side,
-    ExprOp, Node,
+use super::super::{ctx::Ctx, error::Expected, whitespace::Side, ExprOp, Node};
+use super::{
+    call::ident, spanned, whitespace::whitespace, GraphemeLabelError, GraphemeParser,
+    GraphemeParserExtra,
 };
-use super::{call::ident, spanned, whitespace::whitespace, GraphemeParser, GraphemeParserExtra};
 use crate::node::{
     span::{IntoSpanned, Span},
     wast::{
@@ -22,16 +20,16 @@ pub fn initialization<'input, N, P, E>(
 where
     N: Node<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     let open = just("::")
         .ignore_then(spanned(whitespace().then_ignore(just("("))))
-        .map_err(|e: Error| e.replace_expected(Expected::Initialization))
         .map(|(whitespace, span)| (whitespace, Span::from(span)));
 
-    let close = just(")").map_err(|e: Error| e.replace_expected(Expected::InitializationClose));
-    let assign = just("=").map_err(|e: Error| e.replace_expected(Expected::AssignSpecial));
-    let comma = just(",").map_err(|e: Error| e.replace_expected(Expected::Comma));
+    let close = just(")").labelled(Expected::InitializationClose);
+    let assign = just("=").labelled(Expected::AssignSpecial);
+    let comma = just(",").labelled(Expected::Comma);
 
     let close = close
         .ignored()
@@ -86,12 +84,14 @@ where
         let span = open_span.range.start..close_span.range.end;
         Whitespaced::new(whitespace, right.into_spanned(span))
     })
+    .labelled(Expected::Initialization)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use super::super::super::error::Error;
     use super::super::{expr, fact, tests::Extra};
     use crate::node::{
         span::Span,

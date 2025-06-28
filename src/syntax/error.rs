@@ -207,7 +207,17 @@ impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for
 
     fn in_context(&mut self, label: Expected, span: SimpleSpan) {
         match label {
-            Expected::StringEscape | Expected::CharEscape | Expected::Number => {}
+            Expected::Number
+            | Expected::Char
+            | Expected::CharEscape
+            | Expected::String
+            | Expected::StringEscape
+            | Expected::RawString
+            | Expected::Tuple
+            | Expected::Block
+            | Expected::Generics
+            | Expected::Initialization
+            | Expected::DocOuter => {}
 
             Expected::Comment => {
                 self.expected = smallvec![];
