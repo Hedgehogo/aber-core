@@ -1,10 +1,5 @@
-use super::super::{
-    ctx::Ctx,
-    error::{Error, Expected},
-    whitespace::Side,
-    ExprOp, Node,
-};
-use super::{whitespace::whitespace, GraphemeParser, GraphemeParserExtra};
+use super::super::{ctx::Ctx, error::Expected, whitespace::Side, ExprOp, Node};
+use super::{whitespace::whitespace, GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
 use crate::node::{wast::List, Spanned, SpannedVec};
 use chumsky::prelude::*;
 
@@ -16,20 +11,13 @@ fn list<'input, N, P, E>(
 where
     N: Node<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let open = just(open.0)
-        .ignored()
-        .map_err(move |e: Error| e.replace_expected(open.1));
-
-    let comma = just(",")
-        .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::Comma));
-
-    let close = just(close.0)
-        .ignored()
-        .map_err(move |e: Error| e.replace_expected(close.1));
-
+    let expected = open.1;
+    let open = just(open.0).ignored();
+    let comma = just(",").ignored().labelled(Expected::Comma);
+    let close = just(close.0).ignored().labelled(close.1);
     let close = close.recover_with(via_parser(empty()));
 
     let item = whitespace()
@@ -50,6 +38,7 @@ where
         .then(whitespace())
         .map(|(items, whitespace)| List::new(items, whitespace))
         .then_ignore(close)
+        .labelled(expected)
 }
 
 pub fn tuple<'input, N, P, E>(
@@ -58,7 +47,8 @@ pub fn tuple<'input, N, P, E>(
 where
     N: Node<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     list(expr, ("(", Expected::Tuple), (")", Expected::TupleClose))
 }
@@ -69,7 +59,8 @@ pub fn generics<'input, N, P, E>(
 where
     N: Node<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     list(
         expr,
@@ -82,7 +73,7 @@ where
 mod tests {
     use super::*;
 
-    use super::super::super::error::Expected;
+    use super::super::super::error::Error;
     use super::super::{expr::expr, fact::fact, tests::Extra};
     use crate::node::{
         span::{IntoSpanned, Span},

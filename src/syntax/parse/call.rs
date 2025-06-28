@@ -1,11 +1,7 @@
-use super::super::{
-    ctx::Ctx,
-    error::{Error, Expected},
-    Node,
-};
+use super::super::{ctx::Ctx, error::Expected, Node};
 use super::{
-    list::generics, number::digit, spanned, whitespace::whitespaced, GraphemeParser,
-    GraphemeParserExtra,
+    list::generics, number::digit, spanned, whitespace::whitespaced, GraphemeLabelError,
+    GraphemeParser, GraphemeParserExtra,
 };
 use crate::node::{
     wast::{
@@ -14,20 +10,34 @@ use crate::node::{
     },
     Spanned, SpannedVec,
 };
-use chumsky::prelude::*;
+use chumsky::{
+    error::LabelError,
+    prelude::*,
+    text::{Char, Grapheme},
+    util::Maybe,
+};
 
 pub fn ident<'input, E>() -> impl GraphemeParser<'input, Ident<'input>, E> + Copy
 where
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     let number_start = just("-").or_not().then(digit().with_ctx(Radix::DECIMAL));
+
+    let whitespace = any().try_map(|c: &Grapheme, span| {
+        if c.is_whitespace() {
+            Ok(())
+        } else {
+            Err(LabelError::expected_found([], Some(Maybe::Val(c)), span))
+        }
+    });
 
     let not_unit = choice((
         one_of(".,;:'\"@(){}[]").ignored(),
         just("//").ignored(),
         just("///").ignored(),
         just("```").ignored(),
-        text::whitespace().exactly(1),
+        whitespace,
     ));
 
     let unit = not_unit.not().ignore_then(any());
@@ -41,7 +51,7 @@ where
             if i.as_str() != "=" {
                 Ok(i)
             } else {
-                Err(Error::new_expected(Expected::ValidIdent, None, span.into()))
+                Err(E::Error::expected_found([Expected::ValidIdent], None, span))
             }
         })
         .map(|i| Ident::from_repr_unchecked(i.as_str()))
@@ -53,7 +63,8 @@ pub fn call<'input, N, P, E>(
 where
     N: Node<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     let generics = whitespaced(generics(expr)).or_not();
 
@@ -67,6 +78,7 @@ where
 mod tests {
     use super::*;
 
+    use super::super::super::error::Error;
     use super::super::{expr::expr, fact::fact, tests::Extra};
     use crate::node::{
         span::{IntoSpanned, Span},
