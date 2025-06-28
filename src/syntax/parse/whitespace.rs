@@ -1,8 +1,4 @@
-use super::super::{
-    ctx::Ctx,
-    error::{Error, Expected},
-    Expr, Whitespace,
-};
+use super::super::{ctx::Ctx, error::Expected, Expr, Whitespace};
 use super::{end_cursor, spanned, Cursor, GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
 use crate::node::wast::whitespaced::Whitespaced;
 use chumsky::{
@@ -12,7 +8,6 @@ use chumsky::{
     text::{Char, Grapheme, Graphemes},
     util::MaybeRef,
 };
-use smallvec::smallvec;
 
 pub(crate) fn line_break<'input, E>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
 where
@@ -96,11 +91,12 @@ where
 pub fn whitespace<'input, W, E, C>() -> impl GraphemeParser<'input, W, E> + Copy
 where
     W: Whitespace<'input>,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<C>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     let comment = just("//")
-        .map_err(|e: Error| Error::new(smallvec![], e.found(), e.span()))
         .then(not_line_separator().then(any()).repeated())
+        .labelled(Expected::Comment)
         .ignored();
 
     let line = inline_whitespace().then(comment.or_not());
@@ -116,7 +112,8 @@ pub fn whitespaced<'input, R, X, P, E, C>(
 ) -> impl GraphemeParser<'input, Whitespaced<'input, X, R>, E> + Clone
 where
     X: Expr<'input>,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<C>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<C>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
     P: GraphemeParser<'input, R, E> + Clone,
 {
     whitespace()

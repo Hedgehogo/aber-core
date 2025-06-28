@@ -58,6 +58,7 @@ pub enum Expected {
     Initialization,
     InitializationClose,
     DocOuter,
+    Comment,
     #[default]
     Eof,
 }
@@ -197,12 +198,22 @@ impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for
     }
 
     fn label_with(&mut self, label: Expected) {
-        self.expected = smallvec![label];
+        if label == Expected::Comment {
+            self.expected = smallvec![];
+        } else {
+            self.expected = smallvec![label];
+        }
     }
 
     fn in_context(&mut self, label: Expected, span: SimpleSpan) {
         match label {
             Expected::StringEscape | Expected::CharEscape | Expected::Number => {}
+
+            Expected::Comment => {
+                self.expected = smallvec![];
+                self.span = span.into();
+            }
+
             _ => {
                 self.expected = smallvec![label];
                 self.span = span.into();
