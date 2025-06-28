@@ -212,16 +212,7 @@ mod tests {
                         .into_whitespaced(())
                 ),
                 vec![Error::new(
-                    smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::InitializationClose,
-                        Expected::Block,
-                        Expected::Ident,
-                        Expected::NegativeSpecial,
-                    ],
+                    smallvec![Expected::InitializationClose, Expected::Expr],
                     None,
                     Span::new(3..3)
                 )]

@@ -112,17 +112,9 @@ mod tests {
                 )),
                 vec![Error::new(
                     smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::Tuple,
-                        Expected::Block,
                         Expected::BlockClose,
-                        Expected::Semicolon,
-                        Expected::Ident,
-                        Expected::NegativeSpecial,
-                        Expected::AssignSpecial,
+                        Expected::Expr,
+                        Expected::Stmt,
                     ],
                     None,
                     Span::new(1..1)

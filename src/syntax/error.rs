@@ -57,6 +57,9 @@ pub enum Expected {
     NonZeroWhitespace,
     Initialization,
     InitializationClose,
+    Fact,
+    Expr,
+    Stmt,
     DocOuter,
     Comment,
     #[default]
@@ -217,7 +220,10 @@ impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for
             | Expected::Block
             | Expected::Generics
             | Expected::Initialization
-            | Expected::DocOuter => {}
+            | Expected::DocOuter
+            | Expected::Fact
+            | Expected::Expr
+            | Expected::Stmt => {}
 
             Expected::Comment => {
                 self.expected = smallvec![];

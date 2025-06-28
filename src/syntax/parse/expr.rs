@@ -1,14 +1,9 @@
-use super::super::{
-    ctx::Ctx,
-    error::{Error, Expected},
-    whitespace::Side,
-    ExprOp, Node,
-};
+use super::super::{ctx::Ctx, error::Expected, whitespace::Side, ExprOp, Node};
 use super::{
     call::call,
     initialization::initialization,
     whitespace::{whitespace, whitespaced},
-    GraphemeParser, GraphemeParserExtra,
+    GraphemeLabelError, GraphemeParser, GraphemeParserExtra,
 };
 use crate::node::{
     span::IntoSpanned,
@@ -26,7 +21,8 @@ pub fn expr<'input, N, P, E>(
 where
     N: Node<'input> + 'input,
     P: GraphemeParser<'input, Spanned<N>, E> + Clone + 'input,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     recursive(|expr| {
         let atom = fact
@@ -38,14 +34,14 @@ where
 
         let negative_special = just("@")
             .ignore_then(whitespace())
-            .map_err(|e: Error| e.replace_expected(Expected::NegativeSpecial))
+            .labelled(Expected::NegativeSpecial)
             .boxed();
 
         let expr_op_special = |s: &'static str, expected| {
             whitespace()
                 .then_ignore(just(s))
                 .then(whitespaced::<_, N::Expr, _, E, _>(call(expr.clone())))
-                .map_err(move |e: Error| e.replace_expected(expected))
+                .labelled(expected)
                 .boxed()
         };
 
@@ -99,13 +95,14 @@ where
             }),
         ))
     })
+    .labelled(Expected::Expr)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use super::super::super::error::Expected;
+    use super::super::super::error::Error;
     use super::super::{fact::fact, tests::Extra};
     use crate::node::{
         span::{IntoSpanned, Span},

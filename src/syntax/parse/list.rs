@@ -216,17 +216,7 @@ mod tests {
             (
                 Some(List::new(vec![], ())),
                 vec![Error::new(
-                    smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::Tuple,
-                        Expected::TupleClose,
-                        Expected::Block,
-                        Expected::Ident,
-                        Expected::NegativeSpecial,
-                    ],
+                    smallvec![Expected::TupleClose, Expected::Expr],
                     None,
                     Span::new(1..1)
                 )]

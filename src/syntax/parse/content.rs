@@ -155,19 +155,7 @@ mod tests {
             (
                 None,
                 vec![Error::new(
-                    smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::Block,
-                        Expected::Tuple,
-                        Expected::Semicolon,
-                        Expected::Ident,
-                        Expected::NegativeSpecial,
-                        Expected::AssignSpecial,
-                        Expected::Eof,
-                    ],
+                    smallvec![Expected::Expr, Expected::Stmt, Expected::Eof],
                     Some(grapheme("[")),
                     Span::new(0..1)
                 )]
