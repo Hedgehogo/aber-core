@@ -1,10 +1,7 @@
-use super::super::{
-    ctx::Ctx,
-    error::{Error, Expected},
-    whitespace::Side,
-    ExprOp, Node,
+use super::super::{ctx::Ctx, error::Expected, whitespace::Side, ExprOp, Node};
+use super::{
+    spanned, whitespace::whitespace, GraphemeLabelError, GraphemeParser, GraphemeParserExtra,
 };
-use super::{spanned, whitespace::whitespace, GraphemeParser, GraphemeParserExtra};
 use crate::node::{
     span::IntoSpanned,
     wast::{
@@ -21,15 +18,12 @@ pub fn content<'input, N, P, E>(
 where
     N: Node<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let assign = just("=")
-        .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::AssignSpecial));
+    let assign = just("=").ignored().labelled(Expected::AssignSpecial);
 
-    let semicolon = just(";")
-        .ignored()
-        .map_err(|e: Error| e.replace_expected(Expected::Semicolon));
+    let semicolon = just(";").ignored().labelled(Expected::Semicolon);
 
     let expr = whitespace()
         .then(expr.or(spanned(empty().map(|_| vec![])).map(Spanned::from)))
@@ -62,6 +56,7 @@ where
 mod tests {
     use super::*;
 
+    use super::super::super::error::Error;
     use super::super::{expr::expr, fact::fact, tests::Extra};
     use crate::node::{
         span::{IntoSpanned, Span},

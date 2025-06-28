@@ -1,9 +1,5 @@
-use super::super::{
-    ctx::Ctx,
-    error::{Error, Expected},
-    Node,
-};
-use super::{content::content, GraphemeParser, GraphemeParserExtra};
+use super::super::{ctx::Ctx, error::Expected, Node};
+use super::{content::content, GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
 use crate::node::{wast::block::Block, Spanned, SpannedVec};
 use chumsky::prelude::*;
 
@@ -13,25 +9,26 @@ pub fn block<'input, N, P, E>(
 where
     N: Node<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let open = just("{")
-        .ignored()
-        .map_err(move |e: Error| e.replace_expected(Expected::Block));
+    let open = just("{").ignored();
 
     let close = just("}")
         .ignored()
-        .map_err(move |e: Error| e.replace_expected(Expected::BlockClose))
+        .labelled(Expected::BlockClose)
         .recover_with(via_parser(empty()));
 
-    open.ignore_then(content(expr)).then_ignore(close)
+    open.ignore_then(content(expr))
+        .then_ignore(close)
+        .labelled(Expected::Block)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use super::super::super::error::Expected;
+    use super::super::super::error::Error;
     use super::super::{expr::expr, fact::fact, tests::Extra};
     use crate::node::span::IntoSpanned;
     use crate::node::{
