@@ -196,7 +196,11 @@ impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for
 
 impl<'input> chumsky::error::Error<'input, &'input Graphemes> for Error<'input> {
     fn merge(mut self, other: Self) -> Self {
-        self.expected = merge_sorted_vec(self.expected, other.expected);
+        self.expected = match (self.expected.as_slice(), other.expected.as_slice()) {
+            ([Expected::Comment], _) => other.expected,
+            (_, [Expected::Comment]) => self.expected,
+            _ => merge_sorted_vec(self.expected, other.expected),
+        };
         self
     }
 }

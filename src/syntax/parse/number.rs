@@ -99,7 +99,7 @@ mod tests {
         {
             let b = just("_").then(just("a").labelled("al")).ignored();
             let custom = custom(move |input| input.parse(b));
-            custom.labelled("bl")
+            custom.labelled("bl").as_context()
         }
 
         assert_eq!(
