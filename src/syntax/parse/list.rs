@@ -191,6 +191,11 @@ mod tests {
                 ()
             )),
         );
+    }
+
+    #[test]
+    fn test_tuple_erroneous() {
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             tuple(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new(""))
@@ -204,11 +209,6 @@ mod tests {
                 )]
             )
         );
-    }
-
-    #[test]
-    fn test_tuple_erroneous() {
-        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             tuple(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("("))
@@ -236,19 +236,13 @@ mod tests {
                 )),
                 vec![Error::new(
                     smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::PairSpecial,
-                        Expected::Tuple,
                         Expected::TupleClose,
-                        Expected::Block,
                         Expected::Comma,
-                        Expected::Ident,
+                        Expected::PairSpecial,
                         Expected::MethodSpecial,
                         Expected::ChildSpecial,
-                        Expected::NegativeSpecial
+                        Expected::NegativeSpecial,
+                        Expected::Fact,
                     ],
                     None,
                     Span::new(4..4)

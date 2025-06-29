@@ -30,7 +30,8 @@ where
         .map(|(whitespace, expr)| expr.whitespaced(whitespace, Side::Left))
         .then(whitespace())
         .map(|(expr, whitespace)| expr.whitespaced(whitespace, Side::Right))
-        .map(|i| i.into_spanned_expr());
+        .map(|i| i.into_spanned_expr())
+        .labelled(Expected::Expr);
 
     let stmt = expr
         .clone()
@@ -44,7 +45,8 @@ where
             }
 
             None => left.map(Stmt::Expr),
-        });
+        })
+        .labelled(Expected::Stmt);
 
     stmt.repeated()
         .collect()

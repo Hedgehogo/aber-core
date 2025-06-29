@@ -1,12 +1,8 @@
-use super::super::{
-    ctx::Ctx,
-    error::{Error, Expected},
-    Node,
-};
+use super::super::{ctx::Ctx, error::Expected, Node};
 use super::{
     block::block, call::call, character::character, escaped_string::escaped_string, expr::expr,
     list::tuple, number::number, raw_string::raw_string, spanned, whitespace::whitespace,
-    GraphemeParser, GraphemeParserExtra,
+    GraphemeLabelError, GraphemeParser, GraphemeParserExtra,
 };
 use crate::node::{
     wast::{Pair, Wast},
@@ -17,7 +13,8 @@ use chumsky::prelude::*;
 pub fn fact<'input, N, E>() -> impl GraphemeParser<'input, Spanned<N>, E> + Clone
 where
     N: Node<'input> + 'input,
-    E: GraphemeParserExtra<'input, Error = Error<'input>, Context = Ctx<()>>,
+    E: GraphemeParserExtra<'input, Context = Ctx<()>>,
+    E::Error: GraphemeLabelError<'input, Expected>,
 {
     recursive(|fact| {
         let choice = choice((
@@ -33,7 +30,7 @@ where
 
         let pair_special = just(":")
             .then(just(":").not())
-            .map_err(|e: Error| e.replace_expected(Expected::PairSpecial));
+            .labelled(Expected::PairSpecial);
 
         spanned(choice)
             .map(Spanned::from)
@@ -44,6 +41,7 @@ where
 
                 None => node,
             })
+            .labelled(Expected::Fact)
     })
 }
 
@@ -51,7 +49,7 @@ where
 mod tests {
     use super::*;
 
-    use super::super::super::error::Expected;
+    use super::super::super::error::Error;
     use super::super::tests::Extra;
     use crate::node::{
         span::Span,
@@ -123,15 +121,7 @@ mod tests {
             (
                 None,
                 vec![Error::new(
-                    smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::Block,
-                        Expected::Tuple,
-                        Expected::Ident,
-                    ],
+                    smallvec![Expected::Fact],
                     Some(grapheme(":")),
                     Span::new(0..1)
                 )]

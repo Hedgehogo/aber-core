@@ -89,6 +89,62 @@ mod tests {
     use text::Graphemes;
 
     #[test]
+    fn test() {
+        use chumsky::extra::Err;
+        fn ident<'input>() -> impl GraphemeParser<'input, Ident<'input>, Err<Error<'input>>>
+        {
+            let number_start = just("-").or_not().then(digit().with_ctx(Radix::DECIMAL));
+
+            let whitespace = any().try_map(|c: &Grapheme, span: SimpleSpan| {
+                if c.is_whitespace() {
+                    Ok(())
+                } else {
+                    Err(Error::new(smallvec![], Some(c), span.into()))
+                }
+            });
+
+            let not_unit = choice((
+                one_of(".,;:'\"@(){}[]").ignored(),
+                just("//").ignored(),
+                just("///").ignored(),
+                just("```").ignored(),
+                whitespace,
+            ));
+
+            let unit = not_unit.not().ignore_then(any());
+
+            number_start
+                .not()
+                .ignore_then(unit.repeated().at_least(1))
+                .to_slice()
+                .labelled(Expected::Ident)
+                .try_map(|i, span| {
+                    if i.as_str() != "=" {
+                        Ok(i)
+                    } else {
+                        Err(Error::expected_found([Expected::ValidIdent], None, span))
+                    }
+                })
+                .map(|i| Ident::from_repr_unchecked(i.as_str()))
+        }
+
+        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
+        assert_eq!(
+            ident()
+                .parse(Graphemes::new("9hello"))
+                .into_output_errors(),
+            (
+                None,
+                vec![Error::new_expected(
+                    Expected::Ident,
+                    Some(grapheme("9")),
+                    Span::new(0..1)
+                )]
+            )
+        );
+    }
+
+    #[test]
     fn test_ident() {
         assert_eq!(
             ident::<Extra>()

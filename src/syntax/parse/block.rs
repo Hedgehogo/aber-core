@@ -111,11 +111,7 @@ mod tests {
                     CompExpr::from_vec(vec![]).into_spanned(1..1)
                 )),
                 vec![Error::new(
-                    smallvec![
-                        Expected::BlockClose,
-                        Expected::Expr,
-                        Expected::Stmt,
-                    ],
+                    smallvec![Expected::BlockClose, Expected::Expr, Expected::Stmt],
                     None,
                     Span::new(1..1)
                 )]
@@ -135,18 +131,14 @@ mod tests {
                 )),
                 vec![Error::new(
                     smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
                         Expected::PairSpecial,
-                        Expected::Tuple,
-                        Expected::Block,
                         Expected::BlockClose,
-                        Expected::Ident,
+                        Expected::Semicolon,
                         Expected::MethodSpecial,
                         Expected::ChildSpecial,
-                        Expected::NegativeSpecial
+                        Expected::NegativeSpecial,
+                        Expected::AssignSpecial,
+                        Expected::Fact,
                     ],
                     None,
                     Span::new(4..4)

@@ -2,16 +2,10 @@
 
 use std::fmt::Debug;
 
-use crate::node::{
-    span::Span,
-    wast::{
-        character::Ascii,
-        number::{Digit, Radix},
-    },
-};
+use crate::node::{span::Span, wast::number::Radix};
 use chumsky::{
     span::SimpleSpan,
-    text::{Char, Grapheme, Graphemes, TextExpected},
+    text::{Grapheme, Graphemes},
     util::MaybeRef,
     DefaultExpected,
 };
@@ -19,7 +13,6 @@ use smallvec::{smallvec, SmallVec};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Expected {
-    Ascii(Ascii),
     Number,
     Digit(Radix),
     Radix,
@@ -39,31 +32,32 @@ pub enum Expected {
     RawString,
     RawStringClose,
     RawStringIndent,
-    PairSpecial,
+    Ident,
+    ValidIdent,
     Tuple,
     TupleClose,
     Block,
     BlockClose,
     Generics,
     GenericsClose,
+    Initialization,
+    InitializationClose,
     Comma,
     Semicolon,
-    Ident,
-    ValidIdent,
+    PairSpecial,
     MethodSpecial,
     ChildSpecial,
     NegativeSpecial,
     AssignSpecial,
-    NonZeroWhitespace,
-    Initialization,
-    InitializationClose,
     Fact,
     Expr,
     Stmt,
     DocOuter,
     Comment,
-    #[default]
+    NonZeroWhitespace,
     Eof,
+    #[default]
+    Other,
 }
 
 type ExpectedVec = SmallVec<[Expected; 2]>;
@@ -128,56 +122,9 @@ impl<'input>
         let found = found.map(MaybeRef::into_inner);
         let expected = expected
             .into_iter()
-            .filter_map(|i| match i.to_owned() {
-                DefaultExpected::Token(i) => i
-                    .into_inner()
-                    .to_ascii()
-                    .map(|i| Expected::Ascii(Ascii::new(i).unwrap())),
-
-                DefaultExpected::EndOfInput => Some(Expected::Eof),
-
-                _ => None,
-            })
-            .collect();
-
-        Self::new(expected, found, span.into())
-    }
-}
-
-impl<'input>
-    chumsky::error::LabelError<'input, &'input Graphemes, TextExpected<'input, &'input Graphemes>>
-    for Error<'input>
-{
-    fn expected_found<E>(
-        expected: E,
-        found: Option<
-            MaybeRef<'input, <&'input Graphemes as chumsky::prelude::Input<'input>>::Token>,
-        >,
-        span: <&'input Graphemes as chumsky::prelude::Input<'input>>::Span,
-    ) -> Self
-    where
-        E: IntoIterator<Item = TextExpected<'input, &'input Graphemes>>,
-    {
-        let found = found.map(MaybeRef::into_inner);
-        let expected = expected
-            .into_iter()
-            .filter_map(|i| match i {
-                TextExpected::Whitespace => None,
-
-                TextExpected::InlineWhitespace => None,
-
-                TextExpected::Newline => None,
-
-                TextExpected::Digit(range) => matches!(range.end, 0..36)
-                    .then_some(range.end as u8)
-                    .and_then(Digit::new)
-                    .map(|i| Expected::Digit(i.min_radix())),
-
-                TextExpected::IdentifierPart => Some(Expected::Ident),
-
-                TextExpected::Identifier(_) => Some(Expected::Ident),
-
-                _ => None,
+            .map(|i| match i.to_owned() {
+                DefaultExpected::EndOfInput => Expected::Eof,
+                _ => Expected::Other,
             })
             .collect();
 
@@ -236,13 +183,13 @@ impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for
                 return;
             }
         }
-        if self
-            .expected
-            .iter()
-            .all(|i| matches!(i, Expected::Ascii(_)))
-        {
-            self.expected = smallvec![label];
-            self.span = span.into();
+
+        match self.expected.as_slice() {
+            [Expected::Other] | [] => {
+                self.expected = smallvec![label];
+                self.span = span.into();
+            }
+            _ => {}
         }
     }
 }

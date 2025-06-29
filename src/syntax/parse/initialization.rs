@@ -240,18 +240,13 @@ mod tests {
                 ),
                 vec![Error::new(
                     smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::PairSpecial,
                         Expected::InitializationClose,
-                        Expected::Block,
-                        Expected::Comma,
-                        Expected::Ident,
+                        Expected::PairSpecial,
                         Expected::MethodSpecial,
                         Expected::ChildSpecial,
                         Expected::NegativeSpecial,
+                        Expected::AssignSpecial,
+                        Expected::Fact,
                     ],
                     None,
                     Span::new(6..6)
@@ -325,19 +320,7 @@ mod tests {
                         .into_spanned(2..9)
                         .into_whitespaced(())
                 ),
-                vec![Error::new(
-                    smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
-                        Expected::Block,
-                        Expected::Ident,
-                        Expected::NegativeSpecial,
-                    ],
-                    None,
-                    Span::new(3..3)
-                )]
+                vec![Error::new(smallvec![Expected::Expr], None, Span::new(3..3))]
             )
         );
         assert_eq!(
@@ -365,15 +348,14 @@ mod tests {
                 ),
                 vec![Error::new(
                     smallvec![
-                        Expected::Number,
-                        Expected::Char,
-                        Expected::String,
-                        Expected::RawString,
                         Expected::InitializationClose,
-                        Expected::Block,
-                        Expected::Ident,
+                        Expected::Generics,
+                        Expected::Comma,
+                        Expected::PairSpecial,
+                        Expected::MethodSpecial,
+                        Expected::ChildSpecial,
                         Expected::NegativeSpecial,
-                        Expected::AssignSpecial,
+                        Expected::Fact,
                     ],
                     None,
                     Span::new(3..3)
