@@ -1,7 +1,7 @@
 //! Module that provides abstractions over expressions.
 
 use super::{whitespace::Side, Node, Whitespace};
-use crate::node::span::{Spanned, IntoSpanned, SpannedVec};
+use crate::node::span::{IntoSpanned, Spanned, SpannedVec};
 
 pub trait Expr<'input>: Sized + From<SpannedVec<Self::Node>> {
     /// Type describing the node.
@@ -47,13 +47,17 @@ where
     /// - `right` Sequence of nodes on the right.
     fn concat(self, right: Self) -> Self;
 
-    /// Creates an sequence of nodes with added whitespace information.
+    /// Add whitespace information to an sequence of nodes.
     ///
     /// # Arguments
-    /// - `expr` Expression without whitespace information.
-    /// - `whitespace` Added information about whitespace.
+    /// - `whitespace` Information about whitespace.
     /// - `side` Side on which the whitespace is located from the
     ///   expresion.
+    fn whitespace(&mut self, whitespace: X::Whitespace, side: Side);
+
+    /// Creates an sequence of nodes with added whitespace information.
+    ///
+    /// See [`ExprOp::whitespace`].
     fn whitespaced(self, whitespace: X::Whitespace, side: Side) -> Self;
 }
 
@@ -78,5 +82,15 @@ where
         side: Side,
     ) -> Self {
         N::Expr::whitespaced_seq(self, whitespace, side)
+    }
+
+    fn whitespace(
+        &mut self,
+        whitespace: <<N as Node<'input>>::Expr as Expr<'input>>::Whitespace,
+        side: Side,
+    ) {
+        let mut seq = std::mem::take(self);
+        seq = seq.whitespaced(whitespace, side);
+        *self = seq;
     }
 }

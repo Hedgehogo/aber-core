@@ -1,12 +1,12 @@
 use super::super::{ctx::Ctx, error::Expected, Expr, Whitespace};
-use super::{end_cursor, spanned, Cursor, GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
+use super::{
+    end_cursor, entirely, spanned, Cursor, GraphemeLabelError, GraphemeParser, GraphemeParserExtra,
+};
 use crate::node::wast::whitespaced::Whitespaced;
 use chumsky::{
     combinator::Repeated,
-    label::LabelError,
     prelude::*,
     text::{Char, Grapheme, Graphemes},
-    util::MaybeRef,
 };
 
 pub(crate) fn line_break<'input, E>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
@@ -14,13 +14,9 @@ where
     E: GraphemeParserExtra<'input>,
     E::Error: GraphemeLabelError<'input, Expected>,
 {
-    any().try_map(|c: &Grapheme, span| {
-        if c.is_newline() {
-            Ok(c)
-        } else {
-            Err(E::Error::expected_found([], Some(MaybeRef::Val(c)), span))
-        }
-    })
+    any()
+        .filter(|c: &&Grapheme| c.is_newline())
+        .labelled(Expected::Whitespace)
 }
 
 pub(crate) fn line_start<'input, E, C>() -> impl GraphemeParser<'input, (), E> + Copy
@@ -28,20 +24,11 @@ where
     E: GraphemeParserExtra<'input, Context = Ctx<C>>,
     E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let inline_whitespace = any()
-        .try_map(|c: &Grapheme, span| {
-            if c.is_inline_whitespace() {
-                Ok(())
-            } else {
-                Err(E::Error::expected_found([], Some(MaybeRef::Val(c)), span))
-            }
-        })
-        .repeated();
+    let outer_doc = entirely(just("///"), Expected::DocOuter);
 
-    let outer_doc = just("///").labelled(Expected::DocOuter);
     let doc = outer_doc;
 
-    inline_whitespace
+    inline_whitespace()
         .ignore_then(doc)
         .repeated()
         .configure(|cfg, ctx: &Ctx<C>| cfg.exactly(ctx.doc_ctx.depth()))
@@ -78,13 +65,9 @@ where
     E::Error: GraphemeLabelError<'input, Expected>,
 {
     any()
-        .try_map(|c: &Grapheme, span| {
-            if c.is_whitespace() {
-                Ok(())
-            } else {
-                Err(LabelError::expected_found([], Some(MaybeRef::Val(c)), span))
-            }
-        })
+        .filter(|c: &&Grapheme| c.is_inline_whitespace())
+        .labelled(Expected::Whitespace)
+        .ignored()
         .repeated()
 }
 
@@ -96,7 +79,8 @@ where
 {
     let comment = just("//")
         .then(not_line_separator().then(any()).repeated())
-        .labelled(Expected::Comment)
+        .labelled(Expected::Whitespace)
+        .as_context()
         .ignored();
 
     let line = inline_whitespace().then(comment.or_not());

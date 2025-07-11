@@ -6,7 +6,7 @@ use chumsky::span::SimpleSpan;
 use std::{fmt, ops::Range};
 
 /// Type that describes the location of a unit within a document, storing the start and end position of that unit.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct Span {
     pub range: Range<usize>,
 }
@@ -60,7 +60,7 @@ impl chumsky::span::Span for Span {
 }
 
 /// Type that stores the unit and its location within the document.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct Spanned<T>(pub T, pub Span);
 
 impl<T> Spanned<T> {

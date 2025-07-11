@@ -22,20 +22,13 @@ where
 
     let item = whitespace()
         .then(expr)
-        .map(|(whitespace, expr)| expr.whitespaced(whitespace, Side::Left));
-
-    let separator = whitespace().then_ignore(comma);
-
-    let repeat = item.then(separator.or_not()).map(|(item, whitespace)| {
-        match whitespace {
-            Some(whitespace) => item.whitespaced(whitespace, Side::Right),
-            None => item,
-        }
-        .into_spanned_expr()
-    });
-
-    open.ignore_then(repeat.repeated().collect())
+        .map(|(whitespace, expr)| expr.whitespaced(whitespace, Side::Left))
         .then(whitespace())
+        .map(|(expr, whitespace)| expr.whitespaced(whitespace, Side::Right))
+        .map(ExprOp::into_spanned_expr);
+
+    open.ignore_then(item.separated_by(comma).collect())
+        .then(comma.ignore_then(whitespace()).or_not())
         .map(|(items, whitespace)| List::new(items, whitespace))
         .then_ignore(close)
         .labelled(expected)
@@ -84,56 +77,13 @@ mod tests {
     use text::Graphemes;
 
     #[test]
-    fn test() {
-        use chumsky::{
-            error::{Error, LabelError, Rich},
-            extra,
-            text::{whitespace, TextExpected},
-            DefaultExpected,
-        };
-
-        fn tuple<'input>(
-        ) -> impl Parser<'input, &'input str, (), extra::Err<Rich<'input, char, SimpleSpan>>>
-        {
-            just("a")
-                .repeated()
-                .then_ignore(whitespace())
-                .separated_by(just(","))
-                .then_ignore(just(")"))
-        }
-
-        assert_eq!(
-            tuple().parse("a").into_output_errors(),
-            (
-                None,
-                vec![Error::<&str>::merge(
-                    LabelError::<&str, _>::expected_found(
-                        vec![TextExpected::<&str>::Whitespace],
-                        None,
-                        SimpleSpan::new((), 1..1)
-                    ),
-                    LabelError::<&str, _>::expected_found(
-                        vec![
-                            DefaultExpected::Token('a'.into()),
-                            DefaultExpected::Token(','.into()),
-                            DefaultExpected::Token(')'.into()),
-                        ],
-                        None,
-                        SimpleSpan::new((), 1..1)
-                    )
-                )]
-            )
-        );
-    }
-
-    #[test]
     fn test_tuple() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             tuple(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("()"))
                 .into_result(),
-            Ok(List::new(vec![], ())),
+            Ok(List::new(vec![], None)),
         );
         assert_eq!(
             tuple(expr(fact::<CompNode, Extra>()))
@@ -144,7 +94,7 @@ mod tests {
                     .into_spanned_node(1..4)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec)],
-                ()
+                None
             )),
         );
         assert_eq!(
@@ -156,7 +106,7 @@ mod tests {
                     .into_spanned_node(1..4)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec)],
-                ()
+                Some(())
             )),
         );
         assert_eq!(
@@ -170,7 +120,7 @@ mod tests {
                 ]
                 .into_spanned(1..8)
                 .map(CompExpr::from_vec)],
-                ()
+                None
             )),
         );
         assert_eq!(
@@ -188,7 +138,7 @@ mod tests {
                         .into_spanned_vec()
                         .map(CompExpr::from_vec),
                 ],
-                ()
+                None
             )),
         );
     }
@@ -214,9 +164,9 @@ mod tests {
                 .parse(Graphemes::new("("))
                 .into_output_errors(),
             (
-                Some(List::new(vec![], ())),
+                Some(List::new(vec![], None)),
                 vec![Error::new(
-                    smallvec![Expected::TupleClose, Expected::Expr],
+                    smallvec![Expected::TupleClose, Expected::Comma, Expected::Expr],
                     None,
                     Span::new(1..1)
                 )]
@@ -232,11 +182,12 @@ mod tests {
                         .into_spanned_node(1..4)
                         .into_spanned_vec()
                         .map(CompExpr::from_vec)],
-                    ()
+                    None
                 )),
                 vec![Error::new(
                     smallvec![
                         Expected::TupleClose,
+                        Expected::Initialization,
                         Expected::Comma,
                         Expected::PairSpecial,
                         Expected::MethodSpecial,

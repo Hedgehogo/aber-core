@@ -11,12 +11,12 @@ use crate::syntax::Expr;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct List<'input, I, X: Expr<'input>> {
     pub items: SpannedVec<I>,
-    pub whitespace: X::Whitespace,
+    pub whitespace: Option<X::Whitespace>,
 }
 
 impl<'input, I, X: Expr<'input>> List<'input, I, X> {
     /// Creates a new `List`.
-    pub fn new(items: SpannedVec<I>, whitespace: X::Whitespace) -> Self {
+    pub fn new(items: SpannedVec<I>, whitespace: Option<X::Whitespace>) -> Self {
         Self { items, whitespace }
     }
 }

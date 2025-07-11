@@ -21,9 +21,8 @@ pub enum Expected {
     NumberSpacer,
     Char,
     CharClose,
-    CharEscape,
+    CharContent,
     CharEscaped,
-    CharUnescaped,
     String,
     StringClose,
     StringEscape,
@@ -31,6 +30,7 @@ pub enum Expected {
     StringUnescaped,
     RawString,
     RawStringClose,
+    RawStringUnit,
     RawStringIndent,
     Ident,
     ValidIdent,
@@ -53,7 +53,7 @@ pub enum Expected {
     Expr,
     Stmt,
     DocOuter,
-    Comment,
+    Whitespace,
     NonZeroWhitespace,
     Eof,
     #[default]
@@ -122,9 +122,10 @@ impl<'input>
         let found = found.map(MaybeRef::into_inner);
         let expected = expected
             .into_iter()
-            .map(|i| match i.to_owned() {
-                DefaultExpected::EndOfInput => Expected::Eof,
-                _ => Expected::Other,
+            .filter_map(|i| match i.to_owned() {
+                DefaultExpected::EndOfInput => Some(Expected::Eof),
+                DefaultExpected::SomethingElse => None,
+                _ => Some(Expected::Other),
             })
             .collect();
 
@@ -144,52 +145,30 @@ impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for
         E: IntoIterator<Item = Expected>,
     {
         let found = found.map(MaybeRef::into_inner);
-        Self::new(expected.into_iter().collect(), found, span.into())
+        let expected = expected.into_iter().filter(|i| *i != Expected::Whitespace);
+        Self::new(expected.collect(), found, span.into())
     }
 
     fn label_with(&mut self, label: Expected) {
-        if label == Expected::Comment {
+        if label == Expected::Whitespace {
             self.expected = smallvec![];
         } else {
             self.expected = smallvec![label];
         }
     }
 
-    fn in_context(&mut self, label: Expected, span: SimpleSpan) {
+    fn in_context(&mut self, label: Expected, _span: SimpleSpan) {
         match label {
-            Expected::Number
-            | Expected::Char
-            | Expected::CharEscape
-            | Expected::String
-            | Expected::StringEscape
-            | Expected::RawString
-            | Expected::Tuple
-            | Expected::Block
-            | Expected::Generics
-            | Expected::Initialization
-            | Expected::DocOuter
-            | Expected::Fact
-            | Expected::Expr
-            | Expected::Stmt => {}
+            Expected::StringEscape => {}
 
-            Expected::Comment => {
+            Expected::Whitespace => {
                 self.expected = smallvec![];
-                self.span = span.into();
             }
 
             _ => {
                 self.expected = smallvec![label];
-                self.span = span.into();
                 return;
             }
-        }
-
-        match self.expected.as_slice() {
-            [Expected::Other] | [] => {
-                self.expected = smallvec![label];
-                self.span = span.into();
-            }
-            _ => {}
         }
     }
 }
@@ -197,8 +176,8 @@ impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for
 impl<'input> chumsky::error::Error<'input, &'input Graphemes> for Error<'input> {
     fn merge(mut self, other: Self) -> Self {
         self.expected = match (self.expected.as_slice(), other.expected.as_slice()) {
-            ([Expected::Comment], _) => other.expected,
-            (_, [Expected::Comment]) => self.expected,
+            ([Expected::Whitespace], _) => other.expected,
+            (_, [Expected::Whitespace]) => self.expected,
             _ => merge_sorted_vec(self.expected, other.expected),
         };
         self

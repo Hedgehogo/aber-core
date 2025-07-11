@@ -1,4 +1,5 @@
 use super::super::{ctx::Ctx, error::Expected, whitespace::Side, ExprOp, Node};
+use super::entirely;
 use super::{
     call::call,
     initialization::initialization,
@@ -39,7 +40,7 @@ where
 
         let expr_op_special = |s: &'static str, expected| {
             whitespace()
-                .then_ignore(just(s))
+                .then_ignore(entirely(just(s), expected))
                 .then(whitespaced::<_, N::Expr, _, E, _>(call(expr.clone())))
                 .labelled(expected)
                 .boxed()
@@ -109,6 +110,7 @@ mod tests {
         wast::{call::Ident, initialization::Argument, list::List, Wast},
         CompExpr, CompNode,
     };
+    use smallvec::smallvec;
     use text::Graphemes;
 
     #[test]
@@ -185,7 +187,7 @@ mod tests {
                             .map(CompExpr::from_vec)
                     )
                     .into_spanned(6..9)],
-                    ()
+                    None
                 )
                 .into_spanned(5..10)
                 .into_whitespaced(())
@@ -278,6 +280,40 @@ mod tests {
     #[test]
     fn test_expr_erroneous() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
+        assert_eq!(
+            expr(fact::<CompNode, Extra>())
+                .parse(Graphemes::new(""))
+                .into_output_errors(),
+            (
+                None,
+                vec![Error::new_expected(
+                    Expected::Expr,
+                    None,
+                    Span::new(0..0)
+                )]
+            )
+        );
+        assert_eq!(
+            expr(fact::<CompNode, Extra>())
+                .parse(Graphemes::new("'a'["))
+                .into_output_errors(),
+            (
+                None,
+                vec![Error::new(
+                    smallvec![
+                        Expected::Initialization,
+                        Expected::PairSpecial,
+                        Expected::MethodSpecial,
+                        Expected::ChildSpecial,
+                        Expected::NegativeSpecial,
+                        Expected::Fact,
+                        Expected::Eof,
+                    ],
+                    Some(grapheme("[")),
+                    Span::new(3..4)
+                )]
+            )
+        );
         assert_eq!(
             expr(fact::<CompNode, Extra>())
                 .parse(Graphemes::new("\"hello\" //hello\n 'h"))

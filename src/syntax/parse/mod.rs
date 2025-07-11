@@ -57,6 +57,25 @@ where
     parser.map_with(|i, e| (i, e.span()))
 }
 
+pub fn entirely<'src, P, O, E, L>(parser: P, label: L) -> impl GraphemeParser<'src, O, E> + Copy
+where
+    P: GraphemeParser<'src, O, E> + Copy,
+    E: GraphemeParserExtra<'src>,
+    E::Error: GraphemeLabelError<'src, L>,
+    L: Copy,
+{
+    custom(move |inp| {
+        let found = inp.peek_maybe();
+        let span = inp.span_since(&inp.cursor());
+        let res = inp.parse(&parser);
+
+        match res {
+            Ok(out) => Ok(out),
+            Err(_) => Err(E::Error::expected_found([label], found, span)),
+        }
+    })
+}
+
 pub struct Cursor(usize);
 
 pub fn end_cursor<'src, P, O, E>(parser: P) -> impl GraphemeParser<'src, Cursor, E> + Clone

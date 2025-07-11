@@ -97,6 +97,15 @@ mod tests {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             fact::<CompNode, Extra>()
+                .parse(Graphemes::new(""))
+                .into_output_errors(),
+            (
+                None,
+                vec![Error::new_expected(Expected::Fact, None, Span::new(0..0))]
+            )
+        );
+        assert_eq!(
+            fact::<CompNode, Extra>()
                 .parse(Graphemes::new("'g:"))
                 .into_output_errors(),
             (

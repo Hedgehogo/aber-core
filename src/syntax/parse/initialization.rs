@@ -1,6 +1,6 @@
 use super::super::{ctx::Ctx, error::Expected, whitespace::Side, ExprOp, Node};
 use super::{
-    call::ident, spanned, whitespace::whitespace, GraphemeLabelError, GraphemeParser,
+    call::ident, entirely, spanned, whitespace::whitespace, GraphemeLabelError, GraphemeParser,
     GraphemeParserExtra,
 };
 use crate::node::{
@@ -23,7 +23,7 @@ where
     E: GraphemeParserExtra<'input, Context = Ctx<()>>,
     E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let open = just("::")
+    let open = entirely(just("::"), Expected::Other)
         .ignore_then(spanned(whitespace().then_ignore(just("("))))
         .map(|(whitespace, span)| (whitespace, Span::from(span)));
 
@@ -37,53 +37,50 @@ where
         .to_span()
         .map(Span::from);
 
-    let argument = whitespace().then(spanned(
-        spanned(ident())
-            .map(Spanned::from)
-            .then(whitespace())
-            .then_ignore(assign)
-            .then(whitespace())
-            .or_not()
-            .then(expr),
-    ));
+    let argument = group((
+        whitespace(),
+        spanned(group((
+            group((
+                spanned(ident()).map(Spanned::from),
+                whitespace().then_ignore(assign),
+                whitespace(),
+            ))
+            .or_not(),
+            expr,
+        ))),
+        whitespace(),
+    ))
+    .map(|(before_ws, argument, after_ws)| {
+        let ((name, mut expr), span) = argument;
 
-    let separator = whitespace().then_ignore(comma);
+        let (name, expr_ws) = match name {
+            Some((ident, after_name_ws, after_assign_ws)) => {
+                let name = Whitespaced::new(before_ws, ident);
+                (Some((name, after_name_ws)), after_assign_ws)
+            }
 
-    let repeat = argument
-        .then(separator.or_not())
-        .map(|(argument, after_ws)| {
-            let (before_ws, ((name, expr), span)) = argument;
+            None => (None, before_ws),
+        };
 
-            let (name, expr_ws) = match name {
-                Some(((ident, after_name_ws), after_assign_ws)) => {
-                    let name = Whitespaced::new(before_ws, ident);
-                    (Some((name, after_name_ws)), after_assign_ws)
-                }
+        expr.whitespace(expr_ws, Side::Left);
+        expr.whitespace(after_ws, Side::Right);
 
-                None => (None, before_ws),
-            };
+        Argument::new(name, expr.into_spanned_expr()).into_spanned(span)
+    });
 
-            let whitespaced_left = expr.whitespaced(expr_ws, Side::Left);
-            let whitespaced = match after_ws {
-                Some(i) => whitespaced_left.whitespaced(i, Side::Right),
-                None => whitespaced_left,
-            };
-
-            Argument::new(name, whitespaced.into_spanned_expr()).into_spanned(span)
-        });
-
-    open.then(
-        repeat
-            .repeated()
-            .collect()
-            .then(whitespace())
-            .map(|(items, whitespace)| List::new(items, whitespace))
-            .then(close),
+    group((
+        open,
+        argument.separated_by(comma).collect(),
+        comma.ignore_then(whitespace()).or_not(),
+        close,
+    ))
+    .map(
+        |((whitespace, open_span), items, list_whitespace, close_span)| {
+            let span = open_span.range.start..close_span.range.end;
+            let right = List::new(items, list_whitespace);
+            Whitespaced::new(whitespace, right.into_spanned(span))
+        },
     )
-    .map(|((whitespace, open_span), (right, close_span))| {
-        let span = open_span.range.start..close_span.range.end;
-        Whitespaced::new(whitespace, right.into_spanned(span))
-    })
     .labelled(Expected::Initialization)
 }
 
@@ -108,7 +105,7 @@ mod tests {
             initialization(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("::()"))
                 .into_result(),
-            Ok(List::new(vec![], ())
+            Ok(List::new(vec![], None)
                 .into_spanned(2..4)
                 .into_whitespaced(()))
         );
@@ -125,7 +122,7 @@ mod tests {
                         .map(CompExpr::from_vec)
                 )
                 .into_spanned(3..6)],
-                ()
+                None
             )
             .into_spanned(2..7)
             .into_whitespaced(())),
@@ -143,7 +140,7 @@ mod tests {
                         .map(CompExpr::from_vec)
                 )
                 .into_spanned(3..6)],
-                ()
+                Some(())
             )
             .into_spanned(2..9)
             .into_whitespaced(())),
@@ -163,7 +160,7 @@ mod tests {
                     .map(CompExpr::from_vec)
                 )
                 .into_spanned(3..10)],
-                ()
+                None
             )
             .into_spanned(2..11)
             .into_whitespaced(())),
@@ -191,7 +188,7 @@ mod tests {
                     )
                     .into_spanned(8..11),
                 ],
-                ()
+                None
             )
             .into_spanned(2..12)
             .into_whitespaced(())),
@@ -207,12 +204,17 @@ mod tests {
                 .into_output_errors(),
             (
                 Some(
-                    List::new(vec![], ())
+                    List::new(vec![], None)
                         .into_spanned(2..3)
                         .into_whitespaced(())
                 ),
                 vec![Error::new(
-                    smallvec![Expected::InitializationClose, Expected::Expr],
+                    smallvec![
+                        Expected::Ident,
+                        Expected::InitializationClose,
+                        Expected::Comma,
+                        Expected::Expr
+                    ],
                     None,
                     Span::new(3..3)
                 )]
@@ -233,19 +235,20 @@ mod tests {
                                 .map(CompExpr::from_vec)
                         )
                         .into_spanned(3..6)],
-                        ()
+                        None
                     )
                     .into_spanned(2..6)
                     .into_whitespaced(())
                 ),
                 vec![Error::new(
                     smallvec![
+                        Expected::Initialization,
                         Expected::InitializationClose,
+                        Expected::Comma,
                         Expected::PairSpecial,
                         Expected::MethodSpecial,
                         Expected::ChildSpecial,
                         Expected::NegativeSpecial,
-                        Expected::AssignSpecial,
                         Expected::Fact,
                     ],
                     None,
@@ -282,7 +285,7 @@ mod tests {
                     .map(CompExpr::from_vec)
                 )
                 .into_spanned(3..6)],
-                ()
+                None
             )
             .into_spanned(2..7)
             .into_whitespaced(())),
@@ -304,8 +307,8 @@ mod tests {
                         .into_spanned_vec()
                         .map(CompExpr::from_vec)
                 )
-                .into_spanned(9..12)],
-                ()
+                .into_spanned(3..12)],
+                None
             )
             .into_spanned(2..13)
             .into_whitespaced(())),
@@ -315,12 +318,15 @@ mod tests {
                 .parse(Graphemes::new("::(foo = "))
                 .into_output_errors(),
             (
-                Some(
-                    List::new(vec![], ())
-                        .into_spanned(2..9)
-                        .into_whitespaced(())
-                ),
-                vec![Error::new(smallvec![Expected::Expr], None, Span::new(3..3))]
+                None,
+                vec![
+                    Error::new(smallvec![Expected::Expr], None, Span::new(9..9)),
+                    Error::new(
+                        smallvec![Expected::Eof],
+                        Some(grapheme("f")),
+                        Span::new(3..4)
+                    )
+                ]
             )
         );
         assert_eq!(
@@ -341,24 +347,27 @@ mod tests {
                             .map(CompExpr::from_vec)
                         )
                         .into_spanned(3..6)],
-                        ()
+                        None
                     )
                     .into_spanned(2..6)
                     .into_whitespaced(())
                 ),
                 vec![Error::new(
                     smallvec![
-                        Expected::InitializationClose,
+                        Expected::Ident,
                         Expected::Generics,
+                        Expected::Initialization,
+                        Expected::InitializationClose,
                         Expected::Comma,
                         Expected::PairSpecial,
                         Expected::MethodSpecial,
                         Expected::ChildSpecial,
                         Expected::NegativeSpecial,
+                        Expected::AssignSpecial,
                         Expected::Fact,
                     ],
                     None,
-                    Span::new(3..3)
+                    Span::new(6..6)
                 )]
             ),
         );

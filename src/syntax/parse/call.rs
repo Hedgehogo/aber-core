@@ -14,7 +14,6 @@ use chumsky::{
     error::LabelError,
     prelude::*,
     text::{Char, Grapheme},
-    util::Maybe,
 };
 
 pub fn ident<'input, E>() -> impl GraphemeParser<'input, Ident<'input>, E> + Copy
@@ -24,20 +23,16 @@ where
 {
     let number_start = just("-").or_not().then(digit().with_ctx(Radix::DECIMAL));
 
-    let whitespace = any().try_map(|c: &Grapheme, span| {
-        if c.is_whitespace() {
-            Ok(())
-        } else {
-            Err(LabelError::expected_found([], Some(Maybe::Val(c)), span))
-        }
-    });
+    let whitespace = any()
+        .filter(|c: &&Grapheme| c.is_whitespace())
+        .labelled(Expected::Whitespace);
 
     let not_unit = choice((
         one_of(".,;:'\"@(){}[]").ignored(),
         just("//").ignored(),
         just("///").ignored(),
         just("```").ignored(),
-        whitespace,
+        whitespace.ignored(),
     ));
 
     let unit = not_unit.not().ignore_then(any());
@@ -157,7 +152,7 @@ mod tests {
                 vec![Error::new_expected(
                     Expected::Ident,
                     Some(grapheme("-")),
-                    Span::new(0..1)
+                    Span::new(0..2)
                 )]
             )
         );
@@ -183,7 +178,20 @@ mod tests {
                 vec![Error::new_expected(
                     Expected::Ident,
                     Some(grapheme("/")),
-                    Span::new(0..1)
+                    Span::new(0..2)
+                )]
+            )
+        );
+        assert_eq!(
+            ident::<Extra>()
+                .parse(Graphemes::new(""))
+                .into_output_errors(),
+            (
+                None,
+                vec![Error::new_expected(
+                    Expected::Ident,
+                    None,
+                    Span::new(0..0)
                 )]
             )
         );
@@ -206,7 +214,7 @@ mod tests {
                 .into_result(),
             Ok(Call::new(
                 Ident::from_repr_unchecked("hello").into_spanned(0..5),
-                Some(Generics::new((), List::new(vec![], ()).into_spanned(5..7)))
+                Some(Generics::new((), List::new(vec![], None).into_spanned(5..7)))
             ))
         );
         assert_eq!(
@@ -217,7 +225,7 @@ mod tests {
                 Ident::from_repr_unchecked("hello").into_spanned(0..5),
                 Some(Generics::new(
                     (),
-                    List::new(vec![], ()).into_spanned(15..17)
+                    List::new(vec![], None).into_spanned(15..17)
                 ))
             ))
         );
@@ -233,7 +241,7 @@ mod tests {
             (
                 None,
                 vec![Error::new(
-                    smallvec![Expected::Generics, Expected::Eof],
+                    smallvec![Expected::Ident, Expected::Generics, Expected::Eof],
                     Some(grapheme(",")),
                     Span::new(5..6)
                 )]

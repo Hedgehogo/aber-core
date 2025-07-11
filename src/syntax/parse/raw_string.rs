@@ -65,7 +65,7 @@ impl<'input> RawStringCtx<'input> {
 ///
 /// `precapacity` is equal to: real content length + indentation
 /// length * number of lines (Values are given in bytes).
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct RawContentInfo {
     precapacity: usize,
     line_break_count: usize,
@@ -107,7 +107,8 @@ where
     inline_whitespace().to_slice().then_ignore(
         quotes()
             .configure(|cfg, ctx: &Ctx<RawCtx<C>>| cfg.exactly(ctx.additional.quotes_count))
-            .labelled(Expected::RawStringClose),
+            .labelled(Expected::RawStringClose)
+            .as_context(),
     )
 }
 
@@ -122,7 +123,7 @@ where
 {
     close().not().ignore_then(
         not_line_separator()
-            .ignore_then(any())
+            .ignore_then(any().labelled(Expected::RawStringUnit))
             .repeated()
             .to_slice(),
     )
@@ -165,6 +166,7 @@ where
         .configure(|cfg, ctx: &RawStringCtx<'input>| cfg.seq(ctx.additional.additional.indent))
         .ignored()
         .labelled(Expected::RawStringIndent)
+        .as_context()
 }
 
 /// Creates a parser that parses a line with a line break ending it
@@ -174,7 +176,7 @@ where
     E: GraphemeParserExtra<'input, Context = RawStringCtx<'input>>,
     E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let repeated = not_line_separator().ignore_then(any());
+    let repeated = not_line_separator().ignore_then(any().labelled(Expected::RawStringUnit));
     let line_content = repeated.repeated().ignore_then(line_separator_cursor());
     indent().ignore_then(end_cursor_slice(line_content))
 }
@@ -186,7 +188,7 @@ where
     E: GraphemeParserExtra<'input, Context = RawStringCtx<'input>>,
     E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let repeated = not_line_separator().ignore_then(any());
+    let repeated = not_line_separator().ignore_then(any().labelled(Expected::RawStringUnit));
     let line_content = repeated.repeated();
     indent().ignore_then(line_content.to_slice())
 }
@@ -229,13 +231,13 @@ where
 {
     let prerest = precontent()
         .then_ignore(line_separator())
-        .then(close())
-        .then_ignore(separator());
+        .then(close());
 
     let rest = content()
         .map_with(|data, e| (data, e.slice()))
         .then_ignore(line_separator())
-        .then_ignore(close());
+        .then_ignore(close())
+        .then_ignore(separator());
 
     open()
         .map_with(|quotes_count, extra| {
@@ -280,6 +282,7 @@ mod tests {
         wast::{self},
     };
     use indoc::indoc;
+    use smallvec::smallvec;
 
     fn new_string<'input>(
         inner_repr: &'input str,
@@ -299,37 +302,6 @@ mod tests {
                 indent,
             ),
         ))
-    }
-
-    #[test]
-    fn test() {
-        use chumsky::extra::Err;
-        use chumsky::{label::LabelError, DefaultExpected};
-
-        fn parser<'input>(
-        ) -> impl Parser<'input, &'input str, (), Err<Rich<'input, char, SimpleSpan>>> {
-            just("")
-                .configure(|cfg, ctx: &&'static str| cfg.seq(ctx))
-                .labelled(DefaultExpected::Any)
-                .ignored()
-                .with_ctx("  ")
-        }
-
-        assert_eq!(
-            parser().parse(" ").into_output_errors(),
-            (
-                None,
-                vec![{
-                    let mut err = LabelError::<&str, _>::expected_found(
-                        [DefaultExpected::Token(' '.into())],
-                        None,
-                        SimpleSpan::new((), 1..1),
-                    );
-                    LabelError::<&str, _>::label_with(&mut err, DefaultExpected::Any);
-                    err
-                }]
-            )
-        );
     }
 
     #[test]
@@ -417,8 +389,8 @@ mod tests {
                     .into_output_errors(),
                 (
                     None,
-                    vec![Error::new_expected(
-                        Expected::RawStringClose,
+                    vec![Error::new(
+                        smallvec![Expected::RawStringUnit],
                         None,
                         Span::new(23..23)
                     )]

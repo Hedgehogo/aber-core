@@ -131,9 +131,10 @@ mod tests {
                 )),
                 vec![Error::new(
                     smallvec![
-                        Expected::PairSpecial,
                         Expected::BlockClose,
+                        Expected::Initialization,
                         Expected::Semicolon,
+                        Expected::PairSpecial,
                         Expected::MethodSpecial,
                         Expected::ChildSpecial,
                         Expected::NegativeSpecial,
