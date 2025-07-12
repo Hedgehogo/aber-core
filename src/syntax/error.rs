@@ -167,7 +167,6 @@ impl<'input> chumsky::error::LabelError<'input, &'input Graphemes, Expected> for
 
             _ => {
                 self.expected = smallvec![label];
-                return;
             }
         }
     }

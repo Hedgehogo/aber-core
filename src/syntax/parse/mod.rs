@@ -67,7 +67,7 @@ where
     custom(move |inp| {
         let found = inp.peek_maybe();
         let span = inp.span_since(&inp.cursor());
-        let res = inp.parse(&parser);
+        let res = inp.parse(parser);
 
         match res {
             Ok(out) => Ok(out),

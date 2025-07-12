@@ -7,38 +7,27 @@ use chumsky::{
     text::{Char, Grapheme, Graphemes},
 };
 
-fn escape_sequence<'input, E>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
+fn escape_sequence<'input, E>() -> impl GraphemeParser<'input, (), E> + Copy
 where
     E: GraphemeParserExtra<'input, Context = Ctx<()>>,
     E::Error: GraphemeLabelError<'input, Expected>,
 {
     any()
         .validate(|grapheme: &Grapheme, extra, emitter| {
-            let res = grapheme
+            if grapheme
                 .to_ascii()
-                .and_then(|i| match i {
-                    b'\\' => Some("\\"),
-                    b'n' => Some("\n"),
-                    b't' => Some("\t"),
-                    _ => None,
-                })
-                .map(|i| Graphemes::new(i).iter().next().unwrap());
-
-            match res {
-                Some(value) => value,
-
-                None => {
-                    let expected = [Expected::CharEscaped];
-                    let found = Some(grapheme.into());
-                    emitter.emit(E::Error::expected_found(expected, found, extra.span()));
-                    grapheme
-                }
+                .filter(|i| b"\\nt".contains(i))
+                .is_none()
+            {
+                let expected = [Expected::CharEscaped];
+                let found = Some(grapheme.into());
+                emitter.emit(E::Error::expected_found(expected, found, extra.span()));
             }
         })
         .labelled(Expected::CharEscaped)
 }
 
-fn content<'input, E>() -> impl GraphemeParser<'input, &'input Grapheme, E> + Copy
+fn content<'input, E>() -> impl GraphemeParser<'input, &'input str, E> + Copy
 where
     E: GraphemeParserExtra<'input, Context = Ctx<()>>,
     E::Error: GraphemeLabelError<'input, Expected>,
@@ -47,33 +36,33 @@ where
         custom(move |inp| {
             let found = inp.peek_maybe();
             let span = inp.span_since(&inp.cursor());
+            let parser = just("'").then(just("'").not()).rewind();
             match found {
                 None => Ok(None),
-                
-                Some(_) => {
-                    let res = inp.parse(just("'").then(just("'").not()).rewind());
-                    match res {
-                        Ok(_) => Ok(found),
-                        Err(_) => Err(E::Error::expected_found([expected], found, span)),
-                    }
-                }
+
+                Some(_) => match inp.parse(parser) {
+                    Ok(_) => Ok(found),
+                    Err(_) => Err(E::Error::expected_found([expected], found, span)),
+                },
             }
         })
         .validate(move |found, extra, emitter| {
             emitter.emit(E::Error::expected_found([expected], found, extra.span()));
-            Graphemes::new("\u{FFFD}").iter().next().unwrap()
         })
     };
 
     let unescaped = empty(Expected::CharContent)
-        .or(none_of("\\"))
-        .labelled(Expected::CharContent);
+        .or(none_of("\\").ignored())
+        .to_slice();
 
     let escaped = just("\\")
+        .ignored()
         .ignore_then(empty(Expected::CharEscaped).or(escape_sequence()))
-        .labelled(Expected::CharContent);
+        .to_slice();
 
-    unescaped.or(escaped)
+    choice((unescaped, escaped))
+        .map(Graphemes::as_str)
+        .labelled(Expected::CharContent)
 }
 
 pub fn character<'input, E>() -> impl GraphemeParser<'input, Character<'input>, E> + Copy
@@ -83,16 +72,15 @@ where
 {
     let quote = just("'");
 
-    quote
-        .ignore_then(content())
-        .then_ignore(
-            quote
-                .labelled(Expected::CharClose)
-                .ignored()
-                .recover_with(via_parser(empty())),
-        )
-        .map(Character::new)
-        .labelled(Expected::Char)
+    group((
+        quote.ignore_then(content()),
+        quote
+            .to(true)
+            .labelled(Expected::CharClose)
+            .recover_with(via_parser(empty().to(false))),
+    ))
+    .map(|(repr, close)| Character::new(repr, close))
+    .labelled(Expected::Char)
 }
 
 #[cfg(test)]
@@ -107,12 +95,11 @@ mod tests {
 
     #[test]
     fn test_character() {
-        let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
             character::<Extra>()
                 .parse(Graphemes::new("'m'"))
                 .into_result(),
-            Ok(Character::new(grapheme("m")))
+            Ok(Character::from_repr("m"))
         );
     }
 
@@ -124,7 +111,7 @@ mod tests {
                 .parse(Graphemes::new("'m"))
                 .into_output_errors(),
             (
-                Some(Character::new(grapheme("m"))),
+                Some(Character::new("m", false)),
                 vec![Error::new_expected(
                     Expected::CharClose,
                     None,
@@ -137,14 +124,10 @@ mod tests {
                 .parse(Graphemes::new("'"))
                 .into_output_errors(),
             (
-                Some(Character::new(grapheme("\u{FFFD}"))),
+                Some(Character::new("", false)),
                 vec![
                     Error::new(smallvec![Expected::CharContent], None, Span::new(1..1)),
-                    Error::new(
-                        smallvec![Expected::CharClose],
-                        None,
-                        Span::new(1..1)
-                    )
+                    Error::new(smallvec![Expected::CharClose], None, Span::new(1..1))
                 ]
             )
         );
@@ -153,7 +136,7 @@ mod tests {
                 .parse(Graphemes::new("'\\"))
                 .into_output_errors(),
             (
-                Some(Character::new(grapheme("\u{FFFD}"))),
+                Some(Character::new("\\", false)),
                 vec![
                     Error::new_expected(Expected::CharEscaped, None, Span::new(2..2)),
                     Error::new_expected(Expected::CharClose, None, Span::new(2..2))

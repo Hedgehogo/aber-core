@@ -107,7 +107,7 @@ mod tests {
     use super::super::{fact::fact, tests::Extra};
     use crate::node::{
         span::{IntoSpanned, Span},
-        wast::{call::Ident, initialization::Argument, list::List, Wast},
+        wast::{call::Ident, initialization::Argument, list::List, Character, Wast},
         CompExpr, CompNode,
     };
     use smallvec::smallvec;
@@ -286,11 +286,7 @@ mod tests {
                 .into_output_errors(),
             (
                 None,
-                vec![Error::new_expected(
-                    Expected::Expr,
-                    None,
-                    Span::new(0..0)
-                )]
+                vec![Error::new_expected(Expected::Expr, None, Span::new(0..0))]
             )
         );
         assert_eq!(
@@ -322,7 +318,7 @@ mod tests {
                 Some(
                     vec![
                         Wast::String("hello".into()).into_spanned_node(0..7),
-                        Wast::Character(grapheme("h").into()).into_spanned_node(17..19),
+                        Wast::Character(Character::new("h", false)).into_spanned_node(17..19),
                     ]
                     .into_spanned(0..19)
                 ),

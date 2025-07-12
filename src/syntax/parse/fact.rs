@@ -53,7 +53,10 @@ mod tests {
     use super::super::tests::Extra;
     use crate::node::{
         span::Span,
-        wast::number::{Digits, Number, Radix},
+        wast::{
+            number::{Digits, Number, Radix},
+            Character,
+        },
         CompNode,
     };
     use smallvec::smallvec;
@@ -111,7 +114,9 @@ mod tests {
             (
                 Some(
                     Wast::Pair(Pair::new(
-                        Box::new(Wast::Character(grapheme("g").into()).into_spanned_node(0..2)),
+                        Box::new(
+                            Wast::Character(Character::new("g", false)).into_spanned_node(0..2)
+                        ),
                         ()
                     ))
                     .into_spanned_node(0..3)
