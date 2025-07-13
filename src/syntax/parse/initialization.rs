@@ -32,10 +32,9 @@ where
     let comma = just(",").labelled(Expected::Comma);
 
     let close = close
-        .ignored()
-        .recover_with(via_parser(empty()))
-        .to_span()
-        .map(Span::from);
+        .to(true)
+        .recover_with(via_parser(empty().to(false)))
+        .map_with(|value, extra| (value, Span::from(extra.span())));
 
     let argument = group((
         whitespace(),
@@ -74,13 +73,13 @@ where
         comma.ignore_then(whitespace()).or_not(),
         close,
     ))
-    .map(
-        |((whitespace, open_span), items, list_whitespace, close_span)| {
-            let span = open_span.range.start..close_span.range.end;
-            let right = List::new(items, list_whitespace);
-            Whitespaced::new(whitespace, right.into_spanned(span))
-        },
-    )
+    .map(|(open, items, list_whitespace, close)| {
+        let (whitespace, open_span) = open;
+        let (close, close_span) = close;
+        let span = open_span.range.start..close_span.range.end;
+        let right = List::new(items, list_whitespace, close);
+        Whitespaced::new(whitespace, right.into_spanned(span))
+    })
     .labelled(Expected::Initialization)
 }
 
@@ -105,7 +104,7 @@ mod tests {
             initialization(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("::()"))
                 .into_result(),
-            Ok(List::new(vec![], None)
+            Ok(List::new(vec![], None, true)
                 .into_spanned(2..4)
                 .into_whitespaced(()))
         );
@@ -122,7 +121,8 @@ mod tests {
                         .map(CompExpr::from_vec)
                 )
                 .into_spanned(3..6)],
-                None
+                None,
+                true
             )
             .into_spanned(2..7)
             .into_whitespaced(())),
@@ -140,7 +140,8 @@ mod tests {
                         .map(CompExpr::from_vec)
                 )
                 .into_spanned(3..6)],
-                Some(())
+                Some(()),
+                true
             )
             .into_spanned(2..9)
             .into_whitespaced(())),
@@ -160,7 +161,8 @@ mod tests {
                     .map(CompExpr::from_vec)
                 )
                 .into_spanned(3..10)],
-                None
+                None,
+                true
             )
             .into_spanned(2..11)
             .into_whitespaced(())),
@@ -188,7 +190,8 @@ mod tests {
                     )
                     .into_spanned(8..11),
                 ],
-                None
+                None,
+                true
             )
             .into_spanned(2..12)
             .into_whitespaced(())),
@@ -204,7 +207,7 @@ mod tests {
                 .into_output_errors(),
             (
                 Some(
-                    List::new(vec![], None)
+                    List::new(vec![], None, false)
                         .into_spanned(2..3)
                         .into_whitespaced(())
                 ),
@@ -235,7 +238,8 @@ mod tests {
                                 .map(CompExpr::from_vec)
                         )
                         .into_spanned(3..6)],
-                        None
+                        None,
+                        false
                     )
                     .into_spanned(2..6)
                     .into_whitespaced(())
@@ -285,7 +289,8 @@ mod tests {
                     .map(CompExpr::from_vec)
                 )
                 .into_spanned(3..6)],
-                None
+                None,
+                true
             )
             .into_spanned(2..7)
             .into_whitespaced(())),
@@ -308,7 +313,8 @@ mod tests {
                         .map(CompExpr::from_vec)
                 )
                 .into_spanned(3..12)],
-                None
+                None,
+                true
             )
             .into_spanned(2..13)
             .into_whitespaced(())),
@@ -347,7 +353,8 @@ mod tests {
                             .map(CompExpr::from_vec)
                         )
                         .into_spanned(3..6)],
-                        None
+                        None,
+                        false
                     )
                     .into_spanned(2..6)
                     .into_whitespaced(())

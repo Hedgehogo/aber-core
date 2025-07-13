@@ -188,11 +188,7 @@ mod tests {
                 .into_output_errors(),
             (
                 None,
-                vec![Error::new_expected(
-                    Expected::Ident,
-                    None,
-                    Span::new(0..0)
-                )]
+                vec![Error::new_expected(Expected::Ident, None, Span::new(0..0))]
             )
         );
     }
@@ -214,7 +210,10 @@ mod tests {
                 .into_result(),
             Ok(Call::new(
                 Ident::from_repr_unchecked("hello").into_spanned(0..5),
-                Some(Generics::new((), List::new(vec![], None).into_spanned(5..7)))
+                Some(Generics::new(
+                    (),
+                    List::new(vec![], None, true).into_spanned(5..7)
+                ))
             ))
         );
         assert_eq!(
@@ -225,7 +224,7 @@ mod tests {
                 Ident::from_repr_unchecked("hello").into_spanned(0..5),
                 Some(Generics::new(
                     (),
-                    List::new(vec![], None).into_spanned(15..17)
+                    List::new(vec![], None, true).into_spanned(15..17)
                 ))
             ))
         );

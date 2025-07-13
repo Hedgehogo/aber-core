@@ -18,7 +18,7 @@ where
     let open = just(open.0).ignored();
     let comma = just(",").ignored().labelled(Expected::Comma);
     let close = just(close.0).ignored().labelled(close.1);
-    let close = close.recover_with(via_parser(empty()));
+    let close = close.to(true).recover_with(via_parser(empty().to(false)));
 
     let item = whitespace()
         .then(expr)
@@ -27,11 +27,13 @@ where
         .map(|(expr, whitespace)| expr.whitespaced(whitespace, Side::Right))
         .map(ExprOp::into_spanned_expr);
 
-    open.ignore_then(item.separated_by(comma).collect())
-        .then(comma.ignore_then(whitespace()).or_not())
-        .map(|(items, whitespace)| List::new(items, whitespace))
-        .then_ignore(close)
-        .labelled(expected)
+    group((
+        open.ignore_then(item.separated_by(comma).collect()),
+        comma.ignore_then(whitespace()).or_not(),
+        close,
+    ))
+    .map(|(items, whitespace, close)| List::new(items, whitespace, close))
+    .labelled(expected)
 }
 
 pub fn tuple<'input, N, P, E>(
@@ -83,7 +85,7 @@ mod tests {
             tuple(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("()"))
                 .into_result(),
-            Ok(List::new(vec![], None)),
+            Ok(List::new(vec![], None, true)),
         );
         assert_eq!(
             tuple(expr(fact::<CompNode, Extra>()))
@@ -94,7 +96,8 @@ mod tests {
                     .into_spanned_node(1..4)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec)],
-                None
+                None,
+                true
             )),
         );
         assert_eq!(
@@ -106,7 +109,8 @@ mod tests {
                     .into_spanned_node(1..4)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec)],
-                Some(())
+                Some(()),
+                true
             )),
         );
         assert_eq!(
@@ -120,7 +124,8 @@ mod tests {
                 ]
                 .into_spanned(1..8)
                 .map(CompExpr::from_vec)],
-                None
+                None,
+                true
             )),
         );
         assert_eq!(
@@ -138,7 +143,8 @@ mod tests {
                         .into_spanned_vec()
                         .map(CompExpr::from_vec),
                 ],
-                None
+                None,
+                true
             )),
         );
     }
@@ -164,7 +170,7 @@ mod tests {
                 .parse(Graphemes::new("("))
                 .into_output_errors(),
             (
-                Some(List::new(vec![], None)),
+                Some(List::new(vec![], None, false)),
                 vec![Error::new(
                     smallvec![Expected::TupleClose, Expected::Comma, Expected::Expr],
                     None,
@@ -182,7 +188,8 @@ mod tests {
                         .into_spanned_node(1..4)
                         .into_spanned_vec()
                         .map(CompExpr::from_vec)],
-                    None
+                    None,
+                    false
                 )),
                 vec![Error::new(
                     smallvec![

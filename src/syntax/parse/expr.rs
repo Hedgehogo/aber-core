@@ -187,7 +187,8 @@ mod tests {
                             .map(CompExpr::from_vec)
                     )
                     .into_spanned(6..9)],
-                    None
+                    None,
+                    true,
                 )
                 .into_spanned(5..10)
                 .into_whitespaced(())

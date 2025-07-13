@@ -12,7 +12,7 @@ pub mod raw_string;
 pub mod whitespace;
 
 use super::{ctx::Ctx, error::Error, Expr};
-use crate::node::wast::block::Block;
+use crate::node::wast::block::Content;
 use chumsky::{
     combinator::MapWith, extra::ParserExtra, input::MapExtra, label::LabelError, prelude::*,
     text::unicode::Graphemes,
@@ -120,7 +120,7 @@ where
 }
 
 pub fn parser<'input, X>(
-) -> impl GraphemeParser<'input, Block<'input, X>, extra::Err<Error<'input>>> + Clone
+) -> impl GraphemeParser<'input, Content<'input, X>, extra::Err<Error<'input>>> + Clone
 where
     X: Expr<'input> + 'input,
 {
@@ -143,7 +143,7 @@ mod tests {
     fn test_parser() {
         assert_eq!(
             parser::<CompExpr>().parse(Graphemes::new("")).into_result(),
-            Ok(Block::new(
+            Ok(Content::new(
                 vec![],
                 CompExpr::from_vec(vec![]).into_spanned(0..0)
             )),

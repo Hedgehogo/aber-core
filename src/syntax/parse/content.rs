@@ -6,7 +6,7 @@ use crate::node::{
     span::IntoSpanned,
     wast::{
         assign::Assign,
-        block::{Block, Stmt},
+        block::{Content, Stmt},
     },
     Spanned, SpannedVec,
 };
@@ -14,7 +14,7 @@ use chumsky::prelude::*;
 
 pub fn content<'input, N, P, E>(
     expr: P,
-) -> impl GraphemeParser<'input, Block<'input, N::Expr>, E> + Clone
+) -> impl GraphemeParser<'input, Content<'input, N::Expr>, E> + Clone
 where
     N: Node<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
@@ -51,7 +51,7 @@ where
     stmt.repeated()
         .collect()
         .then(expr)
-        .map(|(stmts, expr)| Block::new(stmts, expr))
+        .map(|(stmts, expr)| Content::new(stmts, expr))
 }
 
 #[cfg(test)]
@@ -75,7 +75,7 @@ mod tests {
             content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new(""))
                 .into_result(),
-            Ok(Block::new(
+            Ok(Content::new(
                 vec![],
                 CompExpr::from_vec(vec![]).into_spanned(0..0)
             )),
@@ -84,7 +84,7 @@ mod tests {
             content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("'a'"))
                 .into_result(),
-            Ok(Block::new(
+            Ok(Content::new(
                 vec![],
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(0..3)
@@ -96,7 +96,7 @@ mod tests {
             content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("'a'; "))
                 .into_result(),
-            Ok(Block::new(
+            Ok(Content::new(
                 Stmt::Expr(CompExpr::from_vec(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
@@ -111,7 +111,7 @@ mod tests {
             content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("'a'; 'b'"))
                 .into_result(),
-            Ok(Block::new(
+            Ok(Content::new(
                 Stmt::Expr(CompExpr::from_vec(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
@@ -129,7 +129,7 @@ mod tests {
             content(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("'a' = 'b';"))
                 .into_result(),
-            Ok(Block::new(
+            Ok(Content::new(
                 Stmt::Assign(Assign::new(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)

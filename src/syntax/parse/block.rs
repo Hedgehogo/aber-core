@@ -1,6 +1,6 @@
 use super::super::{ctx::Ctx, error::Expected, Node};
 use super::{content::content, GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
-use crate::node::{wast::block::Block, Spanned, SpannedVec};
+use crate::node::{wast::Block, Spanned, SpannedVec};
 use chumsky::prelude::*;
 
 pub fn block<'input, N, P, E>(
@@ -15,12 +15,13 @@ where
     let open = just("{").ignored();
 
     let close = just("}")
-        .ignored()
+        .to(true)
         .labelled(Expected::BlockClose)
-        .recover_with(via_parser(empty()));
+        .recover_with(via_parser(empty().to(false)));
 
     open.ignore_then(content(expr))
-        .then_ignore(close)
+        .then(close)
+        .map(|(content, close)| Block::new(content, close))
         .labelled(Expected::Block)
 }
 
@@ -33,7 +34,10 @@ mod tests {
     use crate::node::span::IntoSpanned;
     use crate::node::{
         span::Span,
-        wast::{block::Stmt, Wast},
+        wast::{
+            block::{Content, Stmt},
+            Wast,
+        },
         CompExpr, CompNode,
     };
     use smallvec::smallvec;
@@ -46,28 +50,26 @@ mod tests {
             block(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("{}"))
                 .into_result(),
-            Ok(Block::new(
-                vec![],
-                CompExpr::from_vec(vec![]).into_spanned(1..1)
-            )),
+            Ok(Content::new(vec![], CompExpr::from_vec(vec![]).into_spanned(1..1)).into()),
         );
         assert_eq!(
             block(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("{'a'}"))
                 .into_result(),
-            Ok(Block::new(
+            Ok(Content::new(
                 vec![],
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(1..4)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec)
-            )),
+            )
+            .into()),
         );
         assert_eq!(
             block(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("{'a'; }"))
                 .into_result(),
-            Ok(Block::new(
+            Ok(Content::new(
                 Stmt::Expr(CompExpr::from_vec(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(1..4)
@@ -76,13 +78,14 @@ mod tests {
                 .into_spanned(1..4)
                 .into_vec(),
                 CompExpr::from_vec(vec![]).into_spanned(6..6),
-            )),
+            )
+            .into()),
         );
         assert_eq!(
             block(expr(fact::<CompNode, Extra>()))
                 .parse(Graphemes::new("{'a'; 'b'}"))
                 .into_result(),
-            Ok(Block::new(
+            Ok(Content::new(
                 Stmt::Expr(CompExpr::from_vec(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(1..4)
@@ -94,7 +97,8 @@ mod tests {
                     .into_spanned_node(6..9)
                     .into_spanned_vec()
                     .map(CompExpr::from_vec),
-            )),
+            )
+            .into()),
         );
     }
 
@@ -106,9 +110,10 @@ mod tests {
                 .parse(Graphemes::new("{"))
                 .into_output_errors(),
             (
-                Some(Block::new(
+                Some(Block::from_stmts(
                     vec![],
-                    CompExpr::from_vec(vec![]).into_spanned(1..1)
+                    CompExpr::from_vec(vec![]).into_spanned(1..1),
+                    false,
                 )),
                 vec![Error::new(
                     smallvec![Expected::BlockClose, Expected::Expr, Expected::Stmt],
@@ -122,12 +127,13 @@ mod tests {
                 .parse(Graphemes::new("{'a'"))
                 .into_output_errors(),
             (
-                Some(Block::new(
+                Some(Block::from_stmts(
                     vec![],
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(1..4)
                         .into_spanned_vec()
-                        .map(CompExpr::from_vec)
+                        .map(CompExpr::from_vec),
+                    false,
                 )),
                 vec![Error::new(
                     smallvec![
