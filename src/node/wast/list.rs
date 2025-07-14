@@ -19,7 +19,11 @@ pub struct List<'input, I, X: Expr<'input>> {
 impl<'input, I, X: Expr<'input>> List<'input, I, X> {
     /// Creates a new `List`.
     pub fn new(items: SpannedVec<I>, whitespace: Option<X::Whitespace>, close: bool) -> Self {
-        Self { items, whitespace, close }
+        Self {
+            items,
+            whitespace,
+            close,
+        }
     }
 
     /// Asks if the closing parenthesis was present.
@@ -35,10 +39,10 @@ where
     X::Whitespace: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "List {{ items: {:?}, whitespace: {:?}", self.items, self.whitespace)?;
-        if !self.close {
-            write!(f, ", close: false")?;
-        }
-        write!(f, " }}")
+        f.debug_struct("List")
+            .field("items", &self.items)
+            .field("whitespace", &self.whitespace)
+            .field("close", &self.close)
+            .finish()
     }
 }

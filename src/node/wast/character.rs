@@ -115,11 +115,7 @@ impl<'input> fmt::Debug for Character<'input> {
             write!(f, "repr: {:?}", self.inner_repr)?;
         }
 
-        if !self.close {
-            write!(f, ", close: false")?;
-        }
-
-        write!(f, " }}")
+        write!(f, ", close: {} }}", self.close)
     }
 }
 

@@ -63,14 +63,11 @@ impl<'input, X: Expr<'input>> Block<'input, X> {
 
 impl<'input, X: Expr<'input> + fmt::Debug> fmt::Debug for Block<'input, X> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Block {{ ")?;
-        if self.close {
-            let content = self.content();
-            write!(f, "stmts: {:?}, expr: {:?}", content.stmts, content.expr)?;
-        } else {
-            write!(f, "content: {:?}, close: false", self.content)?;
-        }
-        write!(f, " }}")
+        f.debug_struct("Block")
+            .field("content.stmts", &self.content.stmts)
+            .field("content.expr", &self.content.expr)
+            .field("close", &self.close)
+            .finish()
     }
 }
 
