@@ -1,5 +1,4 @@
-pub mod node;
-pub mod syntax;
-pub mod compilation;
+pub mod reprs;
+pub mod stages;
 
 pub use chumsky;
