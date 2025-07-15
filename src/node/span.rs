@@ -33,6 +33,12 @@ impl From<SimpleSpan> for Span {
     }
 }
 
+impl From<Span> for SimpleSpan {
+    fn from(value: Span) -> Self {
+        SimpleSpan::from(value.range)
+    }
+}
+
 impl fmt::Debug for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}..{:?}", self.range.start, self.range.end)

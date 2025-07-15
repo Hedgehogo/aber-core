@@ -1,108 +1,53 @@
-pub mod next_stage;
-
-use chumsky::span::Span;
+pub mod call;
 
 use crate::node::{
-    hir::{call::Call, pair::Pair},
-    span::IntoSpanned,
-    state::{unit_ref::UnitRef, State},
-    CompExpr, Hir, CompNode, Spanned, Wast,
+    state::{Nodes, State},
+    CompExpr, CompNode, Hir, Spanned,
 };
+use call::call;
+use chumsky::{error::Cheap, extra::ParserExtra, prelude::*};
 
-#[expect(clippy::result_unit_err)]
-pub fn to_hir_expr_recursive<'input, 'expr>(
-    state: &mut State,
-    expr: &'expr [Spanned<CompNode<'input>>],
-) -> Result<(Spanned<CompNode<'input>>, &'expr [Spanned<CompNode<'input>>]), ()> {
-    let Spanned(node, node_span) = expr.first().ok_or(())?;
-    let (_, mut rest) = expr.split_at(0);
-
-    match node {
-        CompNode::Wast(Wast::Call(call)) => {
-            let Spanned(ident, mut span) = call.ident.clone();
-
-            #[expect(clippy::infallible_destructuring_match)]
-            let function = match state.find(ident).ok_or(())? {
-                UnitRef::Function(function) => function,
-            };
-
-            let argument_count = function.argument_count().ok_or(())?;
-            let id = function.id();
-
-            let mut result = Vec::with_capacity(argument_count);
-
-            for _ in 0..argument_count {
-                let (argument, expr) = to_hir_expr_recursive(state, rest)?;
-                span.range = span.start()..argument.1.end();
-                result.push(argument);
-                rest = expr;
-            }
-
-            let node = CompNode::Hir(Hir::Call(Call::new(id, result)));
-            Ok((node.into_spanned(span), rest))
-        }
-
-        CompNode::Wast(Wast::Pair(pair)) => {
-            let (right, rest) = to_hir_expr_recursive(state, rest)?;
-            let left_node = to_hir(state, (*pair.node).clone().0)?;
-            let left = left_node.into_spanned(pair.node.1.clone());
-            let span = left.1.start()..right.1.end();
-            let node = CompNode::Hir(Hir::Pair(Pair::new(Box::new(left), Box::new(right))));
-
-            Ok((node.into_spanned(span), rest))
-        }
-
-        i => {
-            let node = to_hir(state, i.clone())?;
-            Ok((node.into_spanned(node_span.clone()), rest))
-        }
-    }
+pub trait CompParser<'input, O, E>: Parser<'input, Nodes<'input>, O, E>
+where
+    E: CompParserExtra<'input>,
+    E::Context: Clone,
+{
 }
 
-#[expect(clippy::result_unit_err)]
-pub fn to_hir_expr<'input>(
-    state: &mut State,
-    expr: &[Spanned<CompNode<'input>>],
-) -> Result<CompNode<'input>, ()> {
-    match expr.first() {
-        Some(_) => to_hir_expr_recursive(state, expr).map(|(i, _)| i.0),
-        None => Ok(CompNode::Hir(Hir::Nil)),
-    }
+impl<'input, T, O, E> CompParser<'input, O, E> for T
+where
+    T: Parser<'input, Nodes<'input>, O, E>,
+    E: CompParserExtra<'input>,
+    E::Context: Clone,
+{
 }
 
-#[expect(clippy::result_unit_err)]
-pub fn to_hir<'input>(state: &mut State, node: CompNode<'input>) -> Result<CompNode<'input>, ()> {
-    match node {
-        CompNode::Wast(wast) => match wast {
-            Wast::Tuple(mut tuple) => {
-                for Spanned(expr, span) in &mut tuple.items {
-                    if let CompExpr::Wast(i) = expr {
-                        *expr = to_hir_expr(state, i.as_slice())
-                            .map(|i| CompExpr::Hir(Box::new(i.into_spanned(span.clone()))))?;
-                    }
-                }
-                Ok(CompNode::Wast(Wast::Tuple(tuple)))
-            }
+pub trait CompParserExtra<'input>:
+    ParserExtra<'input, Nodes<'input>, State = State<'input>, Error = Cheap>
+where
+    Self::Context: Clone,
+{
+}
 
-            #[expect(unused_variables)]
-            Wast::Block(block) => todo!(),
+impl<'input, T> CompParserExtra<'input> for T
+where
+    T: ParserExtra<'input, Nodes<'input>, State = State<'input>, Error = Cheap>,
+    T::Context: Clone,
+{
+}
 
-            #[expect(unused_variables)]
-            Wast::MethodCall(method_call) => todo!(),
+pub fn fact<'input, E>() -> impl CompParser<'input, Spanned<CompNode<'input>>, E> + Clone
+where
+    E: CompParserExtra<'input>,
+    E::Context: Clone,
+{
+    recursive(|fact| call(fact).map(|call| call.map(|call| CompNode::Hir(Hir::Call(call)))))
+}
 
-            #[expect(unused_variables)]
-            Wast::ChildCall(child_call) => todo!(),
-
-            #[expect(unused_variables)]
-            Wast::NegativeCall(negative_call) => todo!(),
-
-            Wast::Pair(_) => panic!("Pair can't exist in this context"),
-
-            Wast::Call(_) => panic!("Call can't exist in this context"),
-
-            i => Ok(CompNode::Wast(i)),
-        },
-
-        CompNode::Hir(hir) => Ok(CompNode::Hir(hir)),
-    }
+pub fn expr<'input, E>() -> impl CompParser<'input, CompExpr<'input>, E> + Clone
+where
+    E: CompParserExtra<'input>,
+    E::Context: Clone,
+{
+    fact().repeated().collect().map(CompExpr::Wast)
 }
