@@ -1,16 +1,18 @@
 pub mod unit;
-pub mod unit_ref;
 
-use super::super::{wast::call::Ident, CompNode, Spanned};
+use super::super::wast::call::Ident;
+use super::input::{Nodes, NodesMapper};
 use chumsky::{
     input::{self, Cursor, Input},
     inspector::Inspector,
 };
 use std::collections::hash_map::{Entry, HashMap};
-use unit::{Function, Unit};
-pub use unit_ref::{FunctionRef, UnitRef};
+use unit::{function::Function, Unit};
 
-pub type Nodes<'input> = &'input [Spanned<CompNode<'input>>];
+pub use unit::{
+    function::{FunctionMut, FunctionRef},
+    UnitMut, UnitRef,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
@@ -63,6 +65,10 @@ impl<'input> State<'input> {
         self.units.get(id)
     }
 
+    fn get_unit_mut(&mut self, id: usize) -> Option<&mut Unit> {
+        self.units.get_mut(id)
+    }
+
     pub fn get<'state>(&'state self, id: usize) -> Option<UnitRef<'state, 'input>> {
         let unit = self.units.get(id)?;
 
@@ -73,32 +79,52 @@ impl<'input> State<'input> {
         Some(unit_ref)
     }
 
+    pub fn get_mut<'state>(&'state mut self, id: usize) -> Option<UnitMut<'state, 'input>> {
+        let unit = self.units.get_mut(id)?;
+
+        let unit_ref = match unit {
+            Unit::Function(_) => UnitMut::Function(FunctionMut::new(self, id)),
+        };
+
+        Some(unit_ref)
+    }
+
     pub fn find<'state>(&'state self, ident: Ident<'input>) -> Option<UnitRef<'state, 'input>> {
         let id = self.idents.get(&ident).copied()?;
         self.get(id)
     }
 
-    pub fn declare(&mut self, ident: Ident<'input>) {
-        if let Entry::Vacant(vacant) = self.idents.entry(ident) {
-            let id = self.units.len();
-            let function = Function { arguments: None };
-
-            vacant.insert(id);
-            self.log.push(Event::Declare(ident));
-            self.units.push(Unit::Function(function));
-        }
+    pub fn find_mut<'state>(
+        &'state mut self,
+        ident: Ident<'input>,
+    ) -> Option<UnitMut<'state, 'input>> {
+        let id = self.idents.get(&ident).copied()?;
+        self.get_mut(id)
     }
 
-    pub fn add_argument_count(&mut self, ident: Ident<'input>, argument_count: usize) {
+    pub fn declare<'state>(
+        &'state mut self,
+        ident: Ident<'input>,
+    ) -> Result<FunctionMut<'state, 'input>, UnitMut<'state, 'input>> {
         match self.idents.entry(ident) {
-            Entry::Occupied(occupied) => {
-                let unit = &mut self.units[*occupied.get()];
-                match unit {
-                    Unit::Function(function) => function.arguments = Some(argument_count),
-                }
+            Entry::Vacant(vacant) => {
+                let id = self.units.len();
+                let function = Function { arguments: None };
+
+                vacant.insert(id);
+                self.log.push(Event::Declare(ident));
+                self.units.push(Unit::Function(function));
+                Ok(FunctionMut::new(self, id))
             }
 
-            Entry::Vacant(_) => todo!(),
+            Entry::Occupied(occupied) => {
+                let id = *occupied.get();
+                #[expect(unreachable_patterns)]
+                match self.get_mut(id).unwrap() {
+                    UnitMut::Function(function) => Ok(function),
+                    unit => Err(unit),
+                }
+            }
         }
     }
 }
@@ -109,18 +135,24 @@ impl Default for State<'_> {
     }
 }
 
-impl<'input> Inspector<'input, Nodes<'input>> for State<'input> {
+impl<'input: 'comp, 'comp, F> Inspector<'comp, Nodes<'input, 'comp, F>> for State<'input>
+where
+    F: NodesMapper<'input, 'comp>,
+{
     type Checkpoint = Checkpoint;
 
-    fn on_token(&mut self, _token: &<Nodes<'input> as Input<'input>>::Token) {}
+    fn on_token(&mut self, _token: &<Nodes<'input, 'comp, F> as Input<'comp>>::Token) {}
 
-    fn on_save<'parse>(&self, _cursor: &Cursor<'input, 'parse, Nodes<'input>>) -> Self::Checkpoint {
+    fn on_save<'parse>(
+        &self,
+        _cursor: &Cursor<'comp, 'parse, Nodes<'input, 'comp, F>>,
+    ) -> Self::Checkpoint {
         self.save()
     }
 
     fn on_rewind<'parse>(
         &mut self,
-        marker: &input::Checkpoint<'input, 'parse, Nodes<'input>, Checkpoint>,
+        marker: &input::Checkpoint<'comp, 'parse, Nodes<'input, 'comp, F>, Checkpoint>,
     ) {
         self.rewind(marker.inspector())
     }

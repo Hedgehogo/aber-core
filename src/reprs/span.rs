@@ -19,6 +19,16 @@ impl Span {
     pub fn new(range: Range<usize>) -> Self {
         Self { range }
     }
+
+    /// Gets start.
+    pub fn start(&self) -> usize {
+        self.range.start
+    }
+
+    /// Gets start.
+    pub fn end(&self) -> usize {
+        self.range.end
+    }
 }
 
 impl From<Range<usize>> for Span {
@@ -70,13 +80,35 @@ impl chumsky::span::Span for Span {
 pub struct Spanned<T>(pub T, pub Span);
 
 impl<T> Spanned<T> {
+    /// Gets inner value.
+    pub fn inner(&self) -> &T {
+        &self.0
+    }
+
+    /// Gets span.
+    pub fn span(&self) -> Span {
+        self.1.clone()
+    }
+
     /// Creates a new Spanned, transforming the unit, keeping the span unchanged.
     ///
     /// # Arguments
     /// * `self` Previous unit value.
     /// * `f` Closure transforming unit.
     pub fn map<O, F: FnOnce(T) -> O>(self, f: F) -> Spanned<O> {
-        Spanned(f(self.0), self.1)
+        let Self(inner, span) = self;
+        Spanned(f(inner), span)
+    }
+
+    /// Converts from `&Spanned<T>` to `Spanned<&T>`.
+    pub fn as_ref(&self) -> Spanned<&T> {
+        let Self(inner, span) = self;
+        Spanned(inner, span.clone())
+    }
+
+    /// Converts `Spanned` to inner value.
+    pub fn into_inner(self) -> T {
+        self.0
     }
 
     /// Creates a vector containing a single element, `self`.
@@ -86,7 +118,7 @@ impl<T> Spanned<T> {
 
     /// Creates a vector containing one element, `self`, and wraps it in `Spanned`, the vector's span is the same as `self`.
     pub fn into_spanned_vec(self) -> Spanned<Vec<Self>> {
-        let span = self.1.clone();
+        let span = self.span();
         Spanned(vec![self], span)
     }
 
@@ -101,13 +133,14 @@ impl<T> Spanned<T> {
 
 impl<T: fmt::Debug> fmt::Debug for Spanned<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} @ {:?}", self.0, self.1)
+        write!(f, "{:?} @ {:?}", self.inner(), self.span())
     }
 }
 
 impl<T, S: Into<Span>> From<(T, S)> for Spanned<T> {
     fn from(value: (T, S)) -> Self {
-        Self(value.0, value.1.into())
+        let (inner, span) = value;
+        Self(inner, span.into())
     }
 }
 

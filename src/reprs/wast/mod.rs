@@ -10,14 +10,14 @@ pub mod initialization;
 pub mod list;
 pub mod negative_call;
 pub mod number;
-pub mod whitespaced;
 pub mod pair;
 pub mod raw_string;
 pub mod string;
 pub mod wast_node;
 pub mod whitespace;
+pub mod whitespaced;
 
-use super::span::{Span, Spanned, SpannedVec};
+use super::span::{IntoSpanned, Span, Spanned, SpannedVec};
 use crate::stages::syntax::{Expr, Node};
 use std::fmt;
 
@@ -63,6 +63,13 @@ impl<'input, N: Node<'input>> Wast<'input, N> {
     /// * `span` Object of the type whose type is implements `Into<Span>`.
     pub fn into_spanned_node<S: Into<Span>>(self, span: S) -> Spanned<N> {
         Spanned(self.into_node(), span.into())
+    }
+}
+
+impl<'input, N: Node<'input>> Spanned<Wast<'input, N>> {
+    pub fn into_spanned_node(self) -> Spanned<N> {
+        let Spanned(wast, span) = self;
+        N::from_wast(wast).into_spanned(span)
     }
 }
 

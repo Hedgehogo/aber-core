@@ -39,7 +39,7 @@ where
         .then_ignore(semicolon)
         .map(|(left, right)| match right {
             Some(right) => {
-                let span = left.1.range.start..right.1.range.end;
+                let span = left.span().start()..right.span().end();
                 let assign = Assign::new(left, right);
                 Stmt::Assign(assign).into_spanned(span)
             }

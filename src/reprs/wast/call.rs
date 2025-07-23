@@ -1,7 +1,6 @@
 //! Module that provides types to describe the syntactic construct *call*.
-
-use super::super::Spanned;
-use super::{List, whitespaced::Whitespaced};
+use super::super::span::{IntoSpanned, Spanned};
+use super::{whitespaced::Whitespaced, List, Wast};
 use crate::stages::syntax::Expr;
 use std::fmt;
 
@@ -40,8 +39,9 @@ impl<'input> Ident<'input> {
 }
 
 impl<'input> Spanned<Ident<'input>> {
-    pub fn into_call<X: Expr<'input>>(self) -> Call<'input, X> {
-        Call::new(self, None)
+    pub fn into_spanned_call<X: Expr<'input>>(self) -> Spanned<Call<'input, X>> {
+        let span = self.span();
+        Call::new(self, None).into_spanned(span)
     }
 }
 
@@ -64,6 +64,13 @@ impl<'input, X: Expr<'input>> Call<'input, X> {
     /// Creates a new `Call`.
     pub fn new(ident: Spanned<Ident<'input>>, generics: Option<Generics<'input, X>>) -> Self {
         Self { ident, generics }
+    }
+}
+
+impl<'input, X: Expr<'input>> Spanned<Call<'input, X>> {
+    pub fn into_spanned_wast(self) -> Spanned<Wast<'input, X::Node>> {
+        let Spanned(call, span) = self;
+        Wast::Call(call).into_spanned(span)
     }
 }
 

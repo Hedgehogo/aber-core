@@ -1,5 +1,12 @@
-use super::super::state::{State, unit_ref::{UnitRef, FunctionRef}};
-use super::super::super::{CompNode, Spanned};
+use super::super::super::{
+    span::{IntoSpanned, Spanned},
+    CompNode,
+};
+use super::super::state::{
+    unit::function::{FunctionMut, FunctionRef},
+    State,
+};
+use super::Hir;
 
 /// Type that describes the *call* construct from MIR.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -14,12 +21,20 @@ impl<'input> Call<'input> {
     }
 
     pub fn function<'state>(&self, state: &'state State<'input>) -> FunctionRef<'state, 'input> {
-        let unit_ref = state.get(self.id).expect("Unit must exist");
-        
-        #[expect(unreachable_patterns)]
-        match unit_ref {
-            UnitRef::Function(i) => i,
-            _ => panic!("Unit was supposed to be a function"),
-        }
+        FunctionRef::new(state, self.id)
+    }
+
+    pub fn function_mut<'state>(
+        &self,
+        state: &'state mut State<'input>,
+    ) -> FunctionMut<'state, 'input> {
+        FunctionMut::new(state, self.id)
+    }
+}
+
+impl<'input> Spanned<Call<'input>> {
+    pub fn into_spanned_hir(self) -> Spanned<Hir<'input>> {
+        let Spanned(call, span) = self;
+        Hir::Call(call).into_spanned(span)
     }
 }
