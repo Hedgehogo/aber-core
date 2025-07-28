@@ -7,10 +7,11 @@ use chumsky::{
     inspector::Inspector,
 };
 use std::collections::hash_map::{Entry, HashMap};
-use unit::{function::Function, Unit};
+use unit::{function::Function, value::Value, Unit};
 
 pub use unit::{
     function::{FunctionMut, FunctionRef},
+    value::{ValueMut, ValueRef},
     UnitMut, UnitRef,
 };
 
@@ -18,6 +19,8 @@ pub use unit::{
 #[non_exhaustive]
 enum Event<'input> {
     Declare(Ident<'input>),
+    AddArgCount(usize),
+    SetValue(usize),
 }
 
 pub struct State<'input> {
@@ -48,14 +51,31 @@ impl<'input> State<'input> {
     }
 
     pub fn rewind(&mut self, marker: &Checkpoint) {
-        let (_, rest) = self.log.split_at(marker.log_len);
+        let log = std::mem::take(&mut self.log);
+        let (_, rest) = log.split_at(marker.log_len);
         for event in rest.iter().rev() {
             match event {
                 Event::Declare(ident) => {
                     self.idents.remove(ident);
                 }
+
+                Event::AddArgCount(id) => {
+                    let unit = self.get_mut(*id).unwrap();
+                    if let UnitMut::Function(mut function) = unit {
+                        function.rewind_arg_count()
+                    }
+                }
+
+                Event::SetValue(id) => {
+                    let unit = self.get_mut(*id).unwrap();
+                    if let UnitMut::Value(mut value) = unit {
+                        value.rewind_set()
+                    }
+                }
             }
         }
+
+        self.log = log;
 
         self.units.truncate(marker.units_len);
         self.log.truncate(marker.log_len);
@@ -74,6 +94,7 @@ impl<'input> State<'input> {
 
         let unit_ref = match unit {
             Unit::Function(_) => UnitRef::Function(FunctionRef::new(self, id)),
+            Unit::Value(_) => UnitRef::Value(ValueRef::new(self, id)),
         };
 
         Some(unit_ref)
@@ -84,6 +105,7 @@ impl<'input> State<'input> {
 
         let unit_ref = match unit {
             Unit::Function(_) => UnitMut::Function(FunctionMut::new(self, id)),
+            Unit::Value(_) => UnitMut::Value(ValueMut::new(self, id)),
         };
 
         Some(unit_ref)
@@ -102,30 +124,62 @@ impl<'input> State<'input> {
         self.get_mut(id)
     }
 
-    pub fn declare<'state>(
+    fn declare_unit<'state, T, U, F, G>(
         &'state mut self,
         ident: Ident<'input>,
-    ) -> Result<FunctionMut<'state, 'input>, UnitMut<'state, 'input>> {
+        unit: U,
+        unit_mut: F,
+        maybe_unit_mut: G,
+    ) -> Result<T, UnitMut<'state, 'input>>
+    where
+        U: FnOnce() -> Unit,
+        F: FnOnce(&'state mut Self, usize) -> T,
+        G: FnOnce(UnitMut<'state, 'input>) -> Result<T, UnitMut<'state, 'input>>,
+    {
         match self.idents.entry(ident) {
             Entry::Vacant(vacant) => {
                 let id = self.units.len();
-                let function = Function { arguments: None };
-
                 vacant.insert(id);
                 self.log.push(Event::Declare(ident));
-                self.units.push(Unit::Function(function));
-                Ok(FunctionMut::new(self, id))
+                self.units.push(unit());
+                Ok(unit_mut(self, id))
             }
 
             Entry::Occupied(occupied) => {
                 let id = *occupied.get();
-                #[expect(unreachable_patterns)]
-                match self.get_mut(id).unwrap() {
-                    UnitMut::Function(function) => Ok(function),
-                    unit => Err(unit),
-                }
+                maybe_unit_mut(self.get_mut(id).unwrap())
             }
         }
+    }
+
+    pub fn declare_value<'state>(
+        &'state mut self,
+        ident: Ident<'input>,
+    ) -> Result<ValueMut<'state, 'input>, UnitMut<'state, 'input>> {
+        self.declare_unit(
+            ident,
+            || Unit::Value(Value::default()),
+            ValueMut::new,
+            |unit| match unit {
+                UnitMut::Value(value) => Ok(value),
+                unit => Err(unit),
+            },
+        )
+    }
+
+    pub fn declare_function<'state>(
+        &'state mut self,
+        ident: Ident<'input>,
+    ) -> Result<FunctionMut<'state, 'input>, UnitMut<'state, 'input>> {
+        self.declare_unit(
+            ident,
+            || Unit::Function(Function::default()),
+            FunctionMut::new,
+            |unit| match unit {
+                UnitMut::Function(function) => Ok(function),
+                unit => Err(unit),
+            },
+        )
     }
 }
 
