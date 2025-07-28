@@ -1,13 +1,18 @@
-use super::super::{unit::Unit, Event, State};
 use super::make_adapters;
 use std::fmt;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub(in super::super) enum FunctionEvent {
+    AddArgCount,
+}
+
 #[derive(Default)]
-pub(in super::super::super) struct Function {
+pub(in super::super) struct Function {
     pub arguments: Option<usize>,
 }
 
-make_adapters!(Function, FunctionRef, FunctionMut);
+make_adapters!(Function, FunctionRef, FunctionMut, FunctionEvent);
 
 impl<'state, 'input> FunctionRef<'state, 'input> {
     pub fn arg_count(&self) -> Option<usize> {
@@ -27,12 +32,14 @@ impl<'state, 'input> FunctionMut<'state, 'input> {
     }
 
     pub fn add_arg_count(&mut self, count: usize) {
-        self.state.log.push(Event::SetValue(self.id));
         self.unit_mut().arguments = Some(count);
+        self.log(FunctionEvent::AddArgCount);
     }
 
-    pub(in super::super::super) fn rewind_arg_count(&mut self) {
-        self.unit_mut().arguments = None;
+    pub(in super::super) fn rewind(&mut self, event: FunctionEvent) {
+        match event {
+            FunctionEvent::AddArgCount => self.unit_mut().arguments = None,
+        }
     }
 }
 

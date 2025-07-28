@@ -1,3 +1,4 @@
+pub mod event;
 pub mod unit;
 
 use super::super::wast::call::Ident;
@@ -6,6 +7,7 @@ use chumsky::{
     input::{self, Cursor, Input},
     inspector::Inspector,
 };
+use event::{Event, EventZipped, UnitEvent};
 use std::collections::hash_map::{Entry, HashMap};
 use unit::{function::Function, value::Value, Unit};
 
@@ -15,18 +17,10 @@ pub use unit::{
     UnitMut, UnitRef,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[non_exhaustive]
-enum Event<'input> {
-    Declare(Ident<'input>),
-    AddArgCount(usize),
-    SetValue(usize),
-}
-
 pub struct State<'input> {
     units: Vec<Unit>,
     idents: HashMap<Ident<'input>, usize>,
-    log: Vec<Event<'input>>,
+    log: Vec<EventZipped<'input>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,23 +47,22 @@ impl<'input> State<'input> {
     pub fn rewind(&mut self, marker: &Checkpoint) {
         let log = std::mem::take(&mut self.log);
         let (_, rest) = log.split_at(marker.log_len);
-        for event in rest.iter().rev() {
-            match event {
+        for zipped in rest.iter().rev() {
+            match zipped.into_event() {
                 Event::Declare(ident) => {
-                    self.idents.remove(ident);
+                    self.idents.remove(&ident);
                 }
 
-                Event::AddArgCount(id) => {
-                    let unit = self.get_mut(*id).unwrap();
-                    if let UnitMut::Function(mut function) = unit {
-                        function.rewind_arg_count()
-                    }
-                }
+                Event::Unit(id, event) => {
+                    let unit = self.get_mut(id).unwrap();
+                    match (unit, event) {
+                        (UnitMut::Value(mut unit), UnitEvent::Value(event)) => unit.rewind(event),
 
-                Event::SetValue(id) => {
-                    let unit = self.get_mut(*id).unwrap();
-                    if let UnitMut::Value(mut value) = unit {
-                        value.rewind_set()
+                        (UnitMut::Function(mut unit), UnitEvent::Function(event)) => {
+                            unit.rewind(event)
+                        }
+
+                        _ => panic!("Kind of unit and event do not match"),
                     }
                 }
             }
@@ -140,7 +133,7 @@ impl<'input> State<'input> {
             Entry::Vacant(vacant) => {
                 let id = self.units.len();
                 vacant.insert(id);
-                self.log.push(Event::Declare(ident));
+                self.log.push(EventZipped::Declare(ident));
                 self.units.push(unit());
                 Ok(unit_mut(self, id))
             }
