@@ -1,6 +1,12 @@
 use super::super::super::wast::call::Ident;
-use super::unit::function::FunctionEvent;
-use super::unit::value::ValueEvent;
+use super::super::unit::{function::FunctionEvent, value::ValueEvent};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum UnitEvent {
+    Value(ValueEvent),
+    Function(FunctionEvent),
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
@@ -22,24 +28,6 @@ impl<'input> From<EventZipped<'input>> for Event<'input> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum UnitEvent {
-    Value(ValueEvent),
-    Function(FunctionEvent),
-}
-
-impl From<ValueEvent> for UnitEvent {
-    fn from(value: ValueEvent) -> Self {
-        UnitEvent::Value(value)
-    }
-}
-
-impl From<FunctionEvent> for UnitEvent {
-    fn from(value: FunctionEvent) -> Self {
-        UnitEvent::Function(value)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub(super) enum EventZipped<'input> {
     Declare(Ident<'input>),
@@ -48,7 +36,7 @@ pub(super) enum EventZipped<'input> {
 }
 
 impl<'input> EventZipped<'input> {
-    pub(super) fn into_event(self) -> Event<'input> {
+    pub(super) fn unzip(self) -> Event<'input> {
         self.into()
     }
 }

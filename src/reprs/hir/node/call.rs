@@ -2,9 +2,9 @@ use super::super::super::{
     span::{IntoSpanned, Spanned},
     CompNode,
 };
-use super::super::state::{
+use super::super::{
+    state::State,
     unit::function::{FunctionMut, FunctionRef},
-    State,
 };
 use super::Hir;
 
@@ -20,11 +20,16 @@ impl<'input> Call<'input> {
         Self { id, args }
     }
 
-    pub fn function<'state>(&self, state: &'state State<'input>) -> FunctionRef<'state, 'input> {
+    #[expect(dead_code)]
+    pub(crate) fn function<'state>(
+        &self,
+        state: &'state State<'input>,
+    ) -> FunctionRef<'state, 'input> {
         FunctionRef::new(state, self.id)
     }
 
-    pub fn function_mut<'state>(
+    #[expect(dead_code)]
+    pub(crate) fn function_mut<'state>(
         &self,
         state: &'state mut State<'input>,
     ) -> FunctionMut<'state, 'input> {

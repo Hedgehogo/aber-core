@@ -1,18 +1,20 @@
-use super::make_adapters;
+use super::{Unit, UnitRef, UnitMut, UnitConv, UnitEvent, impl_unit_conv};
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[non_exhaustive]
-pub(in super::super) enum FunctionEvent {
-    AddArgCount,
-}
-
 #[derive(Default)]
-pub(in super::super) struct Function {
+pub struct Function {
     pub arguments: Option<usize>,
 }
 
-make_adapters!(Function, FunctionRef, FunctionMut, FunctionEvent);
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum FunctionEvent {
+    AddArgCount,
+}
+
+impl_unit_conv!(Function, FunctionEvent);
+
+pub type FunctionRef<'state, 'input> = UnitRef<'state, 'input, Function>;
 
 impl<'state, 'input> FunctionRef<'state, 'input> {
     pub fn arg_count(&self) -> Option<usize> {
@@ -22,9 +24,11 @@ impl<'state, 'input> FunctionRef<'state, 'input> {
 
 impl<'state, 'input> fmt::Debug for FunctionRef<'state, 'input> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FunctionRef").field("id", &self.id).finish()
+        f.debug_struct("FunctionRef").field("id", &self.id()).finish()
     }
 }
+
+pub type FunctionMut<'state, 'input> = UnitMut<'state, 'input, Function>;
 
 impl<'state, 'input> FunctionMut<'state, 'input> {
     pub fn arg_count(&self) -> Option<usize> {
@@ -36,7 +40,7 @@ impl<'state, 'input> FunctionMut<'state, 'input> {
         self.log(FunctionEvent::AddArgCount);
     }
 
-    pub(in super::super) fn rewind(&mut self, event: FunctionEvent) {
+    pub(super) fn rewind(&mut self, event: FunctionEvent) {
         match event {
             FunctionEvent::AddArgCount => self.unit_mut().arguments = None,
         }
@@ -45,6 +49,6 @@ impl<'state, 'input> FunctionMut<'state, 'input> {
 
 impl<'state, 'input> fmt::Debug for FunctionMut<'state, 'input> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FunctionMut").field("id", &self.id).finish()
+        f.debug_struct("FunctionMut").field("id", &self.id()).finish()
     }
 }

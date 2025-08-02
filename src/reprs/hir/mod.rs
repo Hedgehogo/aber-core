@@ -3,7 +3,9 @@
 pub mod input;
 pub mod node;
 pub mod state;
+pub mod unit;
 
-pub use node::Hir;
 pub use input::{nodes, Nodes, NodesMapper};
-pub use state::{FunctionMut, FunctionRef, State, UnitMut, UnitRef};
+pub use node::Hir;
+pub use state::State;
+pub use unit::{Function, Value};

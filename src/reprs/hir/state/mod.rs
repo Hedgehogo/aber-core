@@ -1,21 +1,16 @@
 pub mod event;
-pub mod unit;
 
 use super::super::wast::call::Ident;
 use super::input::{Nodes, NodesMapper};
+use super::unit::{unit_mut::UnitMut, unit_ref::UnitRef, Unit, UnitConv};
 use chumsky::{
     input::{self, Cursor, Input},
     inspector::Inspector,
 };
-use event::{Event, EventZipped, UnitEvent};
+use event::{Event, EventZipped};
 use std::collections::hash_map::{Entry, HashMap};
-use unit::{function::Function, value::Value, Unit};
 
-pub use unit::{
-    function::{FunctionMut, FunctionRef},
-    value::{ValueMut, ValueRef},
-    UnitMut, UnitRef,
-};
+pub use event::UnitEvent;
 
 pub struct State<'input> {
     units: Vec<Unit>,
@@ -47,22 +42,15 @@ impl<'input> State<'input> {
     pub fn rewind(&mut self, marker: &Checkpoint) {
         let log = std::mem::take(&mut self.log);
         let (_, rest) = log.split_at(marker.log_len);
-        for zipped in rest.iter().rev() {
-            match zipped.into_event() {
+        for event in rest.iter().rev() {
+            match event.unzip() {
                 Event::Declare(ident) => {
                     self.idents.remove(&ident);
                 }
 
                 Event::Unit(id, event) => {
-                    let unit = self.get_mut(id).unwrap();
-                    match (unit, event) {
-                        (UnitMut::Value(mut unit), UnitEvent::Value(event)) => unit.rewind(event),
-
-                        (UnitMut::Function(mut unit), UnitEvent::Function(event)) => {
-                            unit.rewind(event)
-                        }
-
-                        _ => panic!("Kind of unit and event do not match"),
+                    if id <= marker.units_len {
+                        UnitMut::<Unit>::new(self, id).rewind(event);
                     }
                 }
             }
@@ -74,37 +62,18 @@ impl<'input> State<'input> {
         self.log.truncate(marker.log_len);
     }
 
-    fn get_unit(&self, id: usize) -> Option<&Unit> {
-        self.units.get(id)
+    pub fn get<'state>(&'state self, id: usize) -> Option<UnitRef<'state, 'input, Unit>> {
+        Some(UnitRef::new(self, id))
     }
 
-    fn get_unit_mut(&mut self, id: usize) -> Option<&mut Unit> {
-        self.units.get_mut(id)
+    pub fn get_mut<'state>(&'state mut self, id: usize) -> Option<UnitMut<'state, 'input, Unit>> {
+        Some(UnitMut::new(self, id))
     }
 
-    pub fn get<'state>(&'state self, id: usize) -> Option<UnitRef<'state, 'input>> {
-        let unit = self.units.get(id)?;
-
-        let unit_ref = match unit {
-            Unit::Function(_) => UnitRef::Function(FunctionRef::new(self, id)),
-            Unit::Value(_) => UnitRef::Value(ValueRef::new(self, id)),
-        };
-
-        Some(unit_ref)
-    }
-
-    pub fn get_mut<'state>(&'state mut self, id: usize) -> Option<UnitMut<'state, 'input>> {
-        let unit = self.units.get_mut(id)?;
-
-        let unit_ref = match unit {
-            Unit::Function(_) => UnitMut::Function(FunctionMut::new(self, id)),
-            Unit::Value(_) => UnitMut::Value(ValueMut::new(self, id)),
-        };
-
-        Some(unit_ref)
-    }
-
-    pub fn find<'state>(&'state self, ident: Ident<'input>) -> Option<UnitRef<'state, 'input>> {
+    pub fn find<'state>(
+        &'state self,
+        ident: Ident<'input>,
+    ) -> Option<UnitRef<'state, 'input, Unit>> {
         let id = self.idents.get(&ident).copied()?;
         self.get(id)
     }
@@ -112,67 +81,44 @@ impl<'input> State<'input> {
     pub fn find_mut<'state>(
         &'state mut self,
         ident: Ident<'input>,
-    ) -> Option<UnitMut<'state, 'input>> {
+    ) -> Option<UnitMut<'state, 'input, Unit>> {
         let id = self.idents.get(&ident).copied()?;
         self.get_mut(id)
     }
 
-    fn declare_unit<'state, T, U, F, G>(
+    pub fn declare<'state, T: UnitConv + Default>(
         &'state mut self,
         ident: Ident<'input>,
-        unit: U,
-        unit_mut: F,
-        maybe_unit_mut: G,
-    ) -> Result<T, UnitMut<'state, 'input>>
-    where
-        U: FnOnce() -> Unit,
-        F: FnOnce(&'state mut Self, usize) -> T,
-        G: FnOnce(UnitMut<'state, 'input>) -> Result<T, UnitMut<'state, 'input>>,
-    {
+    ) -> Result<UnitMut<'state, 'input, T>, UnitMut<'state, 'input, Unit>> {
         match self.idents.entry(ident) {
             Entry::Vacant(vacant) => {
                 let id = self.units.len();
                 vacant.insert(id);
                 self.log.push(EventZipped::Declare(ident));
-                self.units.push(unit());
-                Ok(unit_mut(self, id))
+                self.units.push(T::default().into());
+                Ok(UnitMut::new(self, id))
             }
 
             Entry::Occupied(occupied) => {
                 let id = *occupied.get();
-                maybe_unit_mut(self.get_mut(id).unwrap())
+                match T::from_unit_mut(&mut self.units[id]) {
+                    Ok(_) => Ok(UnitMut::new(self, id)),
+                    Err(_) => Err(UnitMut::new(self, id)),
+                }
             }
         }
     }
 
-    pub fn declare_value<'state>(
-        &'state mut self,
-        ident: Ident<'input>,
-    ) -> Result<ValueMut<'state, 'input>, UnitMut<'state, 'input>> {
-        self.declare_unit(
-            ident,
-            || Unit::Value(Value::default()),
-            ValueMut::new,
-            |unit| match unit {
-                UnitMut::Value(value) => Ok(value),
-                unit => Err(unit),
-            },
-        )
+    pub(super) fn get_unit(&self, id: usize) -> Option<&Unit> {
+        self.units.get(id)
     }
 
-    pub fn declare_function<'state>(
-        &'state mut self,
-        ident: Ident<'input>,
-    ) -> Result<FunctionMut<'state, 'input>, UnitMut<'state, 'input>> {
-        self.declare_unit(
-            ident,
-            || Unit::Function(Function::default()),
-            FunctionMut::new,
-            |unit| match unit {
-                UnitMut::Function(function) => Ok(function),
-                unit => Err(unit),
-            },
-        )
+    pub(super) fn get_unit_mut(&mut self, id: usize) -> Option<&mut Unit> {
+        self.units.get_mut(id)
+    }
+
+    pub(super) fn log(&mut self, id: usize, event: UnitEvent) {
+        self.log.push(Event::Unit(id, event).into());
     }
 }
 
