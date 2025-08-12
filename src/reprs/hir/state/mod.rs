@@ -1,7 +1,8 @@
 pub mod event;
+pub mod with_state;
 
 use super::super::wast::call::Ident;
-use super::input::{Nodes, NodesMapper};
+use super::input::Nodes;
 use super::unit::{unit_mut::UnitMut, unit_ref::UnitRef, Unit, UnitConv};
 use chumsky::{
     input::{self, Cursor, Input},
@@ -11,6 +12,7 @@ use event::{Event, EventZipped};
 use std::collections::hash_map::{Entry, HashMap};
 
 pub use event::UnitEvent;
+pub use with_state::WithState;
 
 pub struct State<'input> {
     units: Vec<Unit>,
@@ -32,6 +34,37 @@ impl<'input> State<'input> {
         Self { units, idents, log }
     }
 
+    pub fn standart() -> Self {
+        use super::unit::function::{impls, Function, Time};
+
+        let ident = |s| Ident::from_repr_unchecked(s);
+
+        let mut state = Self::new();
+
+        state
+            .declare::<Function>(ident("one"))
+            .unwrap()
+            .add_impl(impls::OneI32.into());
+        state
+            .declare::<Function>(ident("same"))
+            .unwrap()
+            .add_impl(impls::SameI32.into());
+        state
+            .declare::<Function>(ident("add"))
+            .unwrap()
+            .add_impl(impls::AddI32.into());
+        state
+            .declare::<Function>(ident("println"))
+            .unwrap()
+            .add_impl(impls::PrintlnI32.into());
+
+        let mut run = state.declare::<Function>(ident("run")).unwrap();
+        run.add_impl(impls::RunI32.into());
+        run.specify_time(Time::Runtime);
+
+        state
+    }
+
     pub fn save(&self) -> Checkpoint {
         Checkpoint {
             units_len: self.units.len(),
@@ -48,6 +81,8 @@ impl<'input> State<'input> {
                     self.idents.remove(&ident);
                 }
 
+                Event::Push(_) => {}
+
                 Event::Unit(id, event) => {
                     if id <= marker.units_len {
                         UnitMut::<Unit>::new(self, id).rewind(event);
@@ -62,18 +97,18 @@ impl<'input> State<'input> {
         self.log.truncate(marker.log_len);
     }
 
-    pub fn get<'state>(&'state self, id: usize) -> Option<UnitRef<'state, 'input, Unit>> {
-        Some(UnitRef::new(self, id))
+    pub fn get<'state>(&'state self, id: usize) -> Option<UnitRef<'input, 'state, Unit>> {
+        (self.units.len() > id).then(|| UnitRef::new(self, id))
     }
 
-    pub fn get_mut<'state>(&'state mut self, id: usize) -> Option<UnitMut<'state, 'input, Unit>> {
-        Some(UnitMut::new(self, id))
+    pub fn get_mut<'state>(&'state mut self, id: usize) -> Option<UnitMut<'input, 'state, Unit>> {
+        (self.units.len() > id).then(|| UnitMut::new(self, id))
     }
 
     pub fn find<'state>(
         &'state self,
         ident: Ident<'input>,
-    ) -> Option<UnitRef<'state, 'input, Unit>> {
+    ) -> Option<UnitRef<'input, 'state, Unit>> {
         let id = self.idents.get(&ident).copied()?;
         self.get(id)
     }
@@ -81,7 +116,7 @@ impl<'input> State<'input> {
     pub fn find_mut<'state>(
         &'state mut self,
         ident: Ident<'input>,
-    ) -> Option<UnitMut<'state, 'input, Unit>> {
+    ) -> Option<UnitMut<'input, 'state, Unit>> {
         let id = self.idents.get(&ident).copied()?;
         self.get_mut(id)
     }
@@ -89,7 +124,7 @@ impl<'input> State<'input> {
     pub fn declare<'state, T: UnitConv + Default>(
         &'state mut self,
         ident: Ident<'input>,
-    ) -> Result<UnitMut<'state, 'input, T>, UnitMut<'state, 'input, Unit>> {
+    ) -> Result<UnitMut<'input, 'state, T>, UnitMut<'input, 'state, Unit>> {
         match self.idents.entry(ident) {
             Entry::Vacant(vacant) => {
                 let id = self.units.len();
@@ -120,6 +155,15 @@ impl<'input> State<'input> {
     pub(super) fn log(&mut self, id: usize, event: UnitEvent) {
         self.log.push(Event::Unit(id, event).into());
     }
+
+    pub(super) fn push<'state, T: UnitConv + Default>(
+        &'state mut self,
+    ) -> UnitMut<'input, 'state, T> {
+        let id = self.units.len();
+        self.units.push(T::default().into());
+        self.log.push(Event::Push(id).into());
+        UnitMut::new(self, id)
+    }
 }
 
 impl Default for State<'_> {
@@ -128,24 +172,21 @@ impl Default for State<'_> {
     }
 }
 
-impl<'input: 'comp, 'comp, F> Inspector<'comp, Nodes<'input, 'comp, F>> for State<'input>
-where
-    F: NodesMapper<'input, 'comp>,
-{
+impl<'input: 'comp, 'comp> Inspector<'comp, Nodes<'input, 'comp>> for State<'input> {
     type Checkpoint = Checkpoint;
 
-    fn on_token(&mut self, _token: &<Nodes<'input, 'comp, F> as Input<'comp>>::Token) {}
+    fn on_token(&mut self, _token: &<Nodes<'input, 'comp> as Input<'comp>>::Token) {}
 
     fn on_save<'parse>(
         &self,
-        _cursor: &Cursor<'comp, 'parse, Nodes<'input, 'comp, F>>,
+        _cursor: &Cursor<'comp, 'parse, Nodes<'input, 'comp>>,
     ) -> Self::Checkpoint {
         self.save()
     }
 
     fn on_rewind<'parse>(
         &mut self,
-        marker: &input::Checkpoint<'comp, 'parse, Nodes<'input, 'comp, F>, Checkpoint>,
+        marker: &input::Checkpoint<'comp, 'parse, Nodes<'input, 'comp>, Checkpoint>,
     ) {
         self.rewind(marker.inspector())
     }

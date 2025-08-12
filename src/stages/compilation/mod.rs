@@ -1,66 +1,60 @@
 pub mod call;
 
 use crate::reprs::{
-    hir::{Nodes, NodesMapper, State},
+    hir::{Nodes, State},
     span::{Span, Spanned},
     CompExpr, CompNode, Hir,
 };
 use call::call;
 use chumsky::{error::Cheap, extra::ParserExtra, prelude::*};
 
-pub trait CompParser<'input, 'comp, O, E, F>: Parser<'comp, Nodes<'input, 'comp, F>, O, E>
+pub trait CompParser<'input, 'comp, O, E>: Parser<'comp, Nodes<'input, 'comp>, O, E>
 where
     'input: 'comp,
-    E: CompParserExtra<'input, 'comp, F>,
+    E: CompParserExtra<'input, 'comp>,
     E::Context: Clone,
-    F: NodesMapper<'input, 'comp>,
 {
 }
 
-impl<'input, 'comp, T, O, E, F> CompParser<'input, 'comp, O, E, F> for T
+impl<'input, 'comp, T, O, E> CompParser<'input, 'comp, O, E> for T
 where
     'input: 'comp,
-    T: Parser<'comp, Nodes<'input, 'comp, F>, O, E>,
-    E: CompParserExtra<'input, 'comp, F>,
+    T: Parser<'comp, Nodes<'input, 'comp>, O, E>,
+    E: CompParserExtra<'input, 'comp>,
     E::Context: Clone,
-    F: NodesMapper<'input, 'comp>,
 {
 }
 
-pub trait CompParserExtra<'input, 'comp, F>:
-    ParserExtra<'comp, Nodes<'input, 'comp, F>, State = State<'input>, Error = Cheap<Span>>
+pub trait CompParserExtra<'input, 'comp>:
+    ParserExtra<'comp, Nodes<'input, 'comp>, State = State<'input>, Error = Cheap<Span>>
 where
     'input: 'comp,
     Self::Context: Clone,
-    F: NodesMapper<'input, 'comp>,
 {
 }
 
-impl<'input, 'comp, F, T> CompParserExtra<'input, 'comp, F> for T
+impl<'input, 'comp, T> CompParserExtra<'input, 'comp> for T
 where
     'input: 'comp,
-    T: ParserExtra<'comp, Nodes<'input, 'comp, F>, State = State<'input>, Error = Cheap<Span>>,
+    T: ParserExtra<'comp, Nodes<'input, 'comp>, State = State<'input>, Error = Cheap<Span>>,
     T::Context: Clone,
-    F: NodesMapper<'input, 'comp>,
 {
 }
 
-pub fn fact<'input, 'comp, E, F>() -> impl CompParser<'input, 'comp, CompNode<'input>, E, F> + Clone
+pub fn fact<'input, 'comp, E>() -> impl CompParser<'input, 'comp, CompNode<'input>, E> + Clone
 where
     'input: 'comp,
-    E: CompParserExtra<'input, 'comp, F>,
+    E: CompParserExtra<'input, 'comp>,
     E::Context: Clone,
-    F: NodesMapper<'input, 'comp>,
 {
     recursive(|fact| call(fact).map(|call| CompNode::Hir(Hir::Call(call))))
 }
 
-pub fn expr<'input, 'comp, E, F>() -> impl CompParser<'input, 'comp, CompExpr<'input>, E, F> + Clone
+pub fn expr<'input, 'comp, E>() -> impl CompParser<'input, 'comp, CompExpr<'input>, E> + Clone
 where
     'input: 'comp,
-    E: CompParserExtra<'input, 'comp, F>,
+    E: CompParserExtra<'input, 'comp>,
     E::Context: Clone,
-    F: NodesMapper<'input, 'comp>,
 {
     fact()
         .map_with(|fact, extra| Spanned(fact, extra.span()))

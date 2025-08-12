@@ -10,6 +10,15 @@ pub enum CompNode<'input> {
     Hir(Hir<'input>),
 }
 
+impl<'input> CompNode<'input> {
+    pub fn hir(&self) -> Option<&Hir<'input>> {
+        match self {
+            Self::Hir(hir) => Some(hir),
+            _ => None,
+        }
+    }
+}
+
 impl<'input> Node<'input> for CompNode<'input> {
     type Expr = CompExpr<'input>;
     type String = String;

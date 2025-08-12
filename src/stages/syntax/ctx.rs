@@ -18,7 +18,7 @@ impl DocCtx {
     }
 
     /// Creates a context for parsing a block of code inside a doc comment.
-    /// 
+    ///
     /// # Arguments
     /// - `comment_kind` Kind of comment inside which the code block is located.
     pub fn deeper(&self, _comment_kind: CommentKind) -> Self {
@@ -42,7 +42,7 @@ pub struct Ctx<C> {
 
 impl<C> Ctx<C> {
     /// Creates `Ctx`.
-    /// 
+    ///
     /// # Arguments
     /// - `doc_ctx` Context for parsing doc comments.
     /// - `additional` Additional context that may be needed in local parsers.
@@ -54,7 +54,7 @@ impl<C> Ctx<C> {
     }
 
     /// Creates a context for parsing a block of code inside a doc comment.
-    /// 
+    ///
     /// # Arguments
     /// - `comment_kind` Kind of comment inside which the code block is located.
     pub fn deeper(self, comment_kind: CommentKind) -> Self {

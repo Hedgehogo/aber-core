@@ -1,6 +1,6 @@
 //! Module that provides [`ExprCall`].
 
-use super::{call::Call, Spanned, whitespaced::Whitespaced};
+use super::{call::Call, whitespaced::Whitespaced, Spanned};
 use crate::stages::syntax::Expr;
 use std::fmt;
 
@@ -17,14 +17,8 @@ pub struct ExprCall<'input, X: Expr<'input>> {
 
 impl<'input, X: Expr<'input>> ExprCall<'input, X> {
     /// Creates a new `ExprCall`.
-    pub fn new(
-        expr: Spanned<X>,
-        call: Whitespaced<'input, X, Call<'input, X>>,
-    ) -> Self {
-        Self {
-            expr,
-            call,
-        }
+    pub fn new(expr: Spanned<X>, call: Whitespaced<'input, X, Call<'input, X>>) -> Self {
+        Self { expr, call }
     }
 }
 
@@ -47,10 +41,7 @@ where
     X::Whitespace: Clone,
 {
     fn clone(&self) -> Self {
-        Self::new(
-            self.expr.clone(),
-            self.call.clone(),
-        )
+        Self::new(self.expr.clone(), self.call.clone())
     }
 }
 

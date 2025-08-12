@@ -1,20 +1,20 @@
 use super::super::State;
-use super::{Unit, UnitConv, Function, Value};
+use super::{Function, Unit, UnitConv, Value};
 use std::{fmt, marker::PhantomData};
 
 #[derive(Clone, Copy)]
-struct UnitRefInner<'state, 'input> {
+struct UnitRefInner<'input, 'state> {
     state: &'state State<'input>,
     id: usize,
 }
 
 #[repr(transparent)]
-pub struct UnitRef<'state, 'input, T: UnitConv> {
-    inner: UnitRefInner<'state, 'input>,
+pub struct UnitRef<'input, 'state, T: UnitConv> {
+    inner: UnitRefInner<'input, 'state>,
     phantom: PhantomData<T>,
 }
 
-impl<'state, 'input, T: UnitConv> UnitRef<'state, 'input, T> {
+impl<'input, 'state, T: UnitConv> UnitRef<'input, 'state, T> {
     pub(in super::super) fn new(state: &'state State<'input>, id: usize) -> Self {
         Self {
             inner: UnitRefInner { state, id },
@@ -22,11 +22,15 @@ impl<'state, 'input, T: UnitConv> UnitRef<'state, 'input, T> {
         }
     }
 
+    pub fn state(&self) -> &'state State<'input> {
+        self.inner.state
+    }
+
     pub fn id(&self) -> usize {
         self.inner.id
     }
 
-    pub fn upcast(self) -> UnitRef<'state, 'input, Unit> {
+    pub fn upcast(self) -> UnitRef<'input, 'state, Unit> {
         unsafe {
             // It's safe because `UnitRef<T>` is `#[repr(transparent)]`
             let inner: UnitRefInner = std::mem::transmute(self);
@@ -47,27 +51,27 @@ impl<'state, 'input, T: UnitConv> UnitRef<'state, 'input, T> {
     }
 }
 
-impl<'state, 'input, T: UnitConv> Clone for UnitRef<'state, 'input, T> {
+impl<'input, 'state, T: UnitConv> Clone for UnitRef<'input, 'state, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'state, 'input, T: UnitConv> Copy for UnitRef<'state, 'input, T> {}
+impl<'input, 'state, T: UnitConv> Copy for UnitRef<'input, 'state, T> {}
 
-impl<'state, 'input, T: UnitConv> PartialEq for UnitRef<'state, 'input, T> {
+impl<'input, 'state, T: UnitConv> PartialEq for UnitRef<'input, 'state, T> {
     fn eq(&self, other: &Self) -> bool {
         self.inner.id == other.inner.id
     }
 }
 
-impl<'state, 'input, T: UnitConv> Eq for UnitRef<'state, 'input, T> {}
+impl<'input, 'state, T: UnitConv> Eq for UnitRef<'input, 'state, T> {}
 
-impl<'state, 'input, T> AsRef<UnitRef<'state, 'input, Unit>> for UnitRef<'state, 'input, T>
+impl<'input, 'state, T> AsRef<UnitRef<'input, 'state, Unit>> for UnitRef<'input, 'state, T>
 where
     T: UnitConv,
 {
-    fn as_ref(&self) -> &UnitRef<'state, 'input, Unit> {
+    fn as_ref(&self) -> &UnitRef<'input, 'state, Unit> {
         let ptr = self as *const UnitRef<T>;
 
         unsafe {
@@ -80,11 +84,11 @@ where
     }
 }
 
-impl<'state, 'input, T> AsMut<UnitRef<'state, 'input, Unit>> for UnitRef<'state, 'input, T>
+impl<'input, 'state, T> AsMut<UnitRef<'input, 'state, Unit>> for UnitRef<'input, 'state, T>
 where
     T: UnitConv,
 {
-    fn as_mut(&mut self) -> &mut UnitRef<'state, 'input, Unit> {
+    fn as_mut(&mut self) -> &mut UnitRef<'input, 'state, Unit> {
         let ptr = self as *mut UnitRef<T>;
 
         unsafe {
@@ -97,8 +101,8 @@ where
     }
 }
 
-impl<'state, 'input> UnitRef<'state, 'input, Unit> {
-    pub fn downcast<T: UnitConv>(self) -> Option<UnitRef<'state, 'input, T>> {
+impl<'input, 'state> UnitRef<'input, 'state, Unit> {
+    pub fn downcast<T: UnitConv>(self) -> Option<UnitRef<'input, 'state, T>> {
         T::from_unit_ref(self.unit()).map(|_| unsafe {
             // It's safe because `UnitRef<Unit>` is `#[repr(transparent)]`
             let inner: UnitRefInner = std::mem::transmute(self);
@@ -109,7 +113,7 @@ impl<'state, 'input> UnitRef<'state, 'input, Unit> {
     }
 }
 
-impl<'state, 'input> fmt::Debug for UnitRef<'state, 'input, Unit> {
+impl<'input, 'state> fmt::Debug for UnitRef<'input, 'state, Unit> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.unit() {
             Unit::Value(_) => write!(f, "Value({:?})", self.downcast::<Value>().unwrap()),

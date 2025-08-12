@@ -1,6 +1,6 @@
 //! Module that provides types for describing expressions
 
-use super::{Spanned, CompNode};
+use super::{CompNode, Spanned};
 
 /// Type that describes an expression.
 #[derive(Debug, Clone, PartialEq, Eq)]

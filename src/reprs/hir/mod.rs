@@ -5,7 +5,7 @@ pub mod node;
 pub mod state;
 pub mod unit;
 
-pub use input::{nodes, Nodes, NodesMapper};
+pub use input::{nodes, Nodes};
 pub use node::Hir;
-pub use state::State;
+pub use state::{State, WithState};
 pub use unit::{Function, Value};

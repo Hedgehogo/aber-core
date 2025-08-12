@@ -1,19 +1,19 @@
-use super::super::state::{State, UnitEvent};
+use super::super::state::{State, UnitEvent, WithState};
 use super::{Function, Unit, UnitConv, Value};
 use std::{fmt, marker::PhantomData};
 
-struct UnitMutInner<'state, 'input> {
+struct UnitMutInner<'input, 'state> {
     state: &'state mut State<'input>,
     id: usize,
 }
 
 #[repr(transparent)]
-pub struct UnitMut<'state, 'input, T: UnitConv> {
-    inner: UnitMutInner<'state, 'input>,
+pub struct UnitMut<'input, 'state, T: UnitConv> {
+    inner: UnitMutInner<'input, 'state>,
     phantom: PhantomData<T>,
 }
 
-impl<'state, 'input, T: UnitConv> UnitMut<'state, 'input, T> {
+impl<'input, 'state, T: UnitConv> UnitMut<'input, 'state, T> {
     pub(in super::super) fn new(state: &'state mut State<'input>, id: usize) -> Self {
         Self {
             inner: UnitMutInner { state, id },
@@ -21,11 +21,15 @@ impl<'state, 'input, T: UnitConv> UnitMut<'state, 'input, T> {
         }
     }
 
+    pub fn state(self) -> &'state mut State<'input> {
+        self.inner.state
+    }
+
     pub fn id(&self) -> usize {
         self.inner.id
     }
 
-    pub fn upcast(self) -> UnitMut<'state, 'input, Unit> {
+    pub fn upcast(self) -> UnitMut<'input, 'state, Unit> {
         unsafe {
             // It's safe because `UnitMut<T>` is `#[repr(transparent)]`
             let inner: UnitMutInner = std::mem::transmute(self);
@@ -33,6 +37,10 @@ impl<'state, 'input, T: UnitConv> UnitMut<'state, 'input, T> {
             // It's safe because `UnitMut<Unit>` is `#[repr(transparent)]`
             std::mem::transmute::<UnitMutInner, UnitMut<Unit>>(inner)
         }
+    }
+
+    pub fn with_state(self) -> WithState<'input, 'state, usize> {
+        WithState(self.inner.state, self.inner.id)
     }
 
     pub(super) fn unit(&self) -> &T {
@@ -62,19 +70,19 @@ impl<'state, 'input, T: UnitConv> UnitMut<'state, 'input, T> {
     }
 }
 
-impl<'state, 'input, T: UnitConv> PartialEq for UnitMut<'state, 'input, T> {
+impl<'input, 'state, T: UnitConv> PartialEq for UnitMut<'input, 'state, T> {
     fn eq(&self, other: &Self) -> bool {
         self.inner.id == other.inner.id
     }
 }
 
-impl<'state, 'input, T: UnitConv> Eq for UnitMut<'state, 'input, T> {}
+impl<'input, 'state, T: UnitConv> Eq for UnitMut<'input, 'state, T> {}
 
-impl<'state, 'input, T> AsRef<UnitMut<'state, 'input, Unit>> for UnitMut<'state, 'input, T>
+impl<'input, 'state, T> AsRef<UnitMut<'input, 'state, Unit>> for UnitMut<'input, 'state, T>
 where
     T: UnitConv,
 {
-    fn as_ref(&self) -> &UnitMut<'state, 'input, Unit> {
+    fn as_ref(&self) -> &UnitMut<'input, 'state, Unit> {
         let ptr = self as *const UnitMut<T>;
 
         unsafe {
@@ -87,11 +95,11 @@ where
     }
 }
 
-impl<'state, 'input, T> AsMut<UnitMut<'state, 'input, Unit>> for UnitMut<'state, 'input, T>
+impl<'input, 'state, T> AsMut<UnitMut<'input, 'state, Unit>> for UnitMut<'input, 'state, T>
 where
     T: UnitConv,
 {
-    fn as_mut(&mut self) -> &mut UnitMut<'state, 'input, Unit> {
+    fn as_mut(&mut self) -> &mut UnitMut<'input, 'state, Unit> {
         let ptr = self as *mut UnitMut<T>;
 
         unsafe {
@@ -104,10 +112,10 @@ where
     }
 }
 
-impl<'state, 'input> UnitMut<'state, 'input, Unit> {
+impl<'input, 'state> UnitMut<'input, 'state, Unit> {
     pub fn downcast<T: UnitConv>(
         self,
-    ) -> Result<UnitMut<'state, 'input, T>, UnitMut<'state, 'input, Unit>> {
+    ) -> Result<UnitMut<'input, 'state, T>, UnitMut<'input, 'state, Unit>> {
         match T::from_unit_ref(self.unit()) {
             Some(_) => unsafe {
                 // It's safe because `UnitMut<Unit>` is `#[repr(transparent)]`
@@ -123,7 +131,7 @@ impl<'state, 'input> UnitMut<'state, 'input, Unit> {
 
     pub fn downcast_ref<T: UnitConv>(
         &self,
-    ) -> Result<&UnitMut<'state, 'input, T>, &UnitMut<'state, 'input, Unit>> {
+    ) -> Result<&UnitMut<'input, 'state, T>, &UnitMut<'input, 'state, Unit>> {
         match T::from_unit_ref(self.unit()) {
             Some(_) => {
                 let ptr = self as *const UnitMut<Unit>;
@@ -143,7 +151,7 @@ impl<'state, 'input> UnitMut<'state, 'input, Unit> {
 
     pub fn downcast_mut<T: UnitConv>(
         &mut self,
-    ) -> Result<&mut UnitMut<'state, 'input, T>, &mut UnitMut<'state, 'input, Unit>> {
+    ) -> Result<&mut UnitMut<'input, 'state, T>, &mut UnitMut<'input, 'state, Unit>> {
         match T::from_unit_ref(self.unit()) {
             Some(_) => {
                 let ptr = self as *mut UnitMut<Unit>;
@@ -169,7 +177,7 @@ impl<'state, 'input> UnitMut<'state, 'input, Unit> {
     }
 }
 
-impl<'state, 'input> fmt::Debug for UnitMut<'state, 'input, Unit> {
+impl<'input, 'state> fmt::Debug for UnitMut<'input, 'state, Unit> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.unit() {
             Unit::Value(_) => {

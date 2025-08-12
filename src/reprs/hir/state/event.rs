@@ -12,6 +12,7 @@ pub enum UnitEvent {
 #[non_exhaustive]
 pub(super) enum Event<'input> {
     Declare(Ident<'input>),
+    Push(usize),
     Unit(usize, UnitEvent),
 }
 
@@ -19,9 +20,14 @@ impl<'input> From<EventZipped<'input>> for Event<'input> {
     fn from(value: EventZipped<'input>) -> Self {
         match value {
             EventZipped::Declare(ident) => Event::Declare(ident),
+            EventZipped::Push(id) => Event::Push(id),
             EventZipped::ValueSet(id) => Event::Unit(id, ValueEvent::Set.into()),
             EventZipped::FunctionAddArgCount(id) => {
                 Event::Unit(id, FunctionEvent::AddArgCount.into())
+            }
+            EventZipped::FunctionAddImpl(id) => Event::Unit(id, FunctionEvent::AddImpl.into()),
+            EventZipped::FunctionSpecifyTime(id) => {
+                Event::Unit(id, FunctionEvent::SpecifyTime.into())
             }
         }
     }
@@ -31,8 +37,11 @@ impl<'input> From<EventZipped<'input>> for Event<'input> {
 #[non_exhaustive]
 pub(super) enum EventZipped<'input> {
     Declare(Ident<'input>),
+    Push(usize),
     ValueSet(usize),
     FunctionAddArgCount(usize),
+    FunctionAddImpl(usize),
+    FunctionSpecifyTime(usize),
 }
 
 impl<'input> EventZipped<'input> {
@@ -46,6 +55,8 @@ impl<'input> From<Event<'input>> for EventZipped<'input> {
         match value {
             Event::Declare(ident) => EventZipped::Declare(ident),
 
+            Event::Push(id) => EventZipped::Push(id),
+
             Event::Unit(id, event) => match event {
                 UnitEvent::Value(event) => match event {
                     ValueEvent::Set => EventZipped::ValueSet(id),
@@ -53,6 +64,8 @@ impl<'input> From<Event<'input>> for EventZipped<'input> {
 
                 UnitEvent::Function(event) => match event {
                     FunctionEvent::AddArgCount => EventZipped::FunctionAddArgCount(id),
+                    FunctionEvent::AddImpl => EventZipped::FunctionAddImpl(id),
+                    FunctionEvent::SpecifyTime => EventZipped::FunctionSpecifyTime(id),
                 },
             },
         }

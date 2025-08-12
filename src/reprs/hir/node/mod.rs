@@ -14,9 +14,17 @@ pub use string::String;
 /// Type that describes a weak abstract syntax tree. In this case "weak" means that not all nestings can be explicitly resolved at this stage.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Hir<'input> {
-    Constant(i32),
     Call(Call<'input>),
     Nil,
+}
+
+impl<'input> Hir<'input> {
+    pub fn call(&self) -> Option<&Call<'input>> {
+        match self {
+            Self::Call(call) => Some(call),
+            _ => None,
+        }
+    }
 }
 
 impl<'input> Spanned<Hir<'input>> {

@@ -7,7 +7,10 @@ pub struct Pair<'input> {
 }
 
 impl<'input> Pair<'input> {
-    pub fn new(left: Box<Spanned<CompNode<'input>>>, right: Box<Spanned<CompNode<'input>>>) -> Self {
+    pub fn new(
+        left: Box<Spanned<CompNode<'input>>>,
+        right: Box<Spanned<CompNode<'input>>>,
+    ) -> Self {
         Self { left, right }
     }
 }
