@@ -1,4 +1,7 @@
-use super::super::state::{State, UnitEvent, WithState};
+use super::super::{
+    state::{State, UnitEvent, WithState},
+    Id,
+};
 use super::{Function, Unit, UnitConv, Value};
 use std::{fmt, marker::PhantomData};
 
@@ -25,8 +28,8 @@ impl<'input, 'state, T: UnitConv> UnitMut<'input, 'state, T> {
         self.inner.state
     }
 
-    pub fn id(&self) -> usize {
-        self.inner.id
+    pub fn id(&self) -> Id<T> {
+        Id::new(self.inner.id)
     }
 
     pub fn upcast(self) -> UnitMut<'input, 'state, Unit> {
@@ -39,8 +42,8 @@ impl<'input, 'state, T: UnitConv> UnitMut<'input, 'state, T> {
         }
     }
 
-    pub fn with_state(self) -> WithState<'input, 'state, usize> {
-        WithState(self.inner.state, self.inner.id)
+    pub fn with_state(self) -> WithState<'input, 'state, Id<T>> {
+        WithState(self.inner.state, Id::new(self.inner.id))
     }
 
     pub(super) fn unit(&self) -> &T {
@@ -66,7 +69,7 @@ impl<'input, 'state, T: UnitConv> UnitMut<'input, 'state, T> {
     }
 
     pub(super) fn log(&mut self, event: T::Event) {
-        self.inner.state.log(self.id(), event.into());
+        self.inner.state.log(self.id().upcast(), event.into());
     }
 }
 

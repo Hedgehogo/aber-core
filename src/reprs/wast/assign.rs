@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 pub struct Assign<'input, X: Expr<'input>> {
     pub left: Spanned<X>,
     pub right: Spanned<X>,
-    phanthom: PhantomData<&'input str>,
+    phantom: PhantomData<&'input str>,
 }
 
 impl<'input, X: Expr<'input>> Assign<'input, X> {
@@ -18,7 +18,7 @@ impl<'input, X: Expr<'input>> Assign<'input, X> {
         Self {
             left,
             right,
-            phanthom: PhantomData,
+            phantom: PhantomData,
         }
     }
 }

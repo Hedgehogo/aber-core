@@ -2,8 +2,11 @@ pub mod event;
 pub mod with_state;
 
 use super::super::wast::call::Ident;
-use super::input::Nodes;
-use super::unit::{unit_mut::UnitMut, unit_ref::UnitRef, Unit, UnitConv};
+use super::{
+    id::Id,
+    input::Nodes,
+    unit::{unit_mut::UnitMut, Unit, UnitConv},
+};
 use chumsky::{
     input::{self, Cursor, Input},
     inspector::Inspector,
@@ -44,21 +47,28 @@ impl<'input> State<'input> {
         state
             .declare::<Function>(ident("one"))
             .unwrap()
+            .unit_mut(&mut state)
             .add_impl(impls::OneI32.into());
         state
             .declare::<Function>(ident("same"))
             .unwrap()
+            .unit_mut(&mut state)
             .add_impl(impls::SameI32.into());
         state
             .declare::<Function>(ident("add"))
             .unwrap()
+            .unit_mut(&mut state)
             .add_impl(impls::AddI32.into());
         state
             .declare::<Function>(ident("println"))
             .unwrap()
+            .unit_mut(&mut state)
             .add_impl(impls::PrintlnI32.into());
 
-        let mut run = state.declare::<Function>(ident("run")).unwrap();
+        let mut run = state
+            .declare::<Function>(ident("run"))
+            .unwrap()
+            .unit_mut(&mut state);
         run.add_impl(impls::RunI32.into());
         run.specify_time(Time::Runtime);
 
@@ -97,51 +107,38 @@ impl<'input> State<'input> {
         self.log.truncate(marker.log_len);
     }
 
-    pub fn get<'state>(&'state self, id: usize) -> Option<UnitRef<'input, 'state, Unit>> {
-        (self.units.len() > id).then(|| UnitRef::new(self, id))
-    }
-
-    pub fn get_mut<'state>(&'state mut self, id: usize) -> Option<UnitMut<'input, 'state, Unit>> {
-        (self.units.len() > id).then(|| UnitMut::new(self, id))
-    }
-
-    pub fn find<'state>(
-        &'state self,
-        ident: Ident<'input>,
-    ) -> Option<UnitRef<'input, 'state, Unit>> {
-        let id = self.idents.get(&ident).copied()?;
-        self.get(id)
-    }
-
-    pub fn find_mut<'state>(
-        &'state mut self,
-        ident: Ident<'input>,
-    ) -> Option<UnitMut<'input, 'state, Unit>> {
-        let id = self.idents.get(&ident).copied()?;
-        self.get_mut(id)
+    pub fn find<'state>(&'state self, ident: Ident<'input>) -> Option<Id<Unit>> {
+        self.idents.get(&ident).copied().map(Id::new)
     }
 
     pub fn declare<'state, T: UnitConv + Default>(
         &'state mut self,
         ident: Ident<'input>,
-    ) -> Result<UnitMut<'input, 'state, T>, UnitMut<'input, 'state, Unit>> {
+    ) -> Option<Id<T>> {
         match self.idents.entry(ident) {
             Entry::Vacant(vacant) => {
                 let id = self.units.len();
                 vacant.insert(id);
                 self.log.push(EventZipped::Declare(ident));
                 self.units.push(T::default().into());
-                Ok(UnitMut::new(self, id))
+                Some(Id::new(id))
             }
 
             Entry::Occupied(occupied) => {
                 let id = *occupied.get();
                 match T::from_unit_mut(&mut self.units[id]) {
-                    Ok(_) => Ok(UnitMut::new(self, id)),
-                    Err(_) => Err(UnitMut::new(self, id)),
+                    Ok(_) => Some(Id::new(id)),
+                    Err(_) => None,
                 }
             }
         }
+    }
+
+    pub fn push<T: UnitConv + Default>(&mut self) -> Id<T> {
+        let id = self.units.len();
+        self.units.push(T::default().into());
+        self.log.push(Event::Push(id).into());
+        Id::new(id)
     }
 
     pub(super) fn get_unit(&self, id: usize) -> Option<&Unit> {
@@ -152,17 +149,8 @@ impl<'input> State<'input> {
         self.units.get_mut(id)
     }
 
-    pub(super) fn log(&mut self, id: usize, event: UnitEvent) {
-        self.log.push(Event::Unit(id, event).into());
-    }
-
-    pub(super) fn push<'state, T: UnitConv + Default>(
-        &'state mut self,
-    ) -> UnitMut<'input, 'state, T> {
-        let id = self.units.len();
-        self.units.push(T::default().into());
-        self.log.push(Event::Push(id).into());
-        UnitMut::new(self, id)
+    pub(super) fn log(&mut self, id: Id<Unit>, event: UnitEvent) {
+        self.log.push(Event::Unit(id.inner(), event).into());
     }
 }
 

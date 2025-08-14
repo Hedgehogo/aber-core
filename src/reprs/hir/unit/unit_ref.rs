@@ -1,4 +1,4 @@
-use super::super::State;
+use super::super::{Id, State};
 use super::{Function, Unit, UnitConv, Value};
 use std::{fmt, marker::PhantomData};
 
@@ -26,8 +26,8 @@ impl<'input, 'state, T: UnitConv> UnitRef<'input, 'state, T> {
         self.inner.state
     }
 
-    pub fn id(&self) -> usize {
-        self.inner.id
+    pub fn id(&self) -> Id<T> {
+        Id::new(self.inner.id)
     }
 
     pub fn upcast(self) -> UnitRef<'input, 'state, Unit> {

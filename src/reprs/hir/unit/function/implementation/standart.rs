@@ -1,29 +1,27 @@
-use crate::reprs::hir::{State, Value, WithState};
+use crate::reprs::hir::{Id, State, Value, WithState};
 
 pub(super) fn one_i32<'input: 'state, 'state>(
     state: &'state mut State<'input>,
-) -> WithState<'input, 'state, Result<usize, ()>> {
-    let mut value = state.push::<Value>();
-    value.set(1);
-    value.with_state().map(Ok)
+) -> WithState<'input, 'state, Result<Id<Value>, ()>> {
+    let value = state.push::<Value>();
+    value.unit_mut(state).set(1);
+    WithState(state, Ok(value))
 }
 
 pub(super) fn same_i32<'input: 'state, 'state>(
     state: &'state mut State<'input>,
-    id: usize,
-) -> WithState<'input, 'state, Result<usize, ()>> {
-    let value = state.get_mut(id).unwrap().downcast::<Value>().unwrap();
-    value.with_state().map(Ok)
+    id: Id<Value>,
+) -> WithState<'input, 'state, Result<Id<Value>, ()>> {
+    WithState(state, Ok(id))
 }
 
 pub(super) fn add_i32<'input: 'state, 'state>(
     state: &'state mut State<'input>,
-    a_id: usize,
-    b_id: usize,
-) -> WithState<'input, 'state, Result<usize, ()>> {
-    let inner = |state: &'state mut State<'input>, id| {
-        let value = state.get_mut(id).unwrap().downcast::<Value>().unwrap();
-        value
+    a_id: Id<Value>,
+    b_id: Id<Value>,
+) -> WithState<'input, 'state, Result<Id<Value>, ()>> {
+    let inner = |state, id: Id<Value>| {
+        id.unit_mut(state)
             .into_inner()
             .map(|inner| inner.ok_or(()))
             .into_result()
@@ -38,9 +36,9 @@ pub(super) fn add_i32<'input: 'state, 'state>(
                 .map(|(a, b)| a.checked_add(b).ok_or(()))
                 .into_result()
                 .map(|WithState(state, result)| {
-                    let mut value = state.push::<Value>();
-                    value.set(result);
-                    value.with_state()
+                    let value = state.push::<Value>();
+                    value.unit_mut(state).set(result);
+                    WithState(state, value)
                 })
         })
         .into()
@@ -48,9 +46,9 @@ pub(super) fn add_i32<'input: 'state, 'state>(
 
 pub(super) fn println_i32<'input: 'state, 'state>(
     state: &'state mut State<'input>,
-    id: usize,
-) -> WithState<'input, 'state, Result<usize, ()>> {
-    let value = state.get_mut(id).unwrap().downcast::<Value>().unwrap();
+    id: Id<Value>,
+) -> WithState<'input, 'state, Result<Id<Value>, ()>> {
+    let value = id.unit_mut(state);
     value.inner().inspect(|value| println!("{}", value));
     value.with_state().map(Ok)
 }

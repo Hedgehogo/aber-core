@@ -1,10 +1,12 @@
 //! Module that provides types that describe the compilation level that results in a high intermediate representation (HIR).
 
+pub mod id;
 pub mod input;
 pub mod node;
 pub mod state;
 pub mod unit;
 
+pub use id::Id;
 pub use input::{nodes, Nodes};
 pub use node::Hir;
 pub use state::{State, WithState};

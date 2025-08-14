@@ -1,6 +1,6 @@
 use super::{CompParser, CompParserExtra};
 use crate::reprs::{
-    hir::{node::Call, nodes, unit::UnitRef, Function, State, WithState},
+    hir::{node::Call, nodes, unit::UnitRef, Function, Id, State, WithState},
     span::IntoSpanned,
     CompNode, Hir, Spanned, Wast,
 };
@@ -8,7 +8,7 @@ use chumsky::{error::Cheap, prelude::*};
 
 struct CallCtx<C> {
     ctx: C,
-    function_id: usize,
+    function_id: Id<Function>,
     argument_count: usize,
 }
 
@@ -31,6 +31,7 @@ where
 
         if let Some(function) = state
             .find(*call.ident.inner())
+            .map(|id| id.unit(state))
             .and_then(UnitRef::downcast::<Function>)
         {
             if let Some(argument_count) = function.arg_count() {
@@ -126,19 +127,31 @@ mod tests {
     #[test]
     fn test_from_wast() {
         let ident = |s| Ident::from_repr_unchecked(s);
+        let id = |state: &State, s| {
+            state
+                .find(ident(s))
+                .unwrap()
+                .unit(state)
+                .downcast::<Function>()
+                .unwrap()
+                .id()
+        };
 
         let mut state = State::new();
         state
             .declare::<Function>(ident("two"))
             .unwrap()
+            .unit_mut(&mut state)
             .add_arg_count(2);
         state
             .declare::<Function>(ident("one"))
             .unwrap()
+            .unit_mut(&mut state)
             .add_arg_count(1);
         state
             .declare::<Function>(ident("zero"))
             .unwrap()
+            .unit_mut(&mut state)
             .add_arg_count(0);
 
         let input = [
@@ -172,11 +185,11 @@ mod tests {
                 .parse_with_state(input, &mut state)
                 .into_result(),
             Ok(Call::new(
-                state.find(ident("two")).unwrap().id(),
+                id(&state, "two"),
                 vec![
                     Call::new(
-                        state.find(ident("one")).unwrap().id(),
-                        vec![Call::new(state.find(ident("zero")).unwrap().id(), vec![])
+                        id(&state, "one"),
+                        vec![Call::new(id(&state, "zero"), vec![])
                             .into_spanned(8..12)
                             .into_spanned_hir()
                             .into_spanned_node()]
@@ -184,7 +197,7 @@ mod tests {
                     .into_spanned(4..12)
                     .into_spanned_hir()
                     .into_spanned_node(),
-                    Call::new(state.find(ident("zero")).unwrap().id(), vec![])
+                    Call::new(id(&state, "zero"), vec![])
                         .into_spanned(13..17)
                         .into_spanned_hir()
                         .into_spanned_node(),
@@ -196,36 +209,46 @@ mod tests {
     #[test]
     fn test_from_hir() {
         let ident = |s| Ident::from_repr_unchecked(s);
+        let id = |state: &State, s| {
+            state
+                .find(ident(s))
+                .unwrap()
+                .unit(state)
+                .downcast::<Function>()
+                .unwrap()
+                .id()
+        };
 
         let mut state = State::standart();
 
         let input = [Call::new(
-            state.find(ident("same")).unwrap().id(),
-            vec![Call::new(state.find(ident("one")).unwrap().id(), vec![])
-                .into_spanned(0..3)
+            id(&state, "same"),
+            vec![Call::new(id(&state, "one"), vec![])
+                .into_spanned(5..8)
                 .into_spanned_hir()
                 .into_spanned_node()],
         )
-        .into_spanned(4..8)
+        .into_spanned(5..8)
         .into_spanned_hir()
         .into_spanned_node()]
         .into_spanned(0..8);
 
         let input = nodes(input.as_ref().map(<[_; 1]>::as_slice));
 
-        assert_eq!(
-            from_hir(fact::<Extra>())
-                .parse_with_state(input, &mut state)
-                .into_result(),
-            Ok(Call::new(
-                state.find(ident("same")).unwrap().id(),
-                vec![Call::new(state.find(ident("one")).unwrap().id(), vec![])
-                    .with_result(5)
-                    .into_spanned(0..3)
-                    .into_spanned_hir()
-                    .into_spanned_node()],
-            ))
-        );
+        let result = from_hir(fact::<Extra>())
+            .parse_with_state(input, &mut state)
+            .into_result()
+            .unwrap();
+
+        assert_eq!(result.args.len(), 1);
+        assert_eq!(result.result_id(), None);
+
+        let Spanned(arg1, span) = result.args[0]
+            .as_ref()
+            .map(|node| node.hir().unwrap().call().unwrap());
+        assert_eq!(span, (5..8).into());
+        assert_eq!(arg1.args.len(), 0);
+        assert_eq!(arg1.result_id().unwrap().unit(&state).inner(), Some(1));
     }
 
     #[test]
@@ -243,12 +266,13 @@ mod tests {
 
         let input = nodes(input.as_ref().map(<[_; 1]>::as_slice));
 
-        assert_eq!(
-            call(fact::<Extra>())
-                .parse_with_state(input, &mut state)
-                .into_result(),
-            Ok(Call::new(state.find(ident("one")).unwrap().id(), vec![]).with_result(5))
-        );
+        let result = call(fact::<Extra>())
+            .parse_with_state(input, &mut state)
+            .into_result()
+            .unwrap();
+
+        assert_eq!(result.args.len(), 0);
+        assert_eq!(result.result_id().unwrap().unit(&state).inner(), Some(1));
     }
 
     #[test]
@@ -289,27 +313,27 @@ mod tests {
             .unwrap();
 
         assert_eq!(result.args.len(), 2);
-        assert_eq!(result.result(&state).unwrap().inner(), Some(2));
+        assert_eq!(result.result_id().unwrap().unit(&state).inner(), Some(2));
 
-        let arg1 = result.args[0]
+        let Spanned(arg1, span) = result.args[0]
+            .as_ref()
+            .map(|node: &CompNode<'_>| node.hir().unwrap().call().unwrap());
+        assert_eq!(span, (4..12).into());
+        assert_eq!(arg1.args.len(), 1);
+        assert_eq!(arg1.result_id().unwrap().unit(&state).inner(), Some(1));
+
+        let Spanned(arg11, span) = arg1.args[0]
             .as_ref()
             .map(|node| node.hir().unwrap().call().unwrap());
-        assert_eq!(arg1.span(), (4..12).into());
-        assert_eq!(arg1.inner().args.len(), 1);
-        assert_eq!(arg1.inner().result(&state).unwrap().inner(), Some(1));
+        assert_eq!(span, (9..12).into());
+        assert_eq!(arg11.args.len(), 0);
+        assert_eq!(arg11.result_id().unwrap().unit(&state).inner(), Some(1));
 
-        let arg11 = arg1.inner().args[0]
+        let Spanned(arg2, span) = result.args[1]
             .as_ref()
             .map(|node| node.hir().unwrap().call().unwrap());
-        assert_eq!(arg11.span(), (9..12).into());
-        assert_eq!(arg11.inner().args.len(), 0);
-        assert_eq!(arg11.inner().result(&state).unwrap().inner(), Some(1));
-
-        let arg2 = result.args[1]
-            .as_ref()
-            .map(|node| node.hir().unwrap().call().unwrap());
-        assert_eq!(arg2.span(), (13..16).into());
-        assert_eq!(arg2.inner().args.len(), 0);
-        assert_eq!(arg2.inner().result(&state).unwrap().inner(), Some(1));
+        assert_eq!(span, (13..16).into());
+        assert_eq!(arg2.args.len(), 0);
+        assert_eq!(arg2.result_id().unwrap().unit(&state).inner(), Some(1));
     }
 }

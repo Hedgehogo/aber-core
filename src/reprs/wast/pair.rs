@@ -12,7 +12,7 @@ use std::{fmt, marker::PhantomData};
 pub struct Pair<'input, N: Node<'input>> {
     pub node: Box<Spanned<N>>,
     pub whitespace: <N::Expr as Expr<'input>>::Whitespace,
-    phanthom: PhantomData<&'input str>,
+    phantom: PhantomData<&'input str>,
 }
 
 impl<'input, N: Node<'input>> Pair<'input, N> {
@@ -21,7 +21,7 @@ impl<'input, N: Node<'input>> Pair<'input, N> {
         Self {
             node,
             whitespace,
-            phanthom: PhantomData,
+            phantom: PhantomData,
         }
     }
 }
@@ -57,7 +57,7 @@ where
     fn eq(&self, other: &Self) -> bool {
         self.node == other.node
             && self.whitespace == other.whitespace
-            && self.phanthom == other.phanthom
+            && self.phantom == other.phantom
     }
 }
 

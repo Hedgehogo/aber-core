@@ -1,4 +1,5 @@
-use super::super::super::super::{State, WithState};
+use super::super::super::super::{Id, State, WithState};
+use super::super::super::Value;
 use super::super::FunctionMut;
 use super::{ComptimeImpl, Impl};
 
@@ -42,9 +43,9 @@ impl<'input, 'state> ComptimeImplMut<'input, 'state> {
         self.function.state()
     }
 
-    pub fn execute<I>(self, args: I) -> WithState<'input, 'state, Result<usize, ()>>
+    pub fn execute<I>(self, args: I) -> WithState<'input, 'state, Result<Id<Value>, ()>>
     where
-        I: Iterator<Item = usize>,
+        I: Iterator<Item = Id<Value>>,
     {
         let state = self.function.state();
         self.implementation.execute(state, args)

@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NegativeCall<'input, X: Expr<'input>> {
     pub expr: Spanned<X>,
-    phanthom: PhantomData<&'input str>,
+    phantom: PhantomData<&'input str>,
 }
 
 impl<'input, X: Expr<'input>> NegativeCall<'input, X> {
@@ -16,7 +16,7 @@ impl<'input, X: Expr<'input>> NegativeCall<'input, X> {
     pub fn new(expr: Spanned<X>) -> Self {
         Self {
             expr,
-            phanthom: PhantomData,
+            phantom: PhantomData,
         }
     }
 }

@@ -2,7 +2,8 @@ pub mod impl_mut;
 
 mod standart;
 
-use super::super::super::{State, WithState};
+use super::super::super::{Id, State, WithState};
+use super::super::Value;
 use super::Time;
 
 pub use impl_mut::ImplMut;
@@ -21,9 +22,9 @@ impl AnyBuiltInImpl {
         &self,
         state: &'state mut State<'input>,
         mut args: I,
-    ) -> WithState<'input, 'state, Result<usize, ()>>
+    ) -> WithState<'input, 'state, Result<Id<Value>, ()>>
     where
-        I: Iterator<Item = usize>,
+        I: Iterator<Item = Id<Value>>,
     {
         match self {
             Self::OneI32 => standart::one_i32(state),
@@ -53,9 +54,9 @@ impl ComptimeBuiltInImpl {
         &self,
         state: &'state mut State<'input>,
         args: I,
-    ) -> WithState<'input, 'state, Result<usize, ()>>
+    ) -> WithState<'input, 'state, Result<Id<Value>, ()>>
     where
-        I: Iterator<Item = usize>,
+        I: Iterator<Item = Id<Value>>,
     {
         #[expect(clippy::match_single_binding)]
         match self {
@@ -131,9 +132,9 @@ impl ComptimeImpl {
         &self,
         state: &'state mut State<'input>,
         args: I,
-    ) -> WithState<'input, 'state, Result<usize, ()>>
+    ) -> WithState<'input, 'state, Result<Id<Value>, ()>>
     where
-        I: Iterator<Item = usize>,
+        I: Iterator<Item = Id<Value>>,
     {
         match self {
             Self::Any(any) => any.execute(state, args),
