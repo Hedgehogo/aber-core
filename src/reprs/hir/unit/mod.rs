@@ -1,4 +1,5 @@
 pub mod function;
+pub mod id;
 pub mod unit_mut;
 pub mod unit_ref;
 pub mod value;
@@ -6,6 +7,7 @@ pub mod value;
 use super::state::event::UnitEvent;
 
 pub use function::Function;
+pub use id::Id;
 pub use unit_mut::UnitMut;
 pub use unit_ref::UnitRef;
 pub use value::Value;

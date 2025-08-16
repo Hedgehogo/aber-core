@@ -3,9 +3,11 @@ use super::super::super::{
     CompNode,
 };
 use super::super::{
-    id::Id,
     state::{State, WithState},
-    unit::function::{implementation::impl_mut::ComptimeImplMut, Function},
+    unit::{
+        function::{implementation::impl_mut::ComptimeImplMut, Function},
+        Id,
+    },
     Value,
 };
 use super::Hir;

@@ -1,6 +1,11 @@
 use super::{CompParser, CompParserExtra};
 use crate::reprs::{
-    hir::{node::Call, nodes, unit::UnitRef, Function, Id, State, WithState},
+    hir::{
+        node::Call,
+        nodes,
+        unit::{Id, UnitRef},
+        Function, State, WithState,
+    },
     span::IntoSpanned,
     CompNode, Hir, Spanned, Wast,
 };

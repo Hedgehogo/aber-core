@@ -1,8 +1,5 @@
-use super::super::{
-    state::{State, UnitEvent, WithState},
-    Id,
-};
-use super::{Function, Unit, UnitConv, Value};
+use super::super::state::{State, UnitEvent, WithState};
+use super::{Function, Id, Unit, UnitConv, Value};
 use std::{fmt, marker::PhantomData};
 
 struct UnitMutInner<'input, 'state> {

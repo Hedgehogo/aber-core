@@ -1,7 +1,5 @@
-use super::{
-    state::State,
-    unit::{Unit, UnitConv, UnitMut, UnitRef},
-};
+use super::super::state::State;
+use super::{Unit, UnitConv, UnitMut, UnitRef};
 use std::{
     fmt,
     hash::{Hash, Hasher},
@@ -14,7 +12,7 @@ pub struct Id<T: UnitConv> {
 }
 
 impl<T: UnitConv> Id<T> {
-    pub(super) fn new(id: usize) -> Self {
+    pub(in super::super) fn new(id: usize) -> Self {
         Self {
             id,
             phantom: PhantomData,
@@ -36,7 +34,7 @@ impl<T: UnitConv> Id<T> {
         Id::new(self.id)
     }
 
-    pub(super) fn inner(&self) -> usize {
+    pub(in super::super) fn inner(&self) -> usize {
         self.id
     }
 }

@@ -1,5 +1,5 @@
-use super::super::{Id, State};
-use super::{Function, Unit, UnitConv, Value};
+use super::super::State;
+use super::{Function, Id, Unit, UnitConv, Value};
 use std::{fmt, marker::PhantomData};
 
 #[derive(Clone, Copy)]

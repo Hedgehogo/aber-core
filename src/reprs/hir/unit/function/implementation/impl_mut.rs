@@ -1,5 +1,5 @@
-use super::super::super::super::{Id, State, WithState};
-use super::super::super::Value;
+use super::super::super::super::{State, WithState};
+use super::super::super::{Id, Value};
 use super::super::FunctionMut;
 use super::{ComptimeImpl, Impl};
 
