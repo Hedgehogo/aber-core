@@ -1,9 +1,9 @@
 pub mod call;
 
 use crate::reprs::{
-    hir::{Nodes, State},
+    mir::{Nodes, State},
     span::{Span, Spanned},
-    CompExpr, CompNode, Hir,
+    CompExpr, CompNode, Mir,
 };
 use call::call;
 use chumsky::{error::Cheap, extra::ParserExtra, prelude::*};
@@ -47,7 +47,7 @@ where
     E: CompParserExtra<'input, 'comp>,
     E::Context: Clone,
 {
-    recursive(|fact| call(fact).map(|call| CompNode::Hir(Hir::Call(call))))
+    recursive(|fact| call(fact).map(|call| CompNode::Mir(Mir::Call(call))))
 }
 
 pub fn expr<'input, 'comp, E>() -> impl CompParser<'input, 'comp, CompExpr<'input>, E> + Clone

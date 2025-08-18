@@ -1,13 +1,13 @@
 use super::{CompParser, CompParserExtra};
 use crate::reprs::{
-    hir::{
+    mir::{
         node::Call,
         nodes,
         unit::{Id, UnitRef},
         Function, State, WithState,
     },
     span::IntoSpanned,
-    CompNode, Hir, Spanned, Wast,
+    CompNode, Mir, Spanned, Wast,
 };
 use chumsky::{error::Cheap, prelude::*};
 
@@ -63,7 +63,7 @@ where
     .map(|(ctx, arguments)| Call::new(ctx.function_id, arguments))
 }
 
-fn from_hir<'input, 'comp, E, P>(fact: P) -> impl CompParser<'input, 'comp, Call<'input>, E> + Clone
+fn from_mir<'input, 'comp, E, P>(fact: P) -> impl CompParser<'input, 'comp, Call<'input>, E> + Clone
 where
     'input: 'comp,
     E: CompParserExtra<'input, 'comp>,
@@ -75,11 +75,11 @@ where
         .repeated()
         .collect()
         .nested_in(select_ref! {
-            CompNode::Hir(Hir::Call(call)) = extra => nodes(call.args.as_slice().into_spanned(extra.span()))
+            CompNode::Mir(Mir::Call(call)) = extra => nodes(call.args.as_slice().into_spanned(extra.span()))
         })
         .rewind()
         .then(select_ref! {
-            CompNode::Hir(Hir::Call(call)) => (call.id(), call.result_id())
+            CompNode::Mir(Mir::Call(call)) => (call.id(), call.result_id())
         }).map(|(args, (id, result_id))| {
             let mut call = Call::new(id, args);
             if let Some(result_id) = result_id {
@@ -97,7 +97,7 @@ where
     P: CompParser<'input, 'comp, CompNode<'input>, E> + Clone,
 {
     from_wast(fact.clone())
-        .or(from_hir(fact))
+        .or(from_mir(fact))
         .try_map_with(|mut call: Call, extra| match call.result_id() {
             Some(_) => Ok(call),
 
@@ -120,7 +120,7 @@ mod tests {
     use super::super::fact;
     use super::*;
     use crate::reprs::{
-        hir::nodes,
+        mir::nodes,
         span::{IntoSpanned, Span},
         wast::call::Ident,
         CompExpr,
@@ -196,15 +196,15 @@ mod tests {
                         id(&state, "one"),
                         vec![Call::new(id(&state, "zero"), vec![])
                             .into_spanned(8..12)
-                            .into_spanned_hir()
+                            .into_spanned_mir()
                             .into_spanned_node()]
                     )
                     .into_spanned(4..12)
-                    .into_spanned_hir()
+                    .into_spanned_mir()
                     .into_spanned_node(),
                     Call::new(id(&state, "zero"), vec![])
                         .into_spanned(13..17)
-                        .into_spanned_hir()
+                        .into_spanned_mir()
                         .into_spanned_node(),
                 ]
             ))
@@ -212,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_hir() {
+    fn test_from_mir() {
         let ident = |s| Ident::from_repr_unchecked(s);
         let id = |state: &State, s| {
             state
@@ -230,17 +230,17 @@ mod tests {
             id(&state, "same"),
             vec![Call::new(id(&state, "one"), vec![])
                 .into_spanned(5..8)
-                .into_spanned_hir()
+                .into_spanned_mir()
                 .into_spanned_node()],
         )
         .into_spanned(5..8)
-        .into_spanned_hir()
+        .into_spanned_mir()
         .into_spanned_node()]
         .into_spanned(0..8);
 
         let input = nodes(input.as_ref().map(<[_; 1]>::as_slice));
 
-        let result = from_hir(fact::<Extra>())
+        let result = from_mir(fact::<Extra>())
             .parse_with_state(input, &mut state)
             .into_result()
             .unwrap();
@@ -250,7 +250,7 @@ mod tests {
 
         let Spanned(arg1, span) = result.args[0]
             .as_ref()
-            .map(|node| node.hir().unwrap().call().unwrap());
+            .map(|node| node.mir().unwrap().call().unwrap());
         assert_eq!(span, (5..8).into());
         assert_eq!(arg1.args.len(), 0);
         assert_eq!(arg1.result_id().unwrap().unit(&state).inner(), Some(1));
@@ -322,21 +322,21 @@ mod tests {
 
         let Spanned(arg1, span) = result.args[0]
             .as_ref()
-            .map(|node: &CompNode<'_>| node.hir().unwrap().call().unwrap());
+            .map(|node: &CompNode<'_>| node.mir().unwrap().call().unwrap());
         assert_eq!(span, (4..12).into());
         assert_eq!(arg1.args.len(), 1);
         assert_eq!(arg1.result_id().unwrap().unit(&state).inner(), Some(1));
 
         let Spanned(arg11, span) = arg1.args[0]
             .as_ref()
-            .map(|node| node.hir().unwrap().call().unwrap());
+            .map(|node| node.mir().unwrap().call().unwrap());
         assert_eq!(span, (9..12).into());
         assert_eq!(arg11.args.len(), 0);
         assert_eq!(arg11.result_id().unwrap().unit(&state).inner(), Some(1));
 
         let Spanned(arg2, span) = result.args[1]
             .as_ref()
-            .map(|node| node.hir().unwrap().call().unwrap());
+            .map(|node| node.mir().unwrap().call().unwrap());
         assert_eq!(span, (13..16).into());
         assert_eq!(arg2.args.len(), 0);
         assert_eq!(arg2.result_id().unwrap().unit(&state).inner(), Some(1));

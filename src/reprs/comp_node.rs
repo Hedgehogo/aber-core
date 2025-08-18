@@ -1,19 +1,19 @@
 //! Module that provides [`CompNode`].
 
-use super::{hir::node::String, CompExpr, Hir, Spanned, SpannedVec, Wast};
+use super::{mir::node::String, CompExpr, Mir, Spanned, SpannedVec, Wast};
 use crate::stages::syntax::{whitespace::Side, Expr, Node};
 
 /// Type describing compilation units of any level.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CompNode<'input> {
     Wast(Wast<'input, Self>),
-    Hir(Hir<'input>),
+    Mir(Mir<'input>),
 }
 
 impl<'input> CompNode<'input> {
-    pub fn hir(&self) -> Option<&Hir<'input>> {
+    pub fn mir(&self) -> Option<&Mir<'input>> {
         match self {
-            Self::Hir(hir) => Some(hir),
+            Self::Mir(mir) => Some(mir),
             _ => None,
         }
     }

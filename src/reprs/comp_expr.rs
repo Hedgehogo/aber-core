@@ -6,7 +6,7 @@ use super::{CompNode, Spanned};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CompExpr<'input> {
     Wast(Vec<Spanned<CompNode<'input>>>),
-    Hir(Box<Spanned<CompNode<'input>>>),
+    Mir(Box<Spanned<CompNode<'input>>>),
 }
 
 impl<'input> CompExpr<'input> {

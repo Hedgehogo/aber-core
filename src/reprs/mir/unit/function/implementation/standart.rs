@@ -1,4 +1,4 @@
-use crate::reprs::hir::{unit::Id, State, Value, WithState};
+use crate::reprs::mir::{unit::Id, State, Value, WithState};
 
 pub(super) fn one_i32<'input: 'state, 'state>(
     state: &'state mut State<'input>,

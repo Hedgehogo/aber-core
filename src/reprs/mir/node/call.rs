@@ -10,7 +10,7 @@ use super::super::{
     },
     Value,
 };
-use super::Hir;
+use super::Mir;
 
 /// Type that describes the *call* construct from MIR.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -59,9 +59,9 @@ impl<'input> Call<'input> {
 }
 
 impl<'input> Spanned<Call<'input>> {
-    pub fn into_spanned_hir(self) -> Spanned<Hir<'input>> {
+    pub fn into_spanned_mir(self) -> Spanned<Mir<'input>> {
         let Spanned(call, span) = self;
-        Hir::Call(call).into_spanned(span)
+        Mir::Call(call).into_spanned(span)
     }
 }
 
@@ -82,14 +82,14 @@ impl<'input, 'state, 'call> ComptimeCallMut<'input, 'state, 'call> {
             .iter()
             .map(|item| item.inner())
             .all(|node| match node {
-                CompNode::Hir(Hir::Call(call)) => call.result_id.is_some(),
+                CompNode::Mir(Mir::Call(call)) => call.result_id.is_some(),
                 _ => false,
             });
 
         let arg_ids = if ok {
             self.args.iter().map(|item| {
                 match item.inner() {
-                    CompNode::Hir(Hir::Call(call)) => call.result_id,
+                    CompNode::Mir(Mir::Call(call)) => call.result_id,
                     _ => None,
                 }
                 .unwrap()
