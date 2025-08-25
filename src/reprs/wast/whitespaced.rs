@@ -9,21 +9,21 @@ use std::fmt;
 /// # Fields
 /// - `whitespace` Whitespace in front of the element.
 /// - `right` Consturction located after whitespace.
-pub struct Whitespaced<'input, X: Expr<'input>, R> {
+pub struct Whitespaced<X: Expr, R> {
     pub whitespace: X::Whitespace,
     pub right: Spanned<R>,
 }
 
-impl<'input, X: Expr<'input>, R> Whitespaced<'input, X, R> {
+impl<X: Expr, R> Whitespaced<X, R> {
     /// Creates a new `Whitespaced`.
     pub fn new(whitespace: X::Whitespace, right: Spanned<R>) -> Self {
         Self { whitespace, right }
     }
 }
 
-impl<'input, X, R> fmt::Debug for Whitespaced<'input, X, R>
+impl<X, R> fmt::Debug for Whitespaced<X, R>
 where
-    X: Expr<'input>,
+    X: Expr,
     X::Whitespace: fmt::Debug,
     R: fmt::Debug,
 {
@@ -35,9 +35,9 @@ where
     }
 }
 
-impl<'input, X, R> Clone for Whitespaced<'input, X, R>
+impl<X, R> Clone for Whitespaced<X, R>
 where
-    X: Expr<'input>,
+    X: Expr,
     X::Whitespace: Clone,
     R: Clone,
 {
@@ -46,9 +46,9 @@ where
     }
 }
 
-impl<'input, X, R> PartialEq for Whitespaced<'input, X, R>
+impl<X, R> PartialEq for Whitespaced<X, R>
 where
-    X: Expr<'input>,
+    X: Expr,
     X::Whitespace: PartialEq,
     R: PartialEq,
 {
@@ -57,9 +57,9 @@ where
     }
 }
 
-impl<'input, X, R> Eq for Whitespaced<'input, X, R>
+impl<X, R> Eq for Whitespaced<X, R>
 where
-    X: Expr<'input>,
+    X: Expr,
     X::Whitespace: PartialEq,
     R: PartialEq,
 {

@@ -1,22 +1,31 @@
 //! Module that provides [`Node`].
 
-use super::{EscapedString, Expr, RawString};
+use super::Expr;
 use crate::reprs::Wast;
 
 /// Trait realized by the types that the
 /// [`fact`](`crate::stages::syntax::parse::fact`) function can return. It is
 /// intended to avoid unnecessary conversion of the returned type
 /// into a type with a larger set of values.
-pub trait Node<'input>: Sized {
+pub trait Node: Sized {
     /// Type describing the expression.
-    type Expr: Expr<'input, Node = Self>;
+    type Expr: Expr<Node = Self>;
 
-    /// Type describing the string.
-    type String: EscapedString<'input> + RawString<'input>;
+    /// Type describing the identifier.
+    type Ident;
+
+    /// Type describing the digit sequence.
+    type Digits;
+
+    /// Type describing the character literal.
+    type Character;
+
+    /// Type describing the string literal.
+    type String;
 
     /// Creates a node from WAST fact.
     ///
     /// # Arguments
     /// - `wast` WAST fact.
-    fn from_wast(wast: Wast<'input, Self>) -> Self;
+    fn from_wast(wast: Wast<Self>) -> Self;
 }

@@ -1,7 +1,7 @@
 //! Module that provides [`ExprCall`].
 
 use super::{call::Call, whitespaced::Whitespaced, Spanned};
-use crate::stages::syntax::Expr;
+use crate::stages::syntax::{Expr, Node};
 use std::fmt;
 
 /// Type describing syntactic constructs *method call* and *child call*.
@@ -10,22 +10,23 @@ use std::fmt;
 /// - `expr` Expression before the operator.
 /// - `whitespace` Whitespace after the operator.
 /// - `call` Call after the operator.
-pub struct ExprCall<'input, X: Expr<'input>> {
+pub struct ExprCall<X: Expr> {
     pub expr: Spanned<X>,
-    pub call: Whitespaced<'input, X, Call<'input, X>>,
+    pub call: Whitespaced<X, Call<X>>,
 }
 
-impl<'input, X: Expr<'input>> ExprCall<'input, X> {
+impl<X: Expr> ExprCall<X> {
     /// Creates a new `ExprCall`.
-    pub fn new(expr: Spanned<X>, call: Whitespaced<'input, X, Call<'input, X>>) -> Self {
+    pub fn new(expr: Spanned<X>, call: Whitespaced<X, Call<X>>) -> Self {
         Self { expr, call }
     }
 }
 
-impl<'input, X> fmt::Debug for ExprCall<'input, X>
+impl<X> fmt::Debug for ExprCall<X>
 where
-    X: Expr<'input> + fmt::Debug,
+    X: Expr + fmt::Debug,
     X::Whitespace: fmt::Debug,
+    <<X as Expr>::Node as Node>::Ident: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ExprCall")
@@ -35,29 +36,32 @@ where
     }
 }
 
-impl<'input, X> Clone for ExprCall<'input, X>
+impl<X> Clone for ExprCall<X>
 where
-    X: Expr<'input> + Clone,
+    X: Expr + Clone,
     X::Whitespace: Clone,
+    <<X as Expr>::Node as Node>::Ident: Clone,
 {
     fn clone(&self) -> Self {
         Self::new(self.expr.clone(), self.call.clone())
     }
 }
 
-impl<'input, X> PartialEq for ExprCall<'input, X>
+impl<X> PartialEq for ExprCall<X>
 where
-    X: Expr<'input> + PartialEq,
+    X: Expr + PartialEq,
     X::Whitespace: PartialEq,
+    <<X as Expr>::Node as Node>::Ident: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         self.expr == other.expr && self.call == other.call
     }
 }
 
-impl<'input, X> Eq for ExprCall<'input, X>
+impl<X> Eq for ExprCall<X>
 where
-    X: Expr<'input> + Eq,
+    X: Expr + Eq,
     X::Whitespace: Eq,
+    <<X as Expr>::Node as Node>::Ident: Eq,
 {
 }

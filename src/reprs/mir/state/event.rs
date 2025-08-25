@@ -1,4 +1,4 @@
-use super::super::super::wast::call::Ident;
+use super::super::super::hir::Ident;
 use super::super::unit::{function::FunctionEvent, value::ValueEvent};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -10,14 +10,14 @@ pub enum UnitEvent {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
-pub(super) enum Event<'input> {
-    Declare(Ident<'input>),
+pub(super) enum Event {
+    Declare(Ident),
     Push(usize),
     Unit(usize, UnitEvent),
 }
 
-impl<'input> From<EventZipped<'input>> for Event<'input> {
-    fn from(value: EventZipped<'input>) -> Self {
+impl From<EventZipped> for Event {
+    fn from(value: EventZipped) -> Self {
         match value {
             EventZipped::Declare(ident) => Event::Declare(ident),
             EventZipped::Push(id) => Event::Push(id),
@@ -35,8 +35,8 @@ impl<'input> From<EventZipped<'input>> for Event<'input> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
-pub(super) enum EventZipped<'input> {
-    Declare(Ident<'input>),
+pub(super) enum EventZipped {
+    Declare(Ident),
     Push(usize),
     ValueSet(usize),
     FunctionAddArgCount(usize),
@@ -44,14 +44,14 @@ pub(super) enum EventZipped<'input> {
     FunctionSpecifyTime(usize),
 }
 
-impl<'input> EventZipped<'input> {
-    pub(super) fn unzip(self) -> Event<'input> {
+impl EventZipped {
+    pub(super) fn unzip(self) -> Event {
         self.into()
     }
 }
 
-impl<'input> From<Event<'input>> for EventZipped<'input> {
-    fn from(value: Event<'input>) -> Self {
+impl From<Event> for EventZipped {
+    fn from(value: Event) -> Self {
         match value {
             Event::Declare(ident) => EventZipped::Declare(ident),
 

@@ -6,47 +6,47 @@ use std::fmt;
 
 /// Type describing the syntactic construct *statement*.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Stmt<'input, X: Expr<'input>> {
+pub enum Stmt<X: Expr> {
     Expr(X),
-    Assign(Assign<'input, X>),
+    Assign(Assign<X>),
 }
 
 /// Type that describes all the contents of a document, as well as
 /// the contents of a block syntax construct.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Content<'input, X: Expr<'input>> {
-    pub stmts: Vec<Spanned<Stmt<'input, X>>>,
+pub struct Content<X: Expr> {
+    pub stmts: Vec<Spanned<Stmt<X>>>,
     pub expr: Spanned<X>,
 }
 
-impl<'input, X: Expr<'input>> Content<'input, X> {
+impl<X: Expr> Content<X> {
     /// Creates a new `Content`.
-    pub fn new(stmts: Vec<Spanned<Stmt<'input, X>>>, expr: Spanned<X>) -> Self {
+    pub fn new(stmts: Vec<Spanned<Stmt<X>>>, expr: Spanned<X>) -> Self {
         Self { stmts, expr }
     }
 }
 
 /// Type describing the syntactic construct *block*.
 #[derive(Clone, PartialEq, Eq)]
-pub struct Block<'input, X: Expr<'input>> {
-    content: Content<'input, X>,
+pub struct Block<X: Expr> {
+    content: Content<X>,
     close: bool,
 }
 
-impl<'input, X: Expr<'input>> Block<'input, X> {
+impl<X: Expr> Block<X> {
     /// Creates a new `Block`.
-    pub fn new(content: Content<'input, X>, close: bool) -> Self {
+    pub fn new(content: Content<X>, close: bool) -> Self {
         Self { content, close }
     }
 
     /// Creates a new `Block` from statements, expression and closing bracket.
-    pub fn from_stmts(stmts: Vec<Spanned<Stmt<'input, X>>>, expr: Spanned<X>, close: bool) -> Self {
+    pub fn from_stmts(stmts: Vec<Spanned<Stmt<X>>>, expr: Spanned<X>, close: bool) -> Self {
         let content = Content::new(stmts, expr);
         Self { content, close }
     }
 
     /// Asks content.
-    pub fn content(&self) -> &Content<'input, X> {
+    pub fn content(&self) -> &Content<X> {
         &self.content
     }
 
@@ -56,12 +56,12 @@ impl<'input, X: Expr<'input>> Block<'input, X> {
     }
 
     /// Converts `Block` to [`Content`], losing semantically irrelevant information.
-    pub fn into_content(self) -> Content<'input, X> {
+    pub fn into_content(self) -> Content<X> {
         self.content
     }
 }
 
-impl<'input, X: Expr<'input> + fmt::Debug> fmt::Debug for Block<'input, X> {
+impl<X: Expr + fmt::Debug> fmt::Debug for Block<X> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Block")
             .field("content.stmts", &self.content.stmts)
@@ -71,14 +71,14 @@ impl<'input, X: Expr<'input> + fmt::Debug> fmt::Debug for Block<'input, X> {
     }
 }
 
-impl<'input, X: Expr<'input>> From<Content<'input, X>> for Block<'input, X> {
-    fn from(value: Content<'input, X>) -> Self {
+impl<X: Expr> From<Content<X>> for Block<X> {
+    fn from(value: Content<X>) -> Self {
         Block::new(value, true)
     }
 }
 
-impl<'input, X: Expr<'input>> From<Block<'input, X>> for Content<'input, X> {
-    fn from(value: Block<'input, X>) -> Self {
+impl<X: Expr> From<Block<X>> for Content<X> {
+    fn from(value: Block<X>) -> Self {
         value.into_content()
     }
 }

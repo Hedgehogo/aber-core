@@ -1,25 +1,25 @@
 use crate::reprs::mir::{unit::Id, State, Value, WithState};
 
-pub(super) fn one_i32<'input: 'state, 'state>(
-    state: &'state mut State<'input>,
-) -> WithState<'input, 'state, Result<Id<Value>, ()>> {
+pub(super) fn one_i32<'state>(
+    state: &'state mut State,
+) -> WithState<'state, Result<Id<Value>, ()>> {
     let value = state.push::<Value>();
     value.unit_mut(state).set(1);
     WithState(state, Ok(value))
 }
 
-pub(super) fn same_i32<'input: 'state, 'state>(
-    state: &'state mut State<'input>,
+pub(super) fn same_i32<'state>(
+    state: &'state mut State,
     id: Id<Value>,
-) -> WithState<'input, 'state, Result<Id<Value>, ()>> {
+) -> WithState<'state, Result<Id<Value>, ()>> {
     WithState(state, Ok(id))
 }
 
-pub(super) fn add_i32<'input: 'state, 'state>(
-    state: &'state mut State<'input>,
+pub(super) fn add_i32<'state>(
+    state: &'state mut State,
     a_id: Id<Value>,
     b_id: Id<Value>,
-) -> WithState<'input, 'state, Result<Id<Value>, ()>> {
+) -> WithState<'state, Result<Id<Value>, ()>> {
     let inner = |state, id: Id<Value>| {
         id.unit_mut(state)
             .into_inner()
@@ -44,10 +44,10 @@ pub(super) fn add_i32<'input: 'state, 'state>(
         .into()
 }
 
-pub(super) fn println_i32<'input: 'state, 'state>(
-    state: &'state mut State<'input>,
+pub(super) fn println_i32<'state>(
+    state: &'state mut State,
     id: Id<Value>,
-) -> WithState<'input, 'state, Result<Id<Value>, ()>> {
+) -> WithState<'state, Result<Id<Value>, ()>> {
     let value = id.unit_mut(state);
     value.inner().inspect(|value| println!("{}", value));
     value.with_state().map(Ok)

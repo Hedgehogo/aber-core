@@ -1,7 +1,7 @@
 //! Module that provides types to describe the syntactic construct *call*.
 use super::super::span::{IntoSpanned, Spanned};
 use super::{whitespaced::Whitespaced, List, Wast};
-use crate::stages::syntax::Expr;
+use crate::stages::syntax::{self, ident::IdentSealed, Expr, Node};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,7 +39,10 @@ impl<'input> Ident<'input> {
 }
 
 impl<'input> Spanned<Ident<'input>> {
-    pub fn into_spanned_call<X: Expr<'input>>(self) -> Spanned<Call<'input, X>> {
+    pub fn into_spanned_call<X: Expr>(self) -> Spanned<Call<X>>
+    where
+        X::Node: Node<Ident = Ident<'input>>,
+    {
         let span = self.span();
         Call::new(self, None).into_spanned(span)
     }
@@ -47,37 +50,49 @@ impl<'input> Spanned<Ident<'input>> {
 
 impl fmt::Debug for Ident<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.content)
+        self.content.fmt(f)
     }
 }
 
-/// Type describing the syntactic construct *generic arguments*
-pub type Generics<'input, X> = Whitespaced<'input, X, List<'input, X, X>>;
-
-/// Type describing the syntactic construct *call*
-pub struct Call<'input, X: Expr<'input>> {
-    pub ident: Spanned<Ident<'input>>,
-    pub generics: Option<Generics<'input, X>>,
+impl<'input, S> IdentSealed<'input, S> for Ident<'input> {
+    fn from_repr_unchecked(_state: &mut S, repr: &'input str) -> Self {
+        Self::from_repr_unchecked(repr)
+    }
 }
 
-impl<'input, X: Expr<'input>> Call<'input, X> {
+impl<'input, S> syntax::Ident<'input, S> for Ident<'input> {}
+
+/// Type describing the syntactic construct *generic arguments*
+pub type Generics<X> = Whitespaced<X, List<X, X>>;
+
+/// Type describing the syntactic construct *call*
+pub struct Call<X: Expr> {
+    pub ident: Spanned<<<X as Expr>::Node as Node>::Ident>,
+    pub generics: Option<Generics<X>>,
+}
+
+impl<X: Expr> Call<X> {
     /// Creates a new `Call`.
-    pub fn new(ident: Spanned<Ident<'input>>, generics: Option<Generics<'input, X>>) -> Self {
+    pub fn new(
+        ident: Spanned<<<X as Expr>::Node as Node>::Ident>,
+        generics: Option<Generics<X>>,
+    ) -> Self {
         Self { ident, generics }
     }
 }
 
-impl<'input, X: Expr<'input>> Spanned<Call<'input, X>> {
-    pub fn into_spanned_wast(self) -> Spanned<Wast<'input, X::Node>> {
+impl<X: Expr> Spanned<Call<X>> {
+    pub fn into_spanned_wast(self) -> Spanned<Wast<X::Node>> {
         let Spanned(call, span) = self;
         Wast::Call(call).into_spanned(span)
     }
 }
 
-impl<'input, X> fmt::Debug for Call<'input, X>
+impl<X> fmt::Debug for Call<X>
 where
-    X: Expr<'input> + fmt::Debug,
+    X: Expr + fmt::Debug,
     X::Whitespace: fmt::Debug,
+    <<X as Expr>::Node as Node>::Ident: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Call")
@@ -87,29 +102,32 @@ where
     }
 }
 
-impl<'input, X> Clone for Call<'input, X>
+impl<X> Clone for Call<X>
 where
-    X: Expr<'input> + Clone,
+    X: Expr + Clone,
     X::Whitespace: Clone,
+    <<X as Expr>::Node as Node>::Ident: Clone,
 {
     fn clone(&self) -> Self {
         Self::new(self.ident.clone(), self.generics.clone())
     }
 }
 
-impl<'input, X> PartialEq for Call<'input, X>
+impl<X> PartialEq for Call<X>
 where
-    X: Expr<'input> + PartialEq,
+    X: Expr + PartialEq,
     X::Whitespace: PartialEq,
+    <<X as Expr>::Node as Node>::Ident: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         self.ident == other.ident && self.generics == other.generics
     }
 }
 
-impl<'input, X> Eq for Call<'input, X>
+impl<X> Eq for Call<X>
 where
-    X: Expr<'input> + Eq,
+    X: Expr + Eq,
     X::Whitespace: Eq,
+    <<X as Expr>::Node as Node>::Ident: Eq,
 {
 }

@@ -1,7 +1,7 @@
 pub mod event;
 pub mod with_state;
 
-use super::super::wast::call::Ident;
+use super::super::{hir::Ident, wast::call::Ident as WastIdent};
 use super::{
     input::Nodes,
     unit::{Id, Unit, UnitConv, UnitMut},
@@ -12,14 +12,16 @@ use chumsky::{
 };
 use event::{Event, EventZipped};
 use std::collections::hash_map::{Entry, HashMap};
+use string_interner::DefaultStringInterner;
 
 pub use event::UnitEvent;
 pub use with_state::WithState;
 
-pub struct State<'input> {
+pub struct State {
     units: Vec<Unit>,
-    idents: HashMap<Ident<'input>, usize>,
-    log: Vec<EventZipped<'input>>,
+    interner: DefaultStringInterner,
+    names: HashMap<Ident, usize>,
+    log: Vec<EventZipped>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,18 +30,22 @@ pub struct Checkpoint {
     log_len: usize,
 }
 
-impl<'input> State<'input> {
+impl State {
+    #[expect(clippy::new_without_default)]
     pub fn new() -> Self {
-        let units = Vec::new();
-        let idents = HashMap::new();
-        let log = Vec::new();
-        Self { units, idents, log }
+        Self {
+            units: Default::default(),
+            interner: Default::default(),
+            names: Default::default(),
+            log: Default::default(),
+        }
     }
 
     pub fn standart() -> Self {
         use super::unit::function::{impls, Function, Time};
 
-        let ident = |s| Ident::from_repr_unchecked(s);
+        let mut interner = DefaultStringInterner::new();
+        let mut ident = |s| Ident::from_repr_unchecked(&mut interner, s);
 
         let mut state = Self::new();
 
@@ -71,6 +77,8 @@ impl<'input> State<'input> {
         run.add_impl(impls::RunI32.into());
         run.specify_time(Time::Runtime);
 
+        state.interner = interner;
+
         state
     }
 
@@ -87,7 +95,7 @@ impl<'input> State<'input> {
         for event in rest.iter().rev() {
             match event.unzip() {
                 Event::Declare(ident) => {
-                    self.idents.remove(&ident);
+                    self.names.remove(&ident);
                 }
 
                 Event::Push(_) => {}
@@ -106,15 +114,12 @@ impl<'input> State<'input> {
         self.log.truncate(marker.log_len);
     }
 
-    pub fn find<'state>(&'state self, ident: Ident<'input>) -> Option<Id<Unit>> {
-        self.idents.get(&ident).copied().map(Id::new)
+    pub fn find(&self, ident: Ident) -> Option<Id<Unit>> {
+        self.names.get(&ident).copied().map(Id::new)
     }
 
-    pub fn declare<'state, T: UnitConv + Default>(
-        &'state mut self,
-        ident: Ident<'input>,
-    ) -> Option<Id<T>> {
-        match self.idents.entry(ident) {
+    pub fn declare<T: UnitConv + Default>(&mut self, ident: Ident) -> Option<Id<T>> {
+        match self.names.entry(ident) {
             Entry::Vacant(vacant) => {
                 let id = self.units.len();
                 vacant.insert(id);
@@ -140,6 +145,10 @@ impl<'input> State<'input> {
         Id::new(id)
     }
 
+    pub fn add_ident<'input>(&mut self, ident: WastIdent<'input>) -> Ident {
+        Ident::from_repr_unchecked(&mut self.interner, ident.as_str())
+    }
+
     pub(super) fn get_unit(&self, id: usize) -> Option<&Unit> {
         self.units.get(id)
     }
@@ -153,27 +162,18 @@ impl<'input> State<'input> {
     }
 }
 
-impl Default for State<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'input: 'comp, 'comp> Inspector<'comp, Nodes<'input, 'comp>> for State<'input> {
+impl<'comp> Inspector<'comp, Nodes<'comp>> for State {
     type Checkpoint = Checkpoint;
 
-    fn on_token(&mut self, _token: &<Nodes<'input, 'comp> as Input<'comp>>::Token) {}
+    fn on_token(&mut self, _token: &<Nodes<'comp> as Input<'comp>>::Token) {}
 
-    fn on_save<'parse>(
-        &self,
-        _cursor: &Cursor<'comp, 'parse, Nodes<'input, 'comp>>,
-    ) -> Self::Checkpoint {
+    fn on_save<'parse>(&self, _cursor: &Cursor<'comp, 'parse, Nodes<'comp>>) -> Self::Checkpoint {
         self.save()
     }
 
     fn on_rewind<'parse>(
         &mut self,
-        marker: &input::Checkpoint<'comp, 'parse, Nodes<'input, 'comp>, Checkpoint>,
+        marker: &input::Checkpoint<'comp, 'parse, Nodes<'comp>, Checkpoint>,
     ) {
         self.rewind(marker.inspector())
     }

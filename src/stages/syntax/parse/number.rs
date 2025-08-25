@@ -1,6 +1,7 @@
 use super::super::error::Expected;
-use super::{spanned, GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
-use crate::reprs::wast::number::{Digit, Digits, Number, Radix};
+use super::{GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
+use crate::reprs::wast::number::{Digit, Number, Radix};
+use crate::stages::syntax::Digits;
 use chumsky::{
     label::LabelError,
     prelude::*,
@@ -30,8 +31,9 @@ where
     })
 }
 
-pub fn digits<'input, E>() -> impl GraphemeParser<'input, Digits<'input>, E> + Copy
+pub fn digits<'input, D, E>() -> impl GraphemeParser<'input, D, E> + Copy
 where
+    D: Digits<'input>,
     E: GraphemeParserExtra<'input, Context = Radix>,
     E::Error: GraphemeLabelError<'input, Expected>,
 {
@@ -39,21 +41,26 @@ where
     digit()
         .then(digit().ignored().or(spacer.ignored()).repeated())
         .to_slice()
-        .map(|i| Digits::from_repr_unchecked(i.as_str()))
+        .map(|i| D::from_repr_unchecked(i.as_str()))
 }
 
-pub fn number<'input, E>() -> impl GraphemeParser<'input, Number<'input>, E> + Copy
+pub fn number<'input, D, E>() -> impl GraphemeParser<'input, Number<D>, E> + Copy
 where
+    D: Digits<'input>,
     E: GraphemeParserExtra<'input>,
     E::Error: GraphemeLabelError<'input, Expected>,
 {
-    let frac = digits().or(empty().map(|_| Digits::default()));
+    let frac = digits().or(empty().map(|_| D::default()));
 
     let unsigned = custom(move |input| {
-        let (radix_or_int, span) = input.parse(spanned(digits().with_ctx(Radix::DECIMAL)))?;
+        let (radix_or_int, slice, span) = input.parse(
+            digits::<D, _>()
+                .with_ctx(Radix::DECIMAL)
+                .map_with(|radix_or_int, extra| (radix_or_int, extra.slice(), extra.span())),
+        )?;
 
         let (radix, int) = match input.parse(just("'").labelled(Expected::RadixSpecial).or_not())? {
-            Some(_) => radix_or_int
+            Some(_) => slice
                 .as_str()
                 .parse::<u8>()
                 .ok()
@@ -87,7 +94,7 @@ mod tests {
 
     use super::super::super::error::Error;
     use super::super::tests::Extra;
-    use crate::reprs::span::Span;
+    use crate::reprs::{span::Span, wast::number::Digits};
     use smallvec::smallvec;
     use text::Graphemes;
 
@@ -123,17 +130,19 @@ mod tests {
     fn test_number() {
         let digits = |s| Digits::from_repr_unchecked(s);
         assert_eq!(
-            number::<Extra>().parse(Graphemes::new("10")).into_result(),
+            number::<Digits, Extra>()
+                .parse(Graphemes::new("10"))
+                .into_result(),
             Ok(Number::new(true, Radix::DECIMAL, digits("10"), None))
         );
         assert_eq!(
-            number::<Extra>()
+            number::<Digits, Extra>()
                 .parse(Graphemes::new("36_000"))
                 .into_result(),
             Ok(Number::new(true, Radix::DECIMAL, digits("36_000"), None))
         );
         assert_eq!(
-            number::<Extra>()
+            number::<Digits, Extra>()
                 .parse(Graphemes::new("10.05"))
                 .into_result(),
             Ok(Number::new(
@@ -144,7 +153,9 @@ mod tests {
             ))
         );
         assert_eq!(
-            number::<Extra>().parse(Graphemes::new("10.")).into_result(),
+            number::<Digits, Extra>()
+                .parse(Graphemes::new("10."))
+                .into_result(),
             Ok(Number::new(
                 true,
                 Radix::DECIMAL,
@@ -153,7 +164,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            number::<Extra>()
+            number::<Digits, Extra>()
                 .parse(Graphemes::new("4'13.02"))
                 .into_result(),
             Ok(Number::new(
@@ -164,7 +175,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            number::<Extra>()
+            number::<Digits, Extra>()
                 .parse(Graphemes::new("36'ABER."))
                 .into_result(),
             Ok(Number::new(
@@ -180,7 +191,7 @@ mod tests {
     fn test_number_erroneous() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            number::<Extra>()
+            number::<Digits, Extra>()
                 .parse(Graphemes::new("10A"))
                 .into_output_errors(),
             (
@@ -199,7 +210,7 @@ mod tests {
             )
         );
         assert_eq!(
-            number::<Extra>()
+            number::<Digits, Extra>()
                 .parse(Graphemes::new("_1"))
                 .into_output_errors(),
             (
@@ -212,7 +223,7 @@ mod tests {
             )
         );
         assert_eq!(
-            number::<Extra>()
+            number::<Digits, Extra>()
                 .parse(Graphemes::new(".1"))
                 .into_output_errors(),
             (
@@ -225,7 +236,7 @@ mod tests {
             )
         );
         assert_eq!(
-            number::<Extra>()
+            number::<Digits, Extra>()
                 .parse(Graphemes::new("2'2"))
                 .into_output_errors(),
             (
@@ -238,7 +249,7 @@ mod tests {
             )
         );
         assert_eq!(
-            number::<Extra>()
+            number::<Digits, Extra>()
                 .parse(Graphemes::new("1'0"))
                 .into_output_errors(),
             (
@@ -247,7 +258,7 @@ mod tests {
             )
         );
         assert_eq!(
-            number::<Extra>()
+            number::<Digits, Extra>()
                 .parse(Graphemes::new("60'15"))
                 .into_output_errors(),
             (

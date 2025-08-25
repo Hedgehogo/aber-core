@@ -1,14 +1,14 @@
 //! Module that provides abstractions over expressions.
 
-use super::{whitespace::Side, Node, Whitespace};
+use super::{whitespace::Side, Node};
 use crate::reprs::span::{IntoSpanned, Spanned, SpannedVec};
 
-pub trait Expr<'input>: Sized + From<SpannedVec<Self::Node>> {
+pub trait Expr: Sized + From<SpannedVec<Self::Node>> {
     /// Type describing the node.
-    type Node: Node<'input, Expr = Self>;
+    type Node: Node<Expr = Self>;
 
     /// Type describing the whitespace.
-    type Whitespace: Whitespace<'input>;
+    type Whitespace;
 
     /// Creates an expression from a sequence of nodes.
     ///
@@ -33,10 +33,7 @@ pub trait Expr<'input>: Sized + From<SpannedVec<Self::Node>> {
 }
 
 /// An extension trait describing operations on `Spanned<SpannedVec<X::Node>>`.
-pub trait ExprOp<'input, X>: Sized
-where
-    X: Expr<'input>,
-{
+pub trait ExprOp<X: Expr>: Sized {
     /// Creates an expresion.
     fn into_spanned_expr(self) -> Spanned<X>;
 
@@ -61,10 +58,7 @@ where
     fn whitespaced(self, whitespace: X::Whitespace, side: Side) -> Self;
 }
 
-impl<'input, N> ExprOp<'input, N::Expr> for Spanned<SpannedVec<N>>
-where
-    N: Node<'input>,
-{
+impl<N: Node> ExprOp<N::Expr> for Spanned<SpannedVec<N>> {
     fn into_spanned_expr(self) -> Spanned<N::Expr> {
         self.map(N::Expr::from_seq)
     }
@@ -76,19 +70,11 @@ where
         left.into_spanned(left_span.range.start..right_span.range.end)
     }
 
-    fn whitespaced(
-        self,
-        whitespace: <<N as Node<'input>>::Expr as Expr<'input>>::Whitespace,
-        side: Side,
-    ) -> Self {
+    fn whitespaced(self, whitespace: <<N as Node>::Expr as Expr>::Whitespace, side: Side) -> Self {
         N::Expr::whitespaced_seq(self, whitespace, side)
     }
 
-    fn whitespace(
-        &mut self,
-        whitespace: <<N as Node<'input>>::Expr as Expr<'input>>::Whitespace,
-        side: Side,
-    ) {
+    fn whitespace(&mut self, whitespace: <<N as Node>::Expr as Expr>::Whitespace, side: Side) {
         let mut seq = std::mem::take(self);
         seq = seq.whitespaced(whitespace, side);
         *self = seq;

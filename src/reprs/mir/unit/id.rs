@@ -19,14 +19,11 @@ impl<T: UnitConv> Id<T> {
         }
     }
 
-    pub fn unit<'input, 'state>(&self, state: &'state State<'input>) -> UnitRef<'input, 'state, T> {
+    pub fn unit<'state>(&self, state: &'state State) -> UnitRef<'state, T> {
         UnitRef::new(state, self.id)
     }
 
-    pub fn unit_mut<'input, 'state>(
-        &self,
-        state: &'state mut State<'input>,
-    ) -> UnitMut<'input, 'state, T> {
+    pub fn unit_mut<'state>(&self, state: &'state mut State) -> UnitMut<'state, T> {
         UnitMut::new(state, self.id)
     }
 

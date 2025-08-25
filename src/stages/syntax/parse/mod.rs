@@ -11,7 +11,10 @@ pub mod number;
 pub mod raw_string;
 pub mod whitespace;
 
-use super::{ctx::Ctx, error::Error, Expr};
+use super::{
+    ctx::Ctx, error::Error, Character, Digits, EscapedString, Expr, Ident, Node, RawString,
+    Whitespace,
+};
 use crate::reprs::wast::block::Content;
 use chumsky::{
     combinator::MapWith, extra::ParserExtra, input::MapExtra, label::LabelError, prelude::*,
@@ -119,10 +122,16 @@ where
     })
 }
 
-pub fn parser<'input, X>(
-) -> impl GraphemeParser<'input, Content<'input, X>, extra::Err<Error<'input>>> + Clone
+pub fn parser<'input, X, S>(
+) -> impl GraphemeParser<'input, Content<X>, extra::Full<Error<'input>, S, ()>> + Clone
 where
-    X: Expr<'input> + 'input,
+    X: Expr + 'input,
+    X::Whitespace: Whitespace<'input>,
+    <<X as Expr>::Node as Node>::Ident: Ident<'input, S>,
+    <<X as Expr>::Node as Node>::Digits: Digits<'input>,
+    <<X as Expr>::Node as Node>::Character: Character<'input>,
+    <<X as Expr>::Node as Node>::String: EscapedString<'input> + RawString<'input>,
+    S: chumsky::inspector::Inspector<'input, &'input Graphemes> + 'input,
 {
     content(expr(fact::<X::Node, _>()))
         .with_ctx(Ctx::default())
@@ -133,7 +142,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::reprs::{span::IntoSpanned, CompExpr};
+    use crate::reprs::{span::IntoSpanned, wast::wast_node::WastExpr};
     use extra::Full;
     use text::Graphemes;
 
@@ -142,11 +151,10 @@ mod tests {
     #[test]
     fn test_parser() {
         assert_eq!(
-            parser::<CompExpr>().parse(Graphemes::new("")).into_result(),
-            Ok(Content::new(
-                vec![],
-                CompExpr::from_vec(vec![]).into_spanned(0..0)
-            )),
+            parser::<WastExpr, ()>()
+                .parse(Graphemes::new(""))
+                .into_result(),
+            Ok(Content::new(vec![], vec![].into_spanned(0..0))),
         );
     }
 }

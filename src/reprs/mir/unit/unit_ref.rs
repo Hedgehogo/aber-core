@@ -3,26 +3,26 @@ use super::{Function, Id, Unit, UnitConv, Value};
 use std::{fmt, marker::PhantomData};
 
 #[derive(Clone, Copy)]
-struct UnitRefInner<'input, 'state> {
-    state: &'state State<'input>,
+struct UnitRefInner<'state> {
+    state: &'state State,
     id: usize,
 }
 
 #[repr(transparent)]
-pub struct UnitRef<'input, 'state, T: UnitConv> {
-    inner: UnitRefInner<'input, 'state>,
+pub struct UnitRef<'state, T: UnitConv> {
+    inner: UnitRefInner<'state>,
     phantom: PhantomData<T>,
 }
 
-impl<'input, 'state, T: UnitConv> UnitRef<'input, 'state, T> {
-    pub(in super::super) fn new(state: &'state State<'input>, id: usize) -> Self {
+impl<'state, T: UnitConv> UnitRef<'state, T> {
+    pub(in super::super) fn new(state: &'state State, id: usize) -> Self {
         Self {
             inner: UnitRefInner { state, id },
             phantom: PhantomData,
         }
     }
 
-    pub fn state(&self) -> &'state State<'input> {
+    pub fn state(&self) -> &'state State {
         self.inner.state
     }
 
@@ -30,7 +30,7 @@ impl<'input, 'state, T: UnitConv> UnitRef<'input, 'state, T> {
         Id::new(self.inner.id)
     }
 
-    pub fn upcast(self) -> UnitRef<'input, 'state, Unit> {
+    pub fn upcast(self) -> UnitRef<'state, Unit> {
         unsafe {
             // It's safe because `UnitRef<T>` is `#[repr(transparent)]`
             let inner: UnitRefInner = std::mem::transmute(self);
@@ -51,27 +51,27 @@ impl<'input, 'state, T: UnitConv> UnitRef<'input, 'state, T> {
     }
 }
 
-impl<'input, 'state, T: UnitConv> Clone for UnitRef<'input, 'state, T> {
+impl<'state, T: UnitConv> Clone for UnitRef<'state, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'input, 'state, T: UnitConv> Copy for UnitRef<'input, 'state, T> {}
+impl<'state, T: UnitConv> Copy for UnitRef<'state, T> {}
 
-impl<'input, 'state, T: UnitConv> PartialEq for UnitRef<'input, 'state, T> {
+impl<'state, T: UnitConv> PartialEq for UnitRef<'state, T> {
     fn eq(&self, other: &Self) -> bool {
         self.inner.id == other.inner.id
     }
 }
 
-impl<'input, 'state, T: UnitConv> Eq for UnitRef<'input, 'state, T> {}
+impl<'state, T: UnitConv> Eq for UnitRef<'state, T> {}
 
-impl<'input, 'state, T> AsRef<UnitRef<'input, 'state, Unit>> for UnitRef<'input, 'state, T>
+impl<'state, T> AsRef<UnitRef<'state, Unit>> for UnitRef<'state, T>
 where
     T: UnitConv,
 {
-    fn as_ref(&self) -> &UnitRef<'input, 'state, Unit> {
+    fn as_ref(&self) -> &UnitRef<'state, Unit> {
         let ptr = self as *const UnitRef<T>;
 
         unsafe {
@@ -84,11 +84,11 @@ where
     }
 }
 
-impl<'input, 'state, T> AsMut<UnitRef<'input, 'state, Unit>> for UnitRef<'input, 'state, T>
+impl<'state, T> AsMut<UnitRef<'state, Unit>> for UnitRef<'state, T>
 where
     T: UnitConv,
 {
-    fn as_mut(&mut self) -> &mut UnitRef<'input, 'state, Unit> {
+    fn as_mut(&mut self) -> &mut UnitRef<'state, Unit> {
         let ptr = self as *mut UnitRef<T>;
 
         unsafe {
@@ -101,8 +101,8 @@ where
     }
 }
 
-impl<'input, 'state> UnitRef<'input, 'state, Unit> {
-    pub fn downcast<T: UnitConv>(self) -> Option<UnitRef<'input, 'state, T>> {
+impl<'state> UnitRef<'state, Unit> {
+    pub fn downcast<T: UnitConv>(self) -> Option<UnitRef<'state, T>> {
         T::from_unit_ref(self.unit()).map(|_| unsafe {
             // It's safe because `UnitRef<Unit>` is `#[repr(transparent)]`
             let inner: UnitRefInner = std::mem::transmute(self);
@@ -113,11 +113,18 @@ impl<'input, 'state> UnitRef<'input, 'state, Unit> {
     }
 }
 
-impl<'input, 'state> fmt::Debug for UnitRef<'input, 'state, Unit> {
+impl<'state> fmt::Debug for UnitRef<'state, Unit> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.unit() {
-            Unit::Value(_) => write!(f, "Value({:?})", self.downcast::<Value>().unwrap()),
-            Unit::Function(_) => write!(f, "Function({:?})", self.downcast::<Function>().unwrap()),
+            Unit::Value(_) => f
+                .debug_tuple("Value")
+                .field(&self.downcast::<Value>().unwrap())
+                .finish(),
+
+            Unit::Function(_) => f
+                .debug_tuple("Function")
+                .field(&self.downcast::<Function>().unwrap())
+                .finish(),
         }
     }
 }

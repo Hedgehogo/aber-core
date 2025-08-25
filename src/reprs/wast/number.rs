@@ -1,5 +1,6 @@
 //! Module that provides types for number literal description.
 
+use crate::stages::syntax::{self, digits::DigitsSealed};
 use std::fmt::Debug;
 
 /// Type guarantee that contains the base of a numeral system in the range of `2` to `36` inclusive.
@@ -139,6 +140,14 @@ impl Debug for Digits<'_> {
     }
 }
 
+impl<'input> DigitsSealed<'input> for Digits<'input> {
+    fn from_repr_unchecked(repr: &'input str) -> Self {
+        Self::from_repr_unchecked(repr)
+    }
+}
+
+impl<'input> syntax::Digits<'input> for Digits<'input> {}
+
 #[derive(Debug, Clone)]
 pub struct DigitIter<'input> {
     iter: std::slice::Iter<'input, u8>,
@@ -172,20 +181,15 @@ impl DoubleEndedIterator for DigitIter<'_> {
 
 /// Type that stores information about how a number was written.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
-pub struct Number<'input> {
+pub struct Number<D> {
     pub sign: bool,
     pub radix: Radix,
-    pub int: Digits<'input>,
-    pub frac: Option<Digits<'input>>,
+    pub int: D,
+    pub frac: Option<D>,
 }
 
-impl<'input> Number<'input> {
-    pub fn new(
-        sign: bool,
-        radix: Radix,
-        int: Digits<'input>,
-        frac: Option<Digits<'input>>,
-    ) -> Self {
+impl<D> Number<D> {
+    pub fn new(sign: bool, radix: Radix, int: D, frac: Option<D>) -> Self {
         Self {
             sign,
             radix,

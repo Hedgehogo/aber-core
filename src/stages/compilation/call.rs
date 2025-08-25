@@ -17,14 +17,11 @@ struct CallCtx<C> {
     argument_count: usize,
 }
 
-fn from_wast<'input, 'comp, E, P>(
-    fact: P,
-) -> impl CompParser<'input, 'comp, Call<'input>, E> + Clone
+fn from_wast<'comp, E, P>(fact: P) -> impl CompParser<'comp, Call, E> + Clone
 where
-    'input: 'comp,
-    E: CompParserExtra<'input, 'comp>,
+    E: CompParserExtra<'comp>,
     E::Context: Clone,
-    P: CompParser<'input, 'comp, CompNode<'input>, E> + Clone,
+    P: CompParser<'comp, CompNode, E> + Clone,
 {
     select_ref! {
         CompNode::Wast(Wast::Call(call)) => call
@@ -63,12 +60,11 @@ where
     .map(|(ctx, arguments)| Call::new(ctx.function_id, arguments))
 }
 
-fn from_mir<'input, 'comp, E, P>(fact: P) -> impl CompParser<'input, 'comp, Call<'input>, E> + Clone
+fn from_mir<'comp, E, P>(fact: P) -> impl CompParser<'comp, Call, E> + Clone
 where
-    'input: 'comp,
-    E: CompParserExtra<'input, 'comp>,
+    E: CompParserExtra<'comp>,
     E::Context: Clone,
-    P: CompParser<'input, 'comp, CompNode<'input>, E> + Clone,
+    P: CompParser<'comp, CompNode, E> + Clone,
 {
     fact
         .map_with(|fact, extra| fact.into_spanned(extra.span()))
@@ -89,12 +85,11 @@ where
         })
 }
 
-pub fn call<'input, 'comp, E, P>(fact: P) -> impl CompParser<'input, 'comp, Call<'input>, E> + Clone
+pub fn call<'comp, E, P>(fact: P) -> impl CompParser<'comp, Call, E> + Clone
 where
-    'input: 'comp,
-    E: CompParserExtra<'input, 'comp>,
+    E: CompParserExtra<'comp>,
     E::Context: Clone,
-    P: CompParser<'input, 'comp, CompNode<'input>, E> + Clone,
+    P: CompParser<'comp, CompNode, E> + Clone,
 {
     from_wast(fact.clone())
         .or(from_mir(fact))
@@ -127,14 +122,14 @@ mod tests {
     };
     use chumsky::extra::Full;
 
-    pub type Extra<'input> = Full<Cheap<Span>, State<'input>, ()>;
+    pub type Extra = Full<Cheap<Span>, State, ()>;
 
     #[test]
     fn test_from_wast() {
         let ident = |s| Ident::from_repr_unchecked(s);
-        let id = |state: &State, s| {
+        let id = |state: &State, ident| {
             state
-                .find(ident(s))
+                .find(ident)
                 .unwrap()
                 .unit(state)
                 .downcast::<Function>()
@@ -143,39 +138,42 @@ mod tests {
         };
 
         let mut state = State::new();
+        let two_ident = state.add_ident(ident("two"));
+        let one_ident = state.add_ident(ident("one"));
+        let zero_ident = state.add_ident(ident("zero"));
         state
-            .declare::<Function>(ident("two"))
+            .declare::<Function>(two_ident)
             .unwrap()
             .unit_mut(&mut state)
             .add_arg_count(2);
         state
-            .declare::<Function>(ident("one"))
+            .declare::<Function>(one_ident)
             .unwrap()
             .unit_mut(&mut state)
             .add_arg_count(1);
         state
-            .declare::<Function>(ident("zero"))
+            .declare::<Function>(zero_ident)
             .unwrap()
             .unit_mut(&mut state)
             .add_arg_count(0);
 
         let input = [
-            ident("two")
+            two_ident
                 .into_spanned(0..3)
                 .into_spanned_call::<CompExpr>()
                 .into_spanned_wast()
                 .into_spanned_node(),
-            ident("one")
+            one_ident
                 .into_spanned(4..7)
                 .into_spanned_call::<CompExpr>()
                 .into_spanned_wast()
                 .into_spanned_node(),
-            ident("zero")
+            zero_ident
                 .into_spanned(8..12)
                 .into_spanned_call::<CompExpr>()
                 .into_spanned_wast()
                 .into_spanned_node(),
-            ident("zero")
+            zero_ident
                 .into_spanned(13..17)
                 .into_spanned_call::<CompExpr>()
                 .into_spanned_wast()
@@ -190,11 +188,11 @@ mod tests {
                 .parse_with_state(input, &mut state)
                 .into_result(),
             Ok(Call::new(
-                id(&state, "two"),
+                id(&state, two_ident),
                 vec![
                     Call::new(
-                        id(&state, "one"),
-                        vec![Call::new(id(&state, "zero"), vec![])
+                        id(&state, one_ident),
+                        vec![Call::new(id(&state, zero_ident), vec![])
                             .into_spanned(8..12)
                             .into_spanned_mir()
                             .into_spanned_node()]
@@ -202,7 +200,7 @@ mod tests {
                     .into_spanned(4..12)
                     .into_spanned_mir()
                     .into_spanned_node(),
-                    Call::new(id(&state, "zero"), vec![])
+                    Call::new(id(&state, zero_ident), vec![])
                         .into_spanned(13..17)
                         .into_spanned_mir()
                         .into_spanned_node(),
@@ -214,9 +212,9 @@ mod tests {
     #[test]
     fn test_from_mir() {
         let ident = |s| Ident::from_repr_unchecked(s);
-        let id = |state: &State, s| {
+        let id = |state: &State, ident| {
             state
-                .find(ident(s))
+                .find(ident)
                 .unwrap()
                 .unit(state)
                 .downcast::<Function>()
@@ -225,10 +223,12 @@ mod tests {
         };
 
         let mut state = State::standart();
+        let same_ident = state.add_ident(ident("same"));
+        let one_ident = state.add_ident(ident("one"));
 
         let input = [Call::new(
-            id(&state, "same"),
-            vec![Call::new(id(&state, "one"), vec![])
+            id(&state, same_ident),
+            vec![Call::new(id(&state, one_ident), vec![])
                 .into_spanned(5..8)
                 .into_spanned_mir()
                 .into_spanned_node()],
@@ -261,8 +261,9 @@ mod tests {
         let ident = |s| Ident::from_repr_unchecked(s);
 
         let mut state = State::standart();
+        let one_ident = state.add_ident(ident("one"));
 
-        let input = [ident("one")
+        let input = [one_ident
             .into_spanned(0..3)
             .into_spanned_call::<CompExpr>()
             .into_spanned_wast()
@@ -285,24 +286,27 @@ mod tests {
         let ident = |s| Ident::from_repr_unchecked(s);
 
         let mut state = State::standart();
+        let add_ident = state.add_ident(ident("add"));
+        let same_ident = state.add_ident(ident("same"));
+        let one_ident = state.add_ident(ident("one"));
 
         let input = [
-            ident("add")
+            add_ident
                 .into_spanned(0..3)
                 .into_spanned_call::<CompExpr>()
                 .into_spanned_wast()
                 .into_spanned_node(),
-            ident("same")
+            same_ident
                 .into_spanned(4..8)
                 .into_spanned_call::<CompExpr>()
                 .into_spanned_wast()
                 .into_spanned_node(),
-            ident("one")
+            one_ident
                 .into_spanned(9..12)
                 .into_spanned_call::<CompExpr>()
                 .into_spanned_wast()
                 .into_spanned_node(),
-            ident("one")
+            one_ident
                 .into_spanned(13..16)
                 .into_spanned_call::<CompExpr>()
                 .into_spanned_wast()
@@ -322,7 +326,7 @@ mod tests {
 
         let Spanned(arg1, span) = result.args[0]
             .as_ref()
-            .map(|node: &CompNode<'_>| node.mir().unwrap().call().unwrap());
+            .map(|node: &CompNode| node.mir().unwrap().call().unwrap());
         assert_eq!(span, (4..12).into());
         assert_eq!(arg1.args.len(), 1);
         assert_eq!(arg1.result_id().unwrap().unit(&state).inner(), Some(1));

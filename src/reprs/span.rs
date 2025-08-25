@@ -123,17 +123,16 @@ impl<T> Spanned<T> {
     }
 
     /// Creates [`Whitespaced`], passes `self` as an argument to `right`.
-    pub fn into_whitespaced<'input, X: Expr<'input>>(
-        self,
-        whitespace: X::Whitespace,
-    ) -> Whitespaced<'input, X, T> {
+    pub fn into_whitespaced<X: Expr>(self, whitespace: X::Whitespace) -> Whitespaced<X, T> {
         Whitespaced::new(whitespace, self)
     }
 }
 
 impl<T: fmt::Debug> fmt::Debug for Spanned<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} @ {:?}", self.inner(), self.span())
+        self.inner().fmt(f)?;
+        f.write_str(" @ ")?;
+        self.span().fmt(f)
     }
 }
 

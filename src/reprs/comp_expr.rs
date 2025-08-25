@@ -4,28 +4,28 @@ use super::{CompNode, Spanned};
 
 /// Type that describes an expression.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CompExpr<'input> {
-    Wast(Vec<Spanned<CompNode<'input>>>),
-    Mir(Box<Spanned<CompNode<'input>>>),
+pub enum CompExpr {
+    Wast(Vec<Spanned<CompNode>>),
+    Mir(Box<Spanned<CompNode>>),
 }
 
-impl<'input> CompExpr<'input> {
+impl CompExpr {
     pub fn new() -> Self {
         Self::Wast(Vec::new())
     }
 
-    pub fn from_vec(value: Vec<Spanned<CompNode<'input>>>) -> Self {
+    pub fn from_vec(value: Vec<Spanned<CompNode>>) -> Self {
         Self::Wast(value)
     }
 }
 
-impl<'input> From<Vec<Spanned<CompNode<'input>>>> for CompExpr<'input> {
-    fn from(value: Vec<Spanned<CompNode<'input>>>) -> Self {
+impl From<Vec<Spanned<CompNode>>> for CompExpr {
+    fn from(value: Vec<Spanned<CompNode>>) -> Self {
         Self::Wast(value)
     }
 }
 
-impl Default for CompExpr<'_> {
+impl Default for CompExpr {
     fn default() -> Self {
         CompExpr::new()
     }

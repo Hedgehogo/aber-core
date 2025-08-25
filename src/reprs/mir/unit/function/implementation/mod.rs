@@ -18,11 +18,11 @@ pub enum AnyBuiltInImpl {
 }
 
 impl AnyBuiltInImpl {
-    pub(crate) fn execute<'input: 'state, 'state, I>(
+    pub(crate) fn execute<'state, I>(
         &self,
-        state: &'state mut State<'input>,
+        state: &'state mut State,
         mut args: I,
-    ) -> WithState<'input, 'state, Result<Id<Value>, ()>>
+    ) -> WithState<'state, Result<Id<Value>, ()>>
     where
         I: Iterator<Item = Id<Value>>,
     {
@@ -50,11 +50,11 @@ pub enum ComptimeBuiltInImpl {}
 
 impl ComptimeBuiltInImpl {
     #[expect(unused_variables)]
-    pub(crate) fn execute<'input, 'state: 'state, I>(
+    pub(crate) fn execute<'state, I>(
         &self,
-        state: &'state mut State<'input>,
+        state: &'state mut State,
         args: I,
-    ) -> WithState<'input, 'state, Result<Id<Value>, ()>>
+    ) -> WithState<'state, Result<Id<Value>, ()>>
     where
         I: Iterator<Item = Id<Value>>,
     {
@@ -128,11 +128,11 @@ pub enum ComptimeImpl {
 }
 
 impl ComptimeImpl {
-    pub(crate) fn execute<'input, 'state: 'state, I>(
+    pub(crate) fn execute<'state, I>(
         &self,
-        state: &'state mut State<'input>,
+        state: &'state mut State,
         args: I,
-    ) -> WithState<'input, 'state, Result<Id<Value>, ()>>
+    ) -> WithState<'state, Result<Id<Value>, ()>>
     where
         I: Iterator<Item = Id<Value>>,
     {

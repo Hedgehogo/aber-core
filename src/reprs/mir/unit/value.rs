@@ -17,15 +17,15 @@ pub enum ValueEvent {
 
 impl_unit_conv!(Value, ValueEvent);
 
-pub type ValueRef<'input, 'state> = UnitRef<'input, 'state, Value>;
+pub type ValueRef<'state> = UnitRef<'state, Value>;
 
-impl<'input, 'state> ValueRef<'input, 'state> {
+impl<'state> ValueRef<'state> {
     pub fn inner(&self) -> Option<ValueData> {
         self.unit().inner
     }
 }
 
-impl<'input, 'state> fmt::Debug for ValueRef<'input, 'state> {
+impl<'state> fmt::Debug for ValueRef<'state> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FunctionRef")
             .field("id", &self.id())
@@ -34,14 +34,14 @@ impl<'input, 'state> fmt::Debug for ValueRef<'input, 'state> {
     }
 }
 
-pub type ValueMut<'input, 'state> = UnitMut<'input, 'state, Value>;
+pub type ValueMut<'state> = UnitMut<'state, Value>;
 
-impl<'input, 'state> ValueMut<'input, 'state> {
+impl<'state> ValueMut<'state> {
     pub fn inner(&self) -> Option<ValueData> {
         self.unit().inner
     }
 
-    pub fn into_inner(self) -> WithState<'input, 'state, Option<ValueData>> {
+    pub fn into_inner(self) -> WithState<'state, Option<ValueData>> {
         let inner = self.inner();
         WithState(self.state(), inner)
     }
@@ -58,7 +58,7 @@ impl<'input, 'state> ValueMut<'input, 'state> {
     }
 }
 
-impl<'input, 'state> fmt::Debug for ValueMut<'input, 'state> {
+impl<'state> fmt::Debug for ValueMut<'state> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FunctionMut")
             .field("id", &self.id())

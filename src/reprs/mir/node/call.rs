@@ -14,14 +14,14 @@ use super::Mir;
 
 /// Type that describes the *call* construct from MIR.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Call<'input> {
+pub struct Call {
     id: Id<Function>,
     result_id: Option<Id<Value>>,
-    pub args: Vec<Spanned<CompNode<'input>>>,
+    pub args: Vec<Spanned<CompNode>>,
 }
 
-impl<'input> Call<'input> {
-    pub fn new(id: Id<Function>, args: Vec<Spanned<CompNode<'input>>>) -> Self {
+impl Call {
+    pub fn new(id: Id<Function>, args: Vec<Spanned<CompNode>>) -> Self {
         Self {
             id,
             result_id: None,
@@ -43,8 +43,8 @@ impl<'input> Call<'input> {
 
     pub(crate) fn comptime<'state, 'call>(
         &'call mut self,
-        state: &'state mut State<'input>,
-    ) -> Result<ComptimeCallMut<'input, 'state, 'call>, &'state mut State<'input>> {
+        state: &'state mut State,
+    ) -> Result<ComptimeCallMut<'state, 'call>, &'state mut State> {
         self.id
             .unit_mut(state)
             .implementation()
@@ -58,25 +58,25 @@ impl<'input> Call<'input> {
     }
 }
 
-impl<'input> Spanned<Call<'input>> {
-    pub fn into_spanned_mir(self) -> Spanned<Mir<'input>> {
+impl Spanned<Call> {
+    pub fn into_spanned_mir(self) -> Spanned<Mir> {
         let Spanned(call, span) = self;
         Mir::Call(call).into_spanned(span)
     }
 }
 
-pub struct ComptimeCallMut<'input, 'state, 'call> {
-    args: &'call Vec<Spanned<CompNode<'input>>>,
+pub struct ComptimeCallMut<'state, 'call> {
+    args: &'call Vec<Spanned<CompNode>>,
     result_id: &'call mut Option<Id<Value>>,
-    implementation: ComptimeImplMut<'input, 'state>,
+    implementation: ComptimeImplMut<'state>,
 }
 
-impl<'input, 'state, 'call> ComptimeCallMut<'input, 'state, 'call> {
-    pub(crate) fn state(self) -> &'state mut State<'input> {
+impl<'state, 'call> ComptimeCallMut<'state, 'call> {
+    pub(crate) fn state(self) -> &'state mut State {
         self.implementation.state()
     }
 
-    pub(crate) fn execute(self) -> WithState<'input, 'state, Result<Id<Value>, ()>> {
+    pub(crate) fn execute(self) -> WithState<'state, Result<Id<Value>, ()>> {
         let ok = self
             .args
             .iter()

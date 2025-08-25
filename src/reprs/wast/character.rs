@@ -1,5 +1,6 @@
 //! Module that provides types for character literal description.
 
+use crate::stages::syntax::{self, character::CharacterSealed};
 use chumsky::text::{Grapheme, Graphemes};
 use std::fmt;
 
@@ -26,7 +27,7 @@ impl From<Ascii> for u8 {
 
 impl fmt::Debug for Ascii {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.0 as char)
+        (self.0 as char).fmt(f)
     }
 }
 
@@ -103,19 +104,19 @@ impl<'input> Default for Character<'input> {
 
 impl<'input> fmt::Debug for Character<'input> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Character {{ ")?;
+        let mut debug = f.debug_struct("Character");
 
-        if let Some(inner) = self.inner {
-            write!(f, "inner: {:?}", inner)?;
-
-            if inner.as_str() != self.inner_repr {
-                write!(f, ", repr: {:?}", self.inner_repr)?;
+        match self.inner {
+            Some(inner) if inner.as_str() != self.inner_repr => {
+                debug.field("inner", &inner).field("repr", &self.inner_repr)
             }
-        } else {
-            write!(f, "repr: {:?}", self.inner_repr)?;
-        }
 
-        write!(f, ", close: {} }}", self.close)
+            Some(inner) => debug.field("inner", &inner),
+
+            None => debug.field("repr", &self.inner_repr),
+        }
+        .field("close", &self.close)
+        .finish()
     }
 }
 
@@ -135,3 +136,11 @@ impl<'input> From<&'input Grapheme> for Character<'input> {
         }
     }
 }
+
+impl<'input> CharacterSealed<'input> for Character<'input> {
+    fn from_repr_unchecked(inner_repr: &'input str, close: bool) -> Self {
+        Self::new(inner_repr, close)
+    }
+}
+
+impl<'input> syntax::Character<'input> for Character<'input> {}

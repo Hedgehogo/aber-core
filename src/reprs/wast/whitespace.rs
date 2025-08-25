@@ -1,6 +1,8 @@
 //! Module that provides [`Whitespace`].
 
+use super::{wast_node::WastNode, Span, Spanned};
 use crate::stages::syntax::whitespace;
+use chumsky::text::{Char, Graphemes};
 
 /// Type describing a whitespace.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -23,6 +25,22 @@ impl<'input> Whitespace<'input> {
     /// sequences.
     pub fn repr(&self) -> &'input str {
         self.repr
+    }
+
+    pub fn is_empty(&self) -> bool {
+        Graphemes::new(self.repr)
+            .iter()
+            .all(|i| i.is_inline_whitespace())
+    }
+}
+
+impl<'input> Whitespace<'input> {
+    /// Wraps in [`WastNode::Whitespace`] and then in [`Spanned`].
+    ///
+    /// # Arguments
+    /// * `span` Object of the type whose type is implements `Into<Span>`.
+    pub fn into_spanned_node<S: Into<Span>>(self, span: S) -> Spanned<WastNode<'input>> {
+        Spanned(WastNode::Whitespace(self), span.into())
     }
 }
 

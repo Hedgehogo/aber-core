@@ -1,4 +1,7 @@
-use super::super::{ctx::Ctx, error::Expected, whitespace::Side, ExprOp, Node};
+use super::super::{
+    ctx::Ctx, error::Expected, whitespace::Side, Character, Digits, EscapedString, Expr, ExprOp,
+    Ident, Node, RawString, Whitespace,
+};
 use super::{
     spanned, whitespace::whitespace, GraphemeLabelError, GraphemeParser, GraphemeParserExtra,
 };
@@ -12,11 +15,14 @@ use crate::reprs::{
 };
 use chumsky::prelude::*;
 
-pub fn content<'input, N, P, E>(
-    expr: P,
-) -> impl GraphemeParser<'input, Content<'input, N::Expr>, E> + Clone
+pub fn content<'input, N, P, E>(expr: P) -> impl GraphemeParser<'input, Content<N::Expr>, E> + Clone
 where
-    N: Node<'input>,
+    N: Node,
+    N::Ident: Ident<'input, E::State>,
+    N::Digits: Digits<'input>,
+    N::Character: Character<'input>,
+    N::String: EscapedString<'input> + RawString<'input>,
+    <N::Expr as Expr>::Whitespace: Whitespace<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
     E: GraphemeParserExtra<'input, Context = Ctx<()>>,
     E::Error: GraphemeLabelError<'input, Expected>,
@@ -62,8 +68,7 @@ mod tests {
     use super::super::{expr::expr, fact::fact, tests::Extra};
     use crate::reprs::{
         span::{IntoSpanned, Span},
-        wast::{assign::Assign, Wast},
-        CompExpr, CompNode,
+        wast::{assign::Assign, wast_node::WastNode, Wast},
     };
     use smallvec::smallvec;
     use text::Graphemes;
@@ -72,16 +77,13 @@ mod tests {
     fn test_content() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            content(expr(fact::<CompNode, Extra>()))
+            content(expr(fact::<WastNode, Extra>()))
                 .parse(Graphemes::new(""))
                 .into_result(),
-            Ok(Content::new(
-                vec![],
-                CompExpr::from_vec(vec![]).into_spanned(0..0)
-            )),
+            Ok(Content::new(vec![], vec![].into_spanned(0..0))),
         );
         assert_eq!(
-            content(expr(fact::<CompNode, Extra>()))
+            content(expr(fact::<WastNode, Extra>()))
                 .parse(Graphemes::new("'a'"))
                 .into_result(),
             Ok(Content::new(
@@ -89,60 +91,56 @@ mod tests {
                 Wast::Character(grapheme("a").into())
                     .into_spanned_node(0..3)
                     .into_spanned_vec()
-                    .map(CompExpr::from_vec)
             )),
         );
         assert_eq!(
-            content(expr(fact::<CompNode, Extra>()))
+            content(expr(fact::<WastNode, Extra>()))
                 .parse(Graphemes::new("'a'; "))
                 .into_result(),
             Ok(Content::new(
-                Stmt::Expr(CompExpr::from_vec(
+                Stmt::Expr(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
                         .into_vec()
-                ))
+                )
                 .into_spanned(0..3)
                 .into_vec(),
-                CompExpr::from_vec(vec![]).into_spanned(5..5),
+                vec![].into_spanned(5..5),
             )),
         );
         assert_eq!(
-            content(expr(fact::<CompNode, Extra>()))
+            content(expr(fact::<WastNode, Extra>()))
                 .parse(Graphemes::new("'a'; 'b'"))
                 .into_result(),
             Ok(Content::new(
-                Stmt::Expr(CompExpr::from_vec(
+                Stmt::Expr(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
                         .into_vec()
-                ))
+                )
                 .into_spanned(0..3)
                 .into_vec(),
                 Wast::Character(grapheme("b").into())
                     .into_spanned_node(5..8)
-                    .into_spanned_vec()
-                    .map(CompExpr::from_vec),
+                    .into_spanned_vec(),
             )),
         );
         assert_eq!(
-            content(expr(fact::<CompNode, Extra>()))
+            content(expr(fact::<WastNode, Extra>()))
                 .parse(Graphemes::new("'a' = 'b';"))
                 .into_result(),
             Ok(Content::new(
                 Stmt::Assign(Assign::new(
                     Wast::Character(grapheme("a").into())
                         .into_spanned_node(0..3)
-                        .into_spanned_vec()
-                        .map(CompExpr::from_vec),
+                        .into_spanned_vec(),
                     Wast::Character(grapheme("b").into())
                         .into_spanned_node(6..9)
                         .into_spanned_vec()
-                        .map(CompExpr::from_vec)
                 ))
                 .into_spanned(0..9)
                 .into_vec(),
-                CompExpr::new().into_spanned(10..10),
+                vec![].into_spanned(10..10),
             )),
         );
     }
@@ -151,7 +149,7 @@ mod tests {
     fn test_content_erroneous() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            content(expr(fact::<CompNode, Extra>()))
+            content(expr(fact::<WastNode, Extra>()))
                 .parse(Graphemes::new("[]"))
                 .into_output_errors(),
             (

@@ -8,52 +8,46 @@ use crate::reprs::{
 use call::call;
 use chumsky::{error::Cheap, extra::ParserExtra, prelude::*};
 
-pub trait CompParser<'input, 'comp, O, E>: Parser<'comp, Nodes<'input, 'comp>, O, E>
+pub trait CompParser<'comp, O, E>: Parser<'comp, Nodes<'comp>, O, E>
 where
-    'input: 'comp,
-    E: CompParserExtra<'input, 'comp>,
+    E: CompParserExtra<'comp>,
     E::Context: Clone,
 {
 }
 
-impl<'input, 'comp, T, O, E> CompParser<'input, 'comp, O, E> for T
+impl<'comp, T, O, E> CompParser<'comp, O, E> for T
 where
-    'input: 'comp,
-    T: Parser<'comp, Nodes<'input, 'comp>, O, E>,
-    E: CompParserExtra<'input, 'comp>,
+    T: Parser<'comp, Nodes<'comp>, O, E>,
+    E: CompParserExtra<'comp>,
     E::Context: Clone,
 {
 }
 
-pub trait CompParserExtra<'input, 'comp>:
-    ParserExtra<'comp, Nodes<'input, 'comp>, State = State<'input>, Error = Cheap<Span>>
+pub trait CompParserExtra<'comp>:
+    ParserExtra<'comp, Nodes<'comp>, State = State, Error = Cheap<Span>>
 where
-    'input: 'comp,
     Self::Context: Clone,
 {
 }
 
-impl<'input, 'comp, T> CompParserExtra<'input, 'comp> for T
+impl<'comp, T> CompParserExtra<'comp> for T
 where
-    'input: 'comp,
-    T: ParserExtra<'comp, Nodes<'input, 'comp>, State = State<'input>, Error = Cheap<Span>>,
+    T: ParserExtra<'comp, Nodes<'comp>, State = State, Error = Cheap<Span>>,
     T::Context: Clone,
 {
 }
 
-pub fn fact<'input, 'comp, E>() -> impl CompParser<'input, 'comp, CompNode<'input>, E> + Clone
+pub fn fact<'comp, E>() -> impl CompParser<'comp, CompNode, E> + Clone
 where
-    'input: 'comp,
-    E: CompParserExtra<'input, 'comp>,
+    E: CompParserExtra<'comp>,
     E::Context: Clone,
 {
     recursive(|fact| call(fact).map(|call| CompNode::Mir(Mir::Call(call))))
 }
 
-pub fn expr<'input, 'comp, E>() -> impl CompParser<'input, 'comp, CompExpr<'input>, E> + Clone
+pub fn expr<'comp, E>() -> impl CompParser<'comp, CompExpr, E> + Clone
 where
-    'input: 'comp,
-    E: CompParserExtra<'input, 'comp>,
+    E: CompParserExtra<'comp>,
     E::Context: Clone,
 {
     fact()

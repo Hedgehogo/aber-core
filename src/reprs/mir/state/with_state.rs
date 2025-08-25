@@ -1,9 +1,9 @@
 use super::State;
 
-pub struct WithState<'input, 'state, T>(pub &'state mut State<'input>, pub T);
+pub struct WithState<'state, T>(pub &'state mut State, pub T);
 
-impl<'input, 'state, T> WithState<'input, 'state, T> {
-    pub fn map<U, F>(self, f: F) -> WithState<'input, 'state, U>
+impl<'state, T> WithState<'state, T> {
+    pub fn map<U, F>(self, f: F) -> WithState<'state, U>
     where
         F: FnOnce(T) -> U,
     {
@@ -11,9 +11,9 @@ impl<'input, 'state, T> WithState<'input, 'state, T> {
         WithState(state, f(inner))
     }
 
-    pub fn map_with<U, F>(self, f: F) -> WithState<'input, 'state, U>
+    pub fn map_with<U, F>(self, f: F) -> WithState<'state, U>
     where
-        F: FnOnce(&'state mut State<'input>, T) -> (&'state mut State<'input>, U),
+        F: FnOnce(&'state mut State, T) -> (&'state mut State, U),
     {
         let Self(state, inner) = self;
         let (state, inner) = f(state, inner);
@@ -26,17 +26,15 @@ impl<'input, 'state, T> WithState<'input, 'state, T> {
     }
 }
 
-impl<'input, 'state, T, E> WithState<'input, 'state, Result<T, E>> {
-    pub fn from_result(
-        result: Result<WithState<'input, 'state, T>, WithState<'input, 'state, E>>,
-    ) -> Self {
+impl<'state, T, E> WithState<'state, Result<T, E>> {
+    pub fn from_result(result: Result<WithState<'state, T>, WithState<'state, E>>) -> Self {
         match result {
             Ok(WithState(state, ok)) => Self(state, Ok(ok)),
             Err(WithState(state, err)) => Self(state, Err(err)),
         }
     }
 
-    pub fn into_result(self) -> Result<WithState<'input, 'state, T>, WithState<'input, 'state, E>> {
+    pub fn into_result(self) -> Result<WithState<'state, T>, WithState<'state, E>> {
         let Self(state, inner) = self;
         match inner {
             Ok(ok) => Ok(WithState(state, ok)),
@@ -45,18 +43,18 @@ impl<'input, 'state, T, E> WithState<'input, 'state, Result<T, E>> {
     }
 }
 
-impl<'input, 'state, T, E> From<Result<WithState<'input, 'state, T>, WithState<'input, 'state, E>>>
-    for WithState<'input, 'state, Result<T, E>>
+impl<'state, T, E> From<Result<WithState<'state, T>, WithState<'state, E>>>
+    for WithState<'state, Result<T, E>>
 {
-    fn from(value: Result<WithState<'input, 'state, T>, WithState<'input, 'state, E>>) -> Self {
+    fn from(value: Result<WithState<'state, T>, WithState<'state, E>>) -> Self {
         Self::from_result(value)
     }
 }
 
-impl<'input, 'state, T, E> From<WithState<'input, 'state, Result<T, E>>>
-    for Result<WithState<'input, 'state, T>, WithState<'input, 'state, E>>
+impl<'state, T, E> From<WithState<'state, Result<T, E>>>
+    for Result<WithState<'state, T>, WithState<'state, E>>
 {
-    fn from(value: WithState<'input, 'state, Result<T, E>>) -> Self {
+    fn from(value: WithState<'state, Result<T, E>>) -> Self {
         value.into_result()
     }
 }

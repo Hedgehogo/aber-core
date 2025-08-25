@@ -2,6 +2,7 @@
 
 pub mod comp_expr;
 pub mod comp_node;
+pub mod hir;
 pub mod mir;
 pub mod span;
 pub mod wast;

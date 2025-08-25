@@ -93,9 +93,10 @@ where
 
 pub fn whitespaced<'input, R, X, P, E, C>(
     right: P,
-) -> impl GraphemeParser<'input, Whitespaced<'input, X, R>, E> + Clone
+) -> impl GraphemeParser<'input, Whitespaced<X, R>, E> + Clone
 where
-    X: Expr<'input>,
+    X: Expr,
+    X::Whitespace: Whitespace<'input>,
     E: GraphemeParserExtra<'input, Context = Ctx<C>>,
     E::Error: GraphemeLabelError<'input, Expected>,
     P: GraphemeParser<'input, R, E> + Clone,

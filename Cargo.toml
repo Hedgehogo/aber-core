@@ -4,12 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-chumsky = { git = "https://github.com/Hedgehogo/chumsky", branch = "unstable", features = [
+chumsky = { git = "https://github.com/zesterer/chumsky", branch = "main", features = [
     "pratt", "stacker"
 ] }
 smallvec = "1"
 num-traits = "0.2"
 num = "0.4"
+string-interner = "0.19"
 
 [dev-dependencies]
 indoc = "2"

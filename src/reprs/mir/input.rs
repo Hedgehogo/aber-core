@@ -4,16 +4,14 @@ use super::super::{
 };
 use chumsky::input::{Input, MappedInput};
 
-pub type Nodes<'input, 'comp> = MappedInput<
-    CompNode<'input>,
+pub type Nodes<'comp> = MappedInput<
+    CompNode,
     Span,
-    &'comp [Spanned<CompNode<'input>>],
-    fn(&'comp Spanned<CompNode<'input>>) -> (&'comp CompNode<'input>, &'comp Span),
+    &'comp [Spanned<CompNode>],
+    fn(&'comp Spanned<CompNode>) -> (&'comp CompNode, &'comp Span),
 >;
 
-pub fn nodes<'input: 'comp, 'comp>(
-    expr: Spanned<&'comp [Spanned<CompNode<'input>>]>,
-) -> Nodes<'input, 'comp> {
+pub fn nodes<'comp>(expr: Spanned<&'comp [Spanned<CompNode>]>) -> Nodes<'comp> {
     let Spanned(expr, span) = expr;
     let eoi = Span::new(span.end()..span.end());
     expr.map(eoi, move |tok| {

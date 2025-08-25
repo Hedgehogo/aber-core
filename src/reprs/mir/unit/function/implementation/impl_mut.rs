@@ -3,13 +3,13 @@ use super::super::super::{Id, Value};
 use super::super::FunctionMut;
 use super::{ComptimeImpl, Impl};
 
-pub struct ImplMut<'input, 'state> {
-    function: FunctionMut<'input, 'state>,
+pub struct ImplMut<'state> {
+    function: FunctionMut<'state>,
     implementation: Impl,
 }
 
-impl<'input, 'state> ImplMut<'input, 'state> {
-    pub(in super::super) fn new(function: FunctionMut<'input, 'state>) -> Self {
+impl<'state> ImplMut<'state> {
+    pub(in super::super) fn new(function: FunctionMut<'state>) -> Self {
         let implementation = function.unit().implementation.unwrap();
         Self {
             function,
@@ -17,11 +17,11 @@ impl<'input, 'state> ImplMut<'input, 'state> {
         }
     }
 
-    pub fn state(self) -> &'state mut State<'input> {
+    pub fn state(self) -> &'state mut State {
         self.function.state()
     }
 
-    pub fn comptime(self) -> Result<ComptimeImplMut<'input, 'state>, Self> {
+    pub fn comptime(self) -> Result<ComptimeImplMut<'state>, Self> {
         match self.implementation.comptime() {
             Some(implementation) => Ok(ComptimeImplMut {
                 function: self.function,
@@ -33,17 +33,17 @@ impl<'input, 'state> ImplMut<'input, 'state> {
     }
 }
 
-pub struct ComptimeImplMut<'input, 'state> {
-    function: FunctionMut<'input, 'state>,
+pub struct ComptimeImplMut<'state> {
+    function: FunctionMut<'state>,
     implementation: ComptimeImpl,
 }
 
-impl<'input, 'state> ComptimeImplMut<'input, 'state> {
-    pub fn state(self) -> &'state mut State<'input> {
+impl<'state> ComptimeImplMut<'state> {
+    pub fn state(self) -> &'state mut State {
         self.function.state()
     }
 
-    pub fn execute<I>(self, args: I) -> WithState<'input, 'state, Result<Id<Value>, ()>>
+    pub fn execute<I>(self, args: I) -> WithState<'state, Result<Id<Value>, ()>>
     where
         I: Iterator<Item = Id<Value>>,
     {

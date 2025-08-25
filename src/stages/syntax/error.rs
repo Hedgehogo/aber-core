@@ -33,6 +33,7 @@ pub enum Expected {
     RawStringUnit,
     RawStringIndent,
     Ident,
+    IdentPart,
     ValidIdent,
     Tuple,
     TupleClose,

@@ -31,15 +31,15 @@ pub enum FunctionEvent {
 
 impl_unit_conv!(Function, FunctionEvent);
 
-pub type FunctionRef<'input, 'state> = UnitRef<'input, 'state, Function>;
+pub type FunctionRef<'state> = UnitRef<'state, Function>;
 
-impl<'input, 'state> FunctionRef<'input, 'state> {
+impl<'state> FunctionRef<'state> {
     pub fn arg_count(&self) -> Option<usize> {
         self.unit().arguments
     }
 }
 
-impl<'input, 'state> fmt::Debug for FunctionRef<'input, 'state> {
+impl<'state> fmt::Debug for FunctionRef<'state> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FunctionRef")
             .field("id", &self.id())
@@ -47,9 +47,9 @@ impl<'input, 'state> fmt::Debug for FunctionRef<'input, 'state> {
     }
 }
 
-pub type FunctionMut<'input, 'state> = UnitMut<'input, 'state, Function>;
+pub type FunctionMut<'state> = UnitMut<'state, Function>;
 
-impl<'input, 'state> FunctionMut<'input, 'state> {
+impl<'state> FunctionMut<'state> {
     pub fn arg_count(&self) -> Option<usize> {
         self.unit().arguments
     }
@@ -61,7 +61,7 @@ impl<'input, 'state> FunctionMut<'input, 'state> {
         }
     }
 
-    pub fn implementation(self) -> Result<ImplMut<'input, 'state>, Self> {
+    pub fn implementation(self) -> Result<ImplMut<'state>, Self> {
         match self.unit().implementation {
             Some(_) => Ok(ImplMut::new(self)),
             None => Err(self),
@@ -94,7 +94,7 @@ impl<'input, 'state> FunctionMut<'input, 'state> {
     }
 }
 
-impl<'input, 'state> fmt::Debug for FunctionMut<'input, 'state> {
+impl<'state> fmt::Debug for FunctionMut<'state> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FunctionMut")
             .field("id", &self.id())

@@ -1,17 +1,19 @@
 //! Module that provides [`CompNode`].
-
-use super::{mir::node::String, CompExpr, Mir, Spanned, SpannedVec, Wast};
+use super::{
+    hir::{Character, Digits, Ident, String},
+    CompExpr, Mir, Spanned, SpannedVec, Wast,
+};
 use crate::stages::syntax::{whitespace::Side, Expr, Node};
 
 /// Type describing compilation units of any level.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CompNode<'input> {
-    Wast(Wast<'input, Self>),
-    Mir(Mir<'input>),
+pub enum CompNode {
+    Wast(Wast<Self>),
+    Mir(Mir),
 }
 
-impl<'input> CompNode<'input> {
-    pub fn mir(&self) -> Option<&Mir<'input>> {
+impl CompNode {
+    pub fn mir(&self) -> Option<&Mir> {
         match self {
             Self::Mir(mir) => Some(mir),
             _ => None,
@@ -19,17 +21,20 @@ impl<'input> CompNode<'input> {
     }
 }
 
-impl<'input> Node<'input> for CompNode<'input> {
-    type Expr = CompExpr<'input>;
+impl Node for CompNode {
+    type Expr = CompExpr;
+    type Ident = Ident;
+    type Digits = Digits;
+    type Character = Character;
     type String = String;
 
-    fn from_wast(wast: Wast<'input, Self>) -> Self {
+    fn from_wast(wast: Wast<Self>) -> Self {
         Self::Wast(wast)
     }
 }
 
-impl<'input> Expr<'input> for CompExpr<'input> {
-    type Node = CompNode<'input>;
+impl Expr for CompExpr {
+    type Node = CompNode;
     type Whitespace = ();
 
     fn whitespaced_seq(

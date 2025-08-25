@@ -1,16 +1,13 @@
 use super::super::super::{CompNode, Spanned};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Pair<'input> {
-    left: Box<Spanned<CompNode<'input>>>,
-    right: Box<Spanned<CompNode<'input>>>,
+pub struct Pair {
+    left: Box<Spanned<CompNode>>,
+    right: Box<Spanned<CompNode>>,
 }
 
-impl<'input> Pair<'input> {
-    pub fn new(
-        left: Box<Spanned<CompNode<'input>>>,
-        right: Box<Spanned<CompNode<'input>>>,
-    ) -> Self {
+impl Pair {
+    pub fn new(left: Box<Spanned<CompNode>>, right: Box<Spanned<CompNode>>) -> Self {
         Self { left, right }
     }
 }

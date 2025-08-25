@@ -37,21 +37,21 @@ pub use string::String;
 pub use whitespace::Whitespace;
 
 /// Type that describes a weak abstract syntax tree. In this case "weak" means that not all nestings can be explicitly resolved at this stage.
-pub enum Wast<'input, N: Node<'input>> {
-    Number(Number<'input>),
-    Character(Character<'input>),
+pub enum Wast<N: Node> {
+    Number(Number<N::Digits>),
+    Character(N::Character),
     String(N::String),
-    Pair(Pair<'input, N>),
-    Tuple(List<'input, N::Expr, N::Expr>),
-    Block(Block<'input, N::Expr>),
-    Call(Call<'input, N::Expr>),
-    MethodCall(ExprCall<'input, N::Expr>),
-    ChildCall(ExprCall<'input, N::Expr>),
-    NegativeCall(NegativeCall<'input, N::Expr>),
-    Initialization(Initialization<'input, N::Expr>),
+    Pair(Pair<N>),
+    Tuple(List<N::Expr, N::Expr>),
+    Block(Block<N::Expr>),
+    Call(Call<N::Expr>),
+    MethodCall(ExprCall<N::Expr>),
+    ChildCall(ExprCall<N::Expr>),
+    NegativeCall(NegativeCall<N::Expr>),
+    Initialization(Initialization<N::Expr>),
 }
 
-impl<'input, N: Node<'input>> Wast<'input, N> {
+impl<N: Node> Wast<N> {
     /// Wraps in [`Node::from_wast`].
     pub fn into_node(self) -> N {
         N::from_wast(self)
@@ -66,19 +66,22 @@ impl<'input, N: Node<'input>> Wast<'input, N> {
     }
 }
 
-impl<'input, N: Node<'input>> Spanned<Wast<'input, N>> {
+impl<N: Node> Spanned<Wast<N>> {
     pub fn into_spanned_node(self) -> Spanned<N> {
         let Spanned(wast, span) = self;
         N::from_wast(wast).into_spanned(span)
     }
 }
 
-impl<'input, N> fmt::Debug for Wast<'input, N>
+impl<N> fmt::Debug for Wast<N>
 where
-    N: Node<'input> + fmt::Debug,
+    N: Node + fmt::Debug,
     N::Expr: fmt::Debug,
-    <N::Expr as Expr<'input>>::Whitespace: fmt::Debug,
+    N::Ident: fmt::Debug,
+    N::Digits: fmt::Debug,
+    N::Character: fmt::Debug,
     N::String: fmt::Debug,
+    <N::Expr as Expr>::Whitespace: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -97,17 +100,20 @@ where
     }
 }
 
-impl<'input, N> Clone for Wast<'input, N>
+impl<N> Clone for Wast<N>
 where
-    N: Node<'input> + Clone,
+    N: Node + Clone,
     N::Expr: Clone,
-    <N::Expr as Expr<'input>>::Whitespace: Clone,
+    N::Ident: Clone,
+    N::Digits: Clone,
+    N::Character: Clone,
     N::String: Clone,
+    <N::Expr as Expr>::Whitespace: Clone,
 {
     fn clone(&self) -> Self {
         match self {
-            Self::Number(arg0) => Self::Number(*arg0),
-            Self::Character(arg0) => Self::Character(*arg0),
+            Self::Number(arg0) => Self::Number(arg0.clone()),
+            Self::Character(arg0) => Self::Character(arg0.clone()),
             Self::String(arg0) => Self::String(arg0.clone()),
             Self::Pair(arg0) => Self::Pair(arg0.clone()),
             Self::Tuple(arg0) => Self::Tuple(arg0.clone()),
@@ -121,12 +127,15 @@ where
     }
 }
 
-impl<'input, N> PartialEq for Wast<'input, N>
+impl<N> PartialEq for Wast<N>
 where
-    N: Node<'input> + PartialEq,
+    N: Node + PartialEq,
     N::Expr: PartialEq,
-    <N::Expr as Expr<'input>>::Whitespace: PartialEq,
+    N::Ident: PartialEq,
+    N::Digits: PartialEq,
+    N::Character: PartialEq,
     N::String: PartialEq,
+    <N::Expr as Expr>::Whitespace: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -146,11 +155,14 @@ where
     }
 }
 
-impl<'input, N> Eq for Wast<'input, N>
+impl<N> Eq for Wast<N>
 where
-    N: Node<'input> + Eq,
+    N: Node + Eq,
     N::Expr: Eq,
-    <N::Expr as Expr<'input>>::Whitespace: Eq,
+    N::Ident: Eq,
+    N::Digits: Eq,
+    N::Character: Eq,
     N::String: Eq,
+    <N::Expr as Expr>::Whitespace: Eq,
 {
 }

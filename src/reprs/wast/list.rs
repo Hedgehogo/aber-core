@@ -10,13 +10,13 @@ use std::fmt;
 /// - `args` Items listed comma-separately.
 /// - `whitespace` Whitespace after the trailing comma.
 #[derive(Clone, PartialEq, Eq)]
-pub struct List<'input, I, X: Expr<'input>> {
+pub struct List<I, X: Expr> {
     pub items: SpannedVec<I>,
     pub whitespace: Option<X::Whitespace>,
     close: bool,
 }
 
-impl<'input, I, X: Expr<'input>> List<'input, I, X> {
+impl<I, X: Expr> List<I, X> {
     /// Creates a new `List`.
     pub fn new(items: SpannedVec<I>, whitespace: Option<X::Whitespace>, close: bool) -> Self {
         Self {
@@ -32,10 +32,10 @@ impl<'input, I, X: Expr<'input>> List<'input, I, X> {
     }
 }
 
-impl<'input, I, X> fmt::Debug for List<'input, I, X>
+impl<I, X> fmt::Debug for List<I, X>
 where
     I: fmt::Debug,
-    X: Expr<'input> + fmt::Debug,
+    X: Expr + fmt::Debug,
     X::Whitespace: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -2,23 +2,17 @@
 
 use super::Spanned;
 use crate::stages::syntax::Expr;
-use std::marker::PhantomData;
 
 /// Type describing the syntactic construct *assign*
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Assign<'input, X: Expr<'input>> {
+pub struct Assign<X: Expr> {
     pub left: Spanned<X>,
     pub right: Spanned<X>,
-    phantom: PhantomData<&'input str>,
 }
 
-impl<'input, X: Expr<'input>> Assign<'input, X> {
+impl<X: Expr> Assign<X> {
     /// Creates a new `Assign`.
     pub fn new(left: Spanned<X>, right: Spanned<X>) -> Self {
-        Self {
-            left,
-            right,
-            phantom: PhantomData,
-        }
+        Self { left, right }
     }
 }

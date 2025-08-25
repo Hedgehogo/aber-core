@@ -1,13 +1,10 @@
-use super::super::{ctx::Ctx, error::Expected, Node};
+use super::super::{ctx::Ctx, error::Expected, Expr, Ident, Node, Whitespace};
 use super::{
     list::generics, number::digit, spanned, whitespace::whitespaced, GraphemeLabelError,
     GraphemeParser, GraphemeParserExtra,
 };
 use crate::reprs::{
-    wast::{
-        call::{Call, Ident},
-        number::Radix,
-    },
+    wast::{call::Call, number::Radix},
     Spanned, SpannedVec,
 };
 use chumsky::{
@@ -16,10 +13,11 @@ use chumsky::{
     text::{Char, Grapheme},
 };
 
-pub fn ident<'input, E>() -> impl GraphemeParser<'input, Ident<'input>, E> + Copy
+pub fn ident<'input, I, E>() -> impl GraphemeParser<'input, I, E> + Copy
 where
     E: GraphemeParserExtra<'input, Context = Ctx<()>>,
     E::Error: GraphemeLabelError<'input, Expected>,
+    I: Ident<'input, E::State>,
 {
     let number_start = just("-").or_not().then(digit().with_ctx(Radix::DECIMAL));
 
@@ -37,7 +35,7 @@ where
 
     let unit = not_unit.not().ignore_then(any());
 
-    number_start
+    let repr = number_start
         .not()
         .ignore_then(unit.repeated().at_least(1))
         .to_slice()
@@ -50,14 +48,16 @@ where
                 Err(E::Error::expected_found([Expected::ValidIdent], None, span))
             }
         })
-        .map(|i| Ident::from_repr_unchecked(i.as_str()))
+        .map(|i| i.as_str());
+
+    repr.map_with(|repr, extra| I::from_repr_unchecked(extra.state(), repr))
 }
 
-pub fn call<'input, N, P, E>(
-    expr: P,
-) -> impl GraphemeParser<'input, Call<'input, N::Expr>, E> + Clone
+pub fn call<'input, N, P, E>(expr: P) -> impl GraphemeParser<'input, Call<N::Expr>, E> + Clone
 where
-    N: Node<'input>,
+    N: Node,
+    N::Ident: Ident<'input, E::State> + 'input,
+    <N::Expr as Expr>::Whitespace: Whitespace<'input>,
     P: GraphemeParser<'input, Spanned<SpannedVec<N>>, E> + Clone,
     E: GraphemeParserExtra<'input, Context = Ctx<()>>,
     E::Error: GraphemeLabelError<'input, Expected>,
@@ -78,8 +78,11 @@ mod tests {
     use super::super::{expr::expr, fact::fact, tests::Extra};
     use crate::reprs::{
         span::{IntoSpanned, Span},
-        wast::{call::Generics, List},
-        CompNode,
+        wast::{
+            call::{Generics, Ident},
+            wast_node::WastNode,
+            List, Whitespace,
+        },
     };
     use smallvec::smallvec;
     use text::Graphemes;
@@ -114,13 +117,13 @@ mod tests {
     #[test]
     fn test_ident() {
         assert_eq!(
-            ident::<Extra>()
+            ident::<_, Extra>()
                 .parse(Graphemes::new("hello"))
                 .into_result(),
             Ok(Ident::from_repr_unchecked("hello"))
         );
         assert_eq!(
-            ident::<Extra>()
+            ident::<_, Extra>()
                 .parse(Graphemes::new("-hello"))
                 .into_result(),
             Ok(Ident::from_repr_unchecked("-hello"))
@@ -131,7 +134,7 @@ mod tests {
     fn test_ident_erroneous() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            ident::<Extra>()
+            ident::<Ident, Extra>()
                 .parse(Graphemes::new("9hello"))
                 .into_output_errors(),
             (
@@ -144,7 +147,7 @@ mod tests {
             )
         );
         assert_eq!(
-            ident::<Extra>()
+            ident::<Ident, Extra>()
                 .parse(Graphemes::new("-9hello"))
                 .into_output_errors(),
             (
@@ -157,7 +160,7 @@ mod tests {
             )
         );
         assert_eq!(
-            ident::<Extra>()
+            ident::<Ident, Extra>()
                 .parse(Graphemes::new("@hello"))
                 .into_output_errors(),
             (
@@ -170,7 +173,7 @@ mod tests {
             )
         );
         assert_eq!(
-            ident::<Extra>()
+            ident::<Ident, Extra>()
                 .parse(Graphemes::new("//hello"))
                 .into_output_errors(),
             (
@@ -183,7 +186,7 @@ mod tests {
             )
         );
         assert_eq!(
-            ident::<Extra>()
+            ident::<Ident, Extra>()
                 .parse(Graphemes::new(""))
                 .into_output_errors(),
             (
@@ -196,7 +199,7 @@ mod tests {
     #[test]
     fn test_call() {
         assert_eq!(
-            call(expr(fact::<CompNode, Extra>()))
+            call(expr(fact::<WastNode, Extra>()))
                 .parse(Graphemes::new("hello"))
                 .into_result(),
             Ok(Call::new(
@@ -205,25 +208,25 @@ mod tests {
             ))
         );
         assert_eq!(
-            call(expr(fact::<CompNode, Extra>()))
+            call(expr(fact::<WastNode, Extra>()))
                 .parse(Graphemes::new("hello[]"))
                 .into_result(),
             Ok(Call::new(
                 Ident::from_repr_unchecked("hello").into_spanned(0..5),
                 Some(Generics::new(
-                    (),
+                    Default::default(),
                     List::new(vec![], None, true).into_spanned(5..7)
                 ))
             ))
         );
         assert_eq!(
-            call(expr(fact::<CompNode, Extra>()))
+            call(expr(fact::<WastNode, Extra>()))
                 .parse(Graphemes::new("hello //hello\n []"))
                 .into_result(),
             Ok(Call::new(
                 Ident::from_repr_unchecked("hello").into_spanned(0..5),
                 Some(Generics::new(
-                    (),
+                    Whitespace::from_repr_unchecked(" //hello\n "),
                     List::new(vec![], None, true).into_spanned(15..17)
                 ))
             ))
@@ -234,7 +237,7 @@ mod tests {
     fn test_call_erroneous() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            call(expr(fact::<CompNode, Extra>()))
+            call(expr(fact::<WastNode, Extra>()))
                 .parse(Graphemes::new("hello,[]"))
                 .into_output_errors(),
             (

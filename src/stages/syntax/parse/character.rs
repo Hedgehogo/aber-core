@@ -1,6 +1,5 @@
-use super::super::{ctx::Ctx, error::Expected};
+use super::super::{ctx::Ctx, error::Expected, Character};
 use super::{GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
-use crate::reprs::wast::character::Character;
 use chumsky::{
     error::LabelError,
     prelude::*,
@@ -65,8 +64,9 @@ where
         .labelled(Expected::CharContent)
 }
 
-pub fn character<'input, E>() -> impl GraphemeParser<'input, Character<'input>, E> + Copy
+pub fn character<'input, C, E>() -> impl GraphemeParser<'input, C, E> + Copy
 where
+    C: Character<'input>,
     E: GraphemeParserExtra<'input, Context = Ctx<()>>,
     E::Error: GraphemeLabelError<'input, Expected>,
 {
@@ -79,7 +79,7 @@ where
             .labelled(Expected::CharClose)
             .recover_with(via_parser(empty().to(false))),
     ))
-    .map(|(repr, close)| Character::new(repr, close))
+    .map(|(repr, close)| C::from_repr_unchecked(repr, close))
     .labelled(Expected::Char)
 }
 
@@ -89,14 +89,14 @@ mod tests {
 
     use super::super::super::error::Error;
     use super::super::tests::Extra;
-    use crate::reprs::span::Span;
+    use crate::reprs::{span::Span, wast::Character};
     use smallvec::smallvec;
     use text::Graphemes;
 
     #[test]
     fn test_character() {
         assert_eq!(
-            character::<Extra>()
+            character::<_, Extra>()
                 .parse(Graphemes::new("'m'"))
                 .into_result(),
             Ok(Character::from_repr("m"))
@@ -107,7 +107,7 @@ mod tests {
     fn test_character_erroneous() {
         let grapheme = |s| Graphemes::new(s).iter().next().unwrap();
         assert_eq!(
-            character::<Extra>()
+            character::<_, Extra>()
                 .parse(Graphemes::new("'m"))
                 .into_output_errors(),
             (
@@ -120,7 +120,7 @@ mod tests {
             )
         );
         assert_eq!(
-            character::<Extra>()
+            character::<_, Extra>()
                 .parse(Graphemes::new("'"))
                 .into_output_errors(),
             (
@@ -132,7 +132,7 @@ mod tests {
             )
         );
         assert_eq!(
-            character::<Extra>()
+            character::<_, Extra>()
                 .parse(Graphemes::new("'\\"))
                 .into_output_errors(),
             (
@@ -144,7 +144,7 @@ mod tests {
             )
         );
         assert_eq!(
-            character::<Extra>()
+            character::<Character, Extra>()
                 .parse(Graphemes::new("'mm"))
                 .into_output_errors(),
             (
@@ -156,7 +156,7 @@ mod tests {
             )
         );
         assert_eq!(
-            character::<Extra>()
+            character::<Character, Extra>()
                 .parse(Graphemes::new(""))
                 .into_output_errors(),
             (
