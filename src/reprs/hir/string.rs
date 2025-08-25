@@ -1,6 +1,6 @@
 //! Module that provides [`String`].
 
-use crate::stages::syntax::string::{
+use crate::stages::parsing::string::{
     EscapedString, EscapedStringCtx, EscapedStringSealed, RawString, RawStringCtx, RawStringSealed,
 };
 

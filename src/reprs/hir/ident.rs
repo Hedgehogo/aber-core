@@ -5,7 +5,7 @@ use super::super::{
     span::{IntoSpanned, Spanned},
     wast::call::{Call, Ident as WastIdent},
 };
-use crate::stages::syntax::{self, ident::IdentSealed, Expr, Node};
+use crate::stages::parsing::{self, ident::IdentSealed, Expr, Node};
 use string_interner::{DefaultStringInterner, DefaultSymbol};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -53,4 +53,4 @@ impl<'input> IdentSealed<'input, State> for Ident {
     }
 }
 
-impl syntax::Ident<'_, DefaultStringInterner> for Ident {}
+impl parsing::Ident<'_, DefaultStringInterner> for Ident {}

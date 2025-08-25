@@ -1,7 +1,7 @@
 //! Module that provides [`List`].
 
 use super::SpannedVec;
-use crate::stages::syntax::Expr;
+use crate::stages::parsing::Expr;
 use std::fmt;
 
 /// Type describing syntactic constructions containing comma-separated enumerated items.

@@ -2,7 +2,7 @@
 
 use super::super::{span::IntoSpanned, Spanned, SpannedVec};
 use super::{call::Ident, number::Digits, Character, String, Wast, Whitespace};
-use crate::stages::syntax::{whitespace::Side, Expr, Node};
+use crate::stages::parsing::{whitespace::Side, Expr, Node};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WastNode<'input> {

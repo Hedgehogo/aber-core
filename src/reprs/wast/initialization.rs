@@ -1,7 +1,7 @@
 //! Module that provides [`Initialization`].
 
 use super::{whitespaced::Whitespaced, List, Spanned};
-use crate::stages::syntax::{Expr, Node};
+use crate::stages::parsing::{Expr, Node};
 use std::fmt;
 
 type Name<N, W> = (Whitespaced<<N as Node>::Expr, <N as Node>::Ident>, W);

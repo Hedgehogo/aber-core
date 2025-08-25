@@ -1,7 +1,7 @@
 //! Module that provides types to describe the syntactic construct *block*.
 
 use super::{Assign, Spanned};
-use crate::stages::syntax::Expr;
+use crate::stages::parsing::Expr;
 use std::fmt;
 
 /// Type describing the syntactic construct *statement*.

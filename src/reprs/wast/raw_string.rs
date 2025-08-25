@@ -1,6 +1,6 @@
 //! Module that provides [`RawString`].
 
-use crate::stages::syntax::string::{self, RawStringCtx};
+use crate::stages::parsing::string::{self, RawStringCtx};
 use std::fmt;
 
 /// Type describing a escaped string literal.
@@ -108,7 +108,7 @@ impl<'str, 'input> Iterator for LineIter<'str, 'input> {
     type Item = &'input str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        use crate::stages::syntax::parse::raw_string::{last_line, line};
+        use crate::stages::parsing::parse::raw_string::{last_line, line};
         use chumsky::{extra::Err, prelude::*, text::Graphemes};
 
         match self.rest_length {

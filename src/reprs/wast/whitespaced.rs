@@ -1,7 +1,7 @@
 //! Module that provides [`Whitespaced`].
 
 use super::Spanned;
-use crate::stages::syntax::Expr;
+use crate::stages::parsing::Expr;
 use std::fmt;
 
 /// Type that describes a construct containing whitespace before it.

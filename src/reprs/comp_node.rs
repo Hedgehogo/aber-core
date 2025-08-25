@@ -3,7 +3,7 @@ use super::{
     hir::{Character, Digits, Ident, String},
     CompExpr, Mir, Spanned, SpannedVec, Wast,
 };
-use crate::stages::syntax::{whitespace::Side, Expr, Node};
+use crate::stages::parsing::{whitespace::Side, Expr, Node};
 
 /// Type describing compilation units of any level.
 #[derive(Debug, Clone, PartialEq, Eq)]

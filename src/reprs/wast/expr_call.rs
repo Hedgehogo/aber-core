@@ -1,7 +1,7 @@
 //! Module that provides [`ExprCall`].
 
 use super::{call::Call, whitespaced::Whitespaced, Spanned};
-use crate::stages::syntax::{Expr, Node};
+use crate::stages::parsing::{Expr, Node};
 use std::fmt;
 
 /// Type describing syntactic constructs *method call* and *child call*.

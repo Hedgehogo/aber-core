@@ -1,7 +1,7 @@
 //! Module that provides [`Assign`].
 
 use super::Spanned;
-use crate::stages::syntax::Expr;
+use crate::stages::parsing::Expr;
 
 /// Type describing the syntactic construct *assign*
 #[derive(Debug, Clone, PartialEq, Eq)]

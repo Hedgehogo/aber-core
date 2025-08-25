@@ -1,7 +1,7 @@
 //! Module that provides [`NegativeCall`].
 
 use super::Spanned;
-use crate::stages::syntax::Expr;
+use crate::stages::parsing::Expr;
 
 /// Type describing the syntactic construct *negative call*
 #[derive(Debug, Clone, PartialEq, Eq)]

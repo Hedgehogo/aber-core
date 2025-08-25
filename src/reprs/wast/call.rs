@@ -1,7 +1,7 @@
 //! Module that provides types to describe the syntactic construct *call*.
 use super::super::span::{IntoSpanned, Spanned};
 use super::{whitespaced::Whitespaced, List, Wast};
-use crate::stages::syntax::{self, ident::IdentSealed, Expr, Node};
+use crate::stages::parsing::{self, ident::IdentSealed, Expr, Node};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -60,7 +60,7 @@ impl<'input, S> IdentSealed<'input, S> for Ident<'input> {
     }
 }
 
-impl<'input, S> syntax::Ident<'input, S> for Ident<'input> {}
+impl<'input, S> parsing::Ident<'input, S> for Ident<'input> {}
 
 /// Type describing the syntactic construct *generic arguments*
 pub type Generics<X> = Whitespaced<X, List<X, X>>;

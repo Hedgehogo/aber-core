@@ -1,7 +1,7 @@
 use super::super::error::Expected;
 use super::{GraphemeLabelError, GraphemeParser, GraphemeParserExtra};
 use crate::reprs::wast::number::{Digit, Number, Radix};
-use crate::stages::syntax::Digits;
+use crate::stages::parsing::Digits;
 use chumsky::{
     label::LabelError,
     prelude::*,

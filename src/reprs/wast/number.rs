@@ -1,6 +1,6 @@
 //! Module that provides types for number literal description.
 
-use crate::stages::syntax::{self, digits::DigitsSealed};
+use crate::stages::parsing::{self, digits::DigitsSealed};
 use std::fmt::Debug;
 
 /// Type guarantee that contains the base of a numeral system in the range of `2` to `36` inclusive.
@@ -146,7 +146,7 @@ impl<'input> DigitsSealed<'input> for Digits<'input> {
     }
 }
 
-impl<'input> syntax::Digits<'input> for Digits<'input> {}
+impl<'input> parsing::Digits<'input> for Digits<'input> {}
 
 #[derive(Debug, Clone)]
 pub struct DigitIter<'input> {

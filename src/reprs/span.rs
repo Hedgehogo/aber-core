@@ -1,7 +1,7 @@
 //! Module that provides types for working with the arrangement of units within a document.
 
 use super::wast::whitespaced::Whitespaced;
-use crate::stages::syntax::Expr;
+use crate::stages::parsing::Expr;
 use chumsky::span::SimpleSpan;
 use std::{fmt, ops::Range};
 

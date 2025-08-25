@@ -1,7 +1,7 @@
 //! Module that provides [`Whitespace`].
 
 use super::{wast_node::WastNode, Span, Spanned};
-use crate::stages::syntax::whitespace;
+use crate::stages::parsing::whitespace;
 use chumsky::text::{Char, Graphemes};
 
 /// Type describing a whitespace.

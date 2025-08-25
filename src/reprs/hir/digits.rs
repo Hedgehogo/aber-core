@@ -1,7 +1,7 @@
 //! Module that provides [`Digits`].
 
 use super::super::wast::number::{self, Digit};
-use crate::stages::syntax::{self, digits::DigitsSealed};
+use crate::stages::parsing::{self, digits::DigitsSealed};
 use std::fmt::Debug;
 
 /// Type describing consecutive digits.
@@ -31,4 +31,4 @@ impl<'input> DigitsSealed<'input> for Digits {
     }
 }
 
-impl<'input> syntax::Digits<'input> for Digits {}
+impl<'input> parsing::Digits<'input> for Digits {}

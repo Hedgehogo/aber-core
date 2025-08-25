@@ -1,6 +1,6 @@
 //! Module that provides [`Character`].
 
-use crate::stages::syntax::{self, character::CharacterSealed};
+use crate::stages::parsing::{self, character::CharacterSealed};
 use chumsky::text::{Grapheme, Graphemes};
 
 #[derive(Default, Debug, PartialEq, Eq)]
@@ -58,4 +58,4 @@ impl<'input> CharacterSealed<'input> for Character {
     }
 }
 
-impl<'input> syntax::Character<'input> for Character {}
+impl<'input> parsing::Character<'input> for Character {}

@@ -1,7 +1,7 @@
 //! Module that provides [`Pair`].
 
 use super::Spanned;
-use crate::stages::syntax::{Expr, Node};
+use crate::stages::parsing::{Expr, Node};
 use std::fmt;
 
 /// Type describing the syntactic construct *pair*

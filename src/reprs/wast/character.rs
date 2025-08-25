@@ -1,6 +1,6 @@
 //! Module that provides types for character literal description.
 
-use crate::stages::syntax::{self, character::CharacterSealed};
+use crate::stages::parsing::{self, character::CharacterSealed};
 use chumsky::text::{Grapheme, Graphemes};
 use std::fmt;
 
@@ -143,4 +143,4 @@ impl<'input> CharacterSealed<'input> for Character<'input> {
     }
 }
 
-impl<'input> syntax::Character<'input> for Character<'input> {}
+impl<'input> parsing::Character<'input> for Character<'input> {}

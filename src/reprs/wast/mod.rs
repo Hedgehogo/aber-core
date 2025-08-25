@@ -18,7 +18,7 @@ pub mod whitespace;
 pub mod whitespaced;
 
 use super::span::{IntoSpanned, Span, Spanned, SpannedVec};
-use crate::stages::syntax::{Expr, Node};
+use crate::stages::parsing::{Expr, Node};
 use std::fmt;
 
 pub use assign::Assign;

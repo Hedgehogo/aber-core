@@ -4,7 +4,7 @@ use super::{
     escaped_string::{EscapedString, EscapedStringData},
     raw_string::RawString,
 };
-use crate::stages::syntax::string::{self, EscapedStringCtx, RawStringCtx};
+use crate::stages::parsing::string::{self, EscapedStringCtx, RawStringCtx};
 
 /// Type describing a string literal.
 #[derive(Debug, Clone, PartialEq, Eq)]

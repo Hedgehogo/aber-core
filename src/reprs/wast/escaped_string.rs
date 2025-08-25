@@ -1,6 +1,6 @@
 //! Module that provides [`EscapedString`].
 
-use crate::stages::syntax::string::{self, EscapedStringCtx};
+use crate::stages::parsing::string::{self, EscapedStringCtx};
 use std::fmt;
 
 /// Type describing a escaped string literal.
@@ -158,7 +158,7 @@ impl<'str, 'input> Iterator for SectionIter<'str, 'input> {
     type Item = Section<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        use crate::stages::syntax::parse::escaped_string::section;
+        use crate::stages::parsing::parse::escaped_string::section;
         use chumsky::{extra::Err, prelude::*, text::Graphemes};
 
         match self.rest_length {
